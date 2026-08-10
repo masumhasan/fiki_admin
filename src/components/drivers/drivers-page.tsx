@@ -163,27 +163,81 @@ const applications = [
   },
 ];
 
+import { useEffect } from "react";
+import { getAdminDriversApi } from "@/lib/api";
+
 export function DriversPage() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"All" | DriverStatus>("All");
+  const [liveDrivers, setLiveDrivers] = useState<Driver[] | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = window.localStorage.getItem("fiki_auth_token");
+      if (token) {
+        getAdminDriversApi(token).then((res) => {
+          if (res.success && res.data && res.data.drivers) {
+            const mapped: Driver[] = res.data.drivers.map((d: any, idx: number) => {
+              const profile = d.profile || {};
+              const statusMap: Record<string, DriverStatus> = {
+                ONLINE: "Active",
+                ASSIGNED: "On trip",
+                OFFLINE: "Off duty",
+                UNAVAILABLE: "Off duty",
+              };
+              const status = statusMap[profile.availabilityStatus] || "Active";
+              const vehicleStr = profile.vehicle
+                ? `${profile.vehicle.make || ""} ${profile.vehicle.model || ""}`.trim() || "Toyota Sienna"
+                : "Toyota Sienna";
+              const plateStr = profile.vehicle?.licensePlate || "FKT-1234";
+
+              const nameParts = (d.name || "Driver").split(" ");
+              const initials = nameParts.length >= 2
+                ? `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase()
+                : (d.name || "DR").substring(0, 2).toUpperCase();
+
+              return {
+                id: `D-${String(idx + 1).padStart(3, "0")}`,
+                name: d.name || "Driver",
+                initials,
+                avatar: "bg-primary",
+                joined: d.createdAt ? new Date(d.createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "Jan 2026",
+                status,
+                vehicle: vehicleStr,
+                plate: plateStr,
+                phone: d.phone || "(555) 000-0000",
+                trips: profile.completedTripsCount || 0,
+                rating: profile.rating ? String(profile.rating) : "5.0",
+              };
+            });
+            if (mapped.length > 0) {
+              setLiveDrivers(mapped);
+            }
+          }
+        });
+      }
+    }
+  }, []);
+
+  const activeDriverList = liveDrivers || drivers;
 
   const filteredDrivers = useMemo(
     () =>
-      drivers.filter(
+      activeDriverList.filter(
         (driver) =>
           (filter === "All" || driver.status === filter) &&
           [driver.name, driver.id, driver.vehicle, driver.plate].some((value) =>
             value.toLowerCase().includes(query.toLowerCase()),
           ),
       ),
-    [filter, query],
+    [activeDriverList, filter, query],
   );
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Drivers"
-        description={`${drivers.length} registered drivers`}
+        description={`${activeDriverList.length} registered drivers`}
         action={
           <Link
             className="flex h-9 items-center rounded-lg bg-primary px-4 text-xs font-bold text-primary-foreground hover:bg-[#0d2c58]"
@@ -196,22 +250,22 @@ export function DriversPage() {
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-5">
         <Summary
           label="Total drivers"
-          value={drivers.length}
+          value={activeDriverList.length}
           tone="text-primary"
         />
         <Summary
           label="Active now"
-          value={drivers.filter((item) => item.status === "Active").length}
+          value={activeDriverList.filter((item) => item.status === "Active").length}
           tone="text-emerald-500"
         />
         <Summary
           label="On trip"
-          value={drivers.filter((item) => item.status === "On trip").length}
+          value={activeDriverList.filter((item) => item.status === "On trip").length}
           tone="text-blue-500"
         />
         <Summary
           label="Off duty"
-          value={drivers.filter((item) => item.status === "Off duty").length}
+          value={activeDriverList.filter((item) => item.status === "Off duty").length}
           tone="text-brand-placeholder"
         />
       </section>
@@ -353,12 +407,44 @@ function DriverStatus({ status }: { status: DriverStatus }) {
   );
 }
 
+import { getDriverApplicationsApi } from "@/lib/api";
+
 export function ApplicationsTable() {
   const [query, setQuery] = useState("");
   const [pageSize, setPageSize] = useState(5);
   const [tab, setTab] = useState("All");
+  const [liveApps, setLiveApps] = useState<typeof applications | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = window.localStorage.getItem("fiki_auth_token");
+      if (token) {
+        getDriverApplicationsApi(token).then((res) => {
+          if (res.success && res.data && Array.isArray(res.data)) {
+            const mapped = res.data.map((a: any) => ({
+              id: a.applicationId || `APP-${a._id.substring(a._id.length - 4)}`,
+              name: a.fullName || "Applicant",
+              phone: a.phone || "(555) 000-0000",
+              email: a.email || "applicant@example.com",
+              type: a.positionType ? a.positionType.charAt(0) + a.positionType.slice(1).toLowerCase() : "Ambulatory",
+              license: a.licenseNumber || "CDL-A 0000000",
+              start: a.submittedDate ? new Date(a.submittedDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Jan 15, 2026",
+              background: a.backgroundStatus === "CLEARED" ? "Cleared" : a.backgroundStatus === "FAILED" ? "Failed" : "Pending",
+              submitted: a.createdAt ? new Date(a.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Dec 28, 2025",
+              status: a.status === "APPROVED" ? "Approved" : a.status === "REJECTED" ? "Rejected" : a.status === "INTERVIEW_SCHEDULED" ? "Interview scheduled" : "Pending review",
+            }));
+            if (mapped.length > 0) {
+              setLiveApps(mapped);
+            }
+          }
+        });
+      }
+    }
+  }, []);
+
+  const activeApps = liveApps || applications;
   const tabs = ["All", "Pending", "Rejected", "Archived"];
-  const filtered = applications.filter(
+  const filtered = activeApps.filter(
     (item) =>
       (tab === "All" ||
         (tab === "Pending"

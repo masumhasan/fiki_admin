@@ -4,25 +4,45 @@ import { Eye, EyeOff, LockKeyhole, Mail } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { loginApi } from "@/lib/api";
 import { saveMockSession } from "@/lib/mock-auth";
 
 export function LoginForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [apiError, setApiError] = useState("");
   const router = useRouter();
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setApiError("");
     setIsSubmitting(true);
+
     const formData = new FormData(event.currentTarget);
-    window.setTimeout(() => {
-      saveMockSession(String(formData.get("email") || ""));
+    const email = String(formData.get("email") || "");
+    const password = String(formData.get("password") || "");
+
+    const res = await loginApi(email, password);
+    setIsSubmitting(false);
+
+    if (res.success && res.data) {
+      saveMockSession(res.data.user.email);
+      if (typeof window !== "undefined") {
+        window.localStorage.setItem("fiki_auth_token", res.data.token);
+      }
       router.replace("/dashboard");
-    }, 650);
+    } else {
+      setApiError(res.error?.message || "Invalid admin email or password");
+    }
   }
 
   return (
     <form className="mt-9 space-y-5" onSubmit={handleSubmit}>
+      {apiError && (
+        <div className="rounded-lg bg-red-50 p-3 text-xs font-medium text-red-600 border border-red-200">
+          {apiError}
+        </div>
+      )}
       <div>
         <label className={labelClass} htmlFor="email">
           Admin email

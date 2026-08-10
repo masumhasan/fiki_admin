@@ -120,11 +120,103 @@ const rides = [
   ["FT-4816", "George Adams", "Danbury Hospital", "Completed", "$38.90"],
 ] as const;
 
+import { useEffect, useState } from "react";
+import { getAdminAnalyticsApi } from "@/lib/api";
+
 export function AnalyticsPage() {
+  const [liveAnalytics, setLiveAnalytics] = useState<{
+    totalDrivers: number;
+    activeDrivers: number;
+    totalTrips: number;
+    completedTrips: number;
+    pendingTrips: number;
+    totalRevenue: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = window.localStorage.getItem("fiki_auth_token");
+      if (token) {
+        getAdminAnalyticsApi(token).then((res) => {
+          if (res.success && res.data) {
+            setLiveAnalytics(res.data);
+          }
+        });
+      }
+    }
+  }, []);
+
+  const dynamicMetrics = [
+    [
+      "Total ride requests",
+      liveAnalytics ? String(liveAnalytics.totalTrips) : "1,248",
+      "+12% from last month",
+      TicketCheck,
+      "bg-blue-50 text-blue-600",
+      true,
+    ],
+    [
+      "Completed rides",
+      liveAnalytics ? String(liveAnalytics.completedTrips) : "1,050",
+      "84% completion rate",
+      UserRoundCheck,
+      "bg-emerald-50 text-emerald-600",
+      true,
+    ],
+    [
+      "Pending rides",
+      liveAnalytics ? String(liveAnalytics.pendingTrips) : "138",
+      "Waiting for approval",
+      Clock3,
+      "bg-amber-50 text-amber-600",
+      null,
+    ],
+    [
+      "Cancelled rides",
+      "60",
+      "4.8% cancellation rate",
+      XCircle,
+      "bg-red-50 text-red-500",
+      false,
+    ],
+    [
+      "Total revenue",
+      liveAnalytics ? `$${liveAnalytics.totalRevenue.toFixed(2)}` : "$52,480",
+      "+8.3% from last month",
+      CircleDollarSign,
+      "bg-emerald-50 text-emerald-600",
+      true,
+    ],
+    [
+      "Outstanding payments",
+      "$8,750",
+      "16.7% of total revenue",
+      CircleDollarSign,
+      "bg-amber-50 text-amber-600",
+      null,
+    ],
+    [
+      "Active drivers",
+      liveAnalytics ? String(liveAnalytics.activeDrivers) : "42",
+      "6 currently on a trip",
+      UserRoundCheck,
+      "bg-blue-50 text-blue-600",
+      null,
+    ],
+    [
+      "Total passengers",
+      "865",
+      "+34 new this week",
+      UsersRound,
+      "bg-violet-50 text-violet-600",
+      true,
+    ],
+  ] as const;
+
   function exportReport() {
     const csv = [
       "Metric,Value",
-      ...metrics.map(([label, value]) => `${label},${value}`),
+      ...dynamicMetrics.map(([label, value]) => `${label},${value}`),
     ].join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const link = document.createElement("a");
@@ -151,7 +243,7 @@ export function AnalyticsPage() {
       />
 
       <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        {metrics.map(([label, value, note, Icon, tone, direction]) => (
+        {dynamicMetrics.map(([label, value, note, Icon, tone, direction]) => (
           <article className={cardClass} key={label}>
             <div className="flex items-start justify-between">
               <span

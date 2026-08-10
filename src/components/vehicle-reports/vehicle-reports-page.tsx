@@ -77,19 +77,53 @@ const reports = [
   },
 ];
 
+import { useEffect } from "react";
+import { getVehicleReportsApi } from "@/lib/api";
+
 export function VehicleReportsPage() {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<"All" | ReportStatus>("All");
+  const [liveReports, setLiveReports] = useState<typeof reports | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = window.localStorage.getItem("fiki_auth_token");
+      if (token) {
+        getVehicleReportsApi(token).then((res) => {
+          if (res.success && res.data && Array.isArray(res.data)) {
+            const mapped = res.data.map((r: any) => ({
+              id: `VR-${r.vehicleId}`,
+              driver: r.inspectorName || "Admin Inspector",
+              initials: "AI",
+              avatar: "bg-primary",
+              vehicle: `${r.make} ${r.vehicleModel}`,
+              plate: r.licensePlate,
+              date: r.createdAt ? new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Aug 3, 2026",
+              shift: "7:00 AM – 3:00 PM",
+              distance: `${r.fuelLevelPercentage}% fuel`,
+              status: r.inspectionStatus === "PASS" ? ("Completed" as ReportStatus) : ("Missing report" as ReportStatus),
+            }));
+            if (mapped.length > 0) {
+              setLiveReports(mapped);
+            }
+          }
+        });
+      }
+    }
+  }, []);
+
+  const activeReports = liveReports || reports;
+
   const filtered = useMemo(
     () =>
-      reports.filter(
+      activeReports.filter(
         (report) =>
           (status === "All" || report.status === status) &&
           [report.driver, report.vehicle, report.plate, report.id].some(
             (value) => value.toLowerCase().includes(query.toLowerCase()),
           ),
       ),
-    [query, status],
+    [activeReports, query, status],
   );
 
   return (

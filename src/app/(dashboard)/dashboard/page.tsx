@@ -1,3 +1,7 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { getAdminTripsApi } from "@/lib/api";
 import {
   ArrowRight,
   CheckCircle2,
@@ -117,6 +121,47 @@ const requests = [
 ];
 
 export default function DashboardPage() {
+  const [liveTrips, setLiveTrips] = useState<any[] | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = window.localStorage.getItem("fiki_auth_token");
+      if (token) {
+        getAdminTripsApi(token).then((res) => {
+          if (res.success && res.data && Array.isArray(res.data.trips)) {
+            const mapped = res.data.trips.map((t: any) => {
+              const passengerName = t.passengerId?.name || "Passenger";
+              const driverName = t.driverId?.name || "Unassigned";
+              const ini = passengerName.split(" ").map((n: string) => n[0]).join("").toUpperCase().substring(0, 2) || "PA";
+
+              let statusStr = "Scheduled";
+              if (t.status === "COMPLETED") statusStr = "Completed";
+              else if (t.status === "IN_PROGRESS") statusStr = "Onboard";
+              else if (t.status === "REQUESTED") statusStr = "Need Driver";
+
+              return [
+                `T-${t._id.substring(t._id.length - 4).toUpperCase()}`,
+                ini,
+                passengerName,
+                driverName,
+                t.pickupLocation?.address || "Pickup Address",
+                t.dropoffLocation?.address || "Dropoff Address",
+                statusStr,
+                t.createdAt ? new Date(t.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Now",
+                "#2563eb",
+              ];
+            });
+            if (mapped.length > 0) {
+              setLiveTrips(mapped);
+            }
+          }
+        });
+      }
+    }
+  }, []);
+
+  const activeTripsList = liveTrips || trips;
+
   return (
     <div className="space-y-5">
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -250,7 +295,7 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {trips.map(
+                {activeTripsList.map(
                   (
                     [
                       id,
