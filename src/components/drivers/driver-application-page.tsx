@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   BriefcaseBusiness,
   CalendarDays,
+  Car,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -27,6 +28,10 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { useState } from "react";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { getVehiclesApi, approveDriverApplicationApi } from "@/lib/api";
+
 type Decision = "Pending review" | "Approved" | "Rejected";
 
 const documents = [
@@ -44,8 +49,44 @@ export function DriverApplicationPage({
 }: {
   applicationId: string;
 }) {
+  const router = useRouter();
   const [decision, setDecision] = useState<Decision>("Pending review");
   const [comments, setComments] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [vehicles, setVehicles] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = window.localStorage.getItem("fiki_auth_token");
+      if (token) {
+        getVehiclesApi(token).then((res) => {
+          if (res.success && res.data && Array.isArray(res.data)) {
+            setVehicles(res.data);
+          }
+        });
+      }
+    }
+  }, []);
+
+  const handleApproveClick = () => {
+    setModalOpen(true);
+  };
+
+  const handleVehicleAssign = async (vehicleId: string) => {
+    if (typeof window !== "undefined") {
+      const token = window.localStorage.getItem("fiki_auth_token");
+      if (token) {
+        const res = await approveDriverApplicationApi(token, applicationId, vehicleId);
+        if (res.success) {
+          setDecision("Approved");
+          setModalOpen(false);
+          if (res.data?.driverId) {
+            router.push(`/drivers/${res.data.driverId}`);
+          }
+        }
+      }
+    }
+  };
 
   return (
     <div className="pb-20">
@@ -351,7 +392,7 @@ export function DriverApplicationPage({
             <button
               className="flex h-9 items-center gap-2 rounded-lg bg-secondary px-4 text-xs font-bold text-secondary-foreground disabled:opacity-50"
               disabled={decision === "Approved"}
-              onClick={() => setDecision("Approved")}
+              onClick={handleApproveClick}
               type="button"
             >
               <CheckCircle2 className="size-4" />
@@ -373,6 +414,112 @@ export function DriverApplicationPage({
           >
             <Archive className="size-4" />
             Archive
+          </button>
+        </div>
+      </div>
+
+      <VehicleAssignmentModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onAssign={handleVehicleAssign}
+        vehicles={vehicles}
+      />
+    </div>
+  );
+}
+
+function VehicleAssignmentModal({
+  open,
+  onClose,
+  onAssign,
+  vehicles,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onAssign: (vehicleId: string) => void;
+  vehicles: any[];
+}) {
+  const [selectedId, setSelectedId] = useState<string>("");
+
+  if (!open) return null;
+
+  const displayVehicles =
+    vehicles.length > 0
+      ? vehicles
+      : [
+          { _id: "v1", modelName: "Toyota", licensePlate: "Corolla Altis 2022", year: 2022 },
+          { _id: "v2", modelName: "Honda", licensePlate: "CR-V 2021", year: 2021 },
+          { _id: "v3", modelName: "Hyundai", licensePlate: "Tucson 2020", year: 2020 },
+        ];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-md space-y-5 rounded-[28px] border border-border bg-card p-6 shadow-2xl sm:p-7">
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-xl font-extrabold text-foreground">Select Vehicle and Assign</h2>
+            <p className="mt-1 text-xs text-muted-foreground">Choose a vehicle from the list below</p>
+          </div>
+          <button
+            onClick={onClose}
+            className="grid size-8 place-items-center rounded-full bg-muted text-muted-foreground hover:bg-muted/80"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+
+        {/* Header Card */}
+        <div className="flex items-center gap-3.5 rounded-2xl bg-muted/60 p-4">
+          <div className="grid size-11 place-items-center rounded-xl bg-amber-100 text-amber-600">
+            <Car className="size-5" />
+          </div>
+          <div>
+            <h3 className="text-xs font-bold text-foreground">Available Vehicles</h3>
+            <p className="text-[11px] text-muted-foreground">Select a vehicle to continue</p>
+          </div>
+        </div>
+
+        {/* Vehicle Radio Options */}
+        <div className="max-h-64 space-y-3 overflow-y-auto pr-1">
+          {displayVehicles.map((v) => {
+            const isSelected = selectedId === v._id;
+            return (
+              <div
+                key={v._id}
+                onClick={() => setSelectedId(v._id)}
+                className={`flex cursor-pointer items-center gap-3.5 rounded-2xl border p-4 transition-all ${
+                  isSelected
+                    ? "border-amber-500 bg-amber-50/20 ring-1 ring-amber-500"
+                    : "border-border bg-card hover:border-amber-200 hover:bg-muted/30"
+                }`}
+              >
+                <div
+                  className={`grid size-5 shrink-0 place-items-center rounded-full border-2 transition-all ${
+                    isSelected ? "border-amber-500 bg-amber-500" : "border-muted-foreground/40"
+                  }`}
+                >
+                  {isSelected && <div className="size-2 rounded-full bg-white" />}
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-foreground">{v.modelName}</h4>
+                  <p className="text-xs text-muted-foreground">
+                    {v.licensePlate} {v.year ? `· ${v.year}` : ""}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Assign Button */}
+        <div className="pt-2">
+          <button
+            type="button"
+            disabled={!selectedId}
+            onClick={() => onAssign(selectedId)}
+            className="w-full rounded-2xl bg-amber-500 py-3.5 text-sm font-bold text-white shadow-md transition hover:bg-amber-600 active:scale-[0.99] disabled:opacity-50"
+          >
+            Assign
           </button>
         </div>
       </div>

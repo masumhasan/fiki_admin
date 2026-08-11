@@ -163,15 +163,100 @@ const tabs = [
   "Rejected",
 ] as const;
 
+import { useEffect } from "react";
+import { getAdminTripsApi, getAdminDriversApi, assignDriverApi } from "@/lib/api";
+
 export function RideRequestsPage() {
   const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>("All");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
+  const [liveTrips, setLiveTrips] = useState<RideRequest[] | null>(null);
+  const [availableDrivers, setAvailableDrivers] = useState<any[]>([]);
+
+  const fetchTripsAndDrivers = () => {
+    if (typeof window !== "undefined") {
+      const token = window.localStorage.getItem("fiki_auth_token");
+      if (token) {
+        getAdminTripsApi(token).then((res) => {
+          if (res.success && res.data && Array.isArray(res.data.trips)) {
+            const mapped: RideRequest[] = res.data.trips.map((t: any) => {
+              const passengerName = t.passengerId?.name || "Passenger";
+              const driverName = t.driverId?.name;
+
+              let statusStr: RequestStatus = "Pending";
+              if (t.status === "COMPLETED") statusStr = "Completed";
+              else if (t.status === "QUOTE_ACCEPTED") statusStr = "Need driver";
+              else if (t.status === "QUOTE_DENIED" || t.status === "CANCELLED") statusStr = "Rejected";
+              else if (t.status === "QUOTE_SENT") statusStr = "Approved";
+              else if (t.status === "ACCEPTED" || t.status === "DRIVER_ARRIVING" || t.status === "DRIVER_ARRIVED") statusStr = "Approved";
+              else if (t.status === "IN_PROGRESS") statusStr = "Scheduled";
+              else if (t.status === "QUOTE_COUNTERED") statusStr = "Pending";
+              else if (t.status === "REQUESTED") statusStr = driverName ? "Approved" : "Pending";
+
+              return {
+                id: `RR-${t._id.substring(t._id.length - 4).toUpperCase()}`,
+                rawId: t._id,
+                passenger: passengerName,
+                phone: t.passengerId?.phone || "(555) 000-0000",
+                initials: passengerName.split(" ").map((n: string) => n[0]).join("").toUpperCase().substring(0, 2) || "PA",
+                avatar: "bg-violet-600",
+                pickup: t.pickupLocation?.address || "Pickup Address",
+                destination: t.dropoffLocation?.address || "Dropoff Address",
+                date: t.scheduledTime
+                  ? new Date(t.scheduledTime).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                  : t.createdAt ? new Date(t.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—",
+                time: t.scheduledTime
+                  ? new Date(t.scheduledTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                  : t.createdAt ? new Date(t.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—",
+                roundTrip: false,
+                driver: driverName,
+                status: statusStr,
+                backendStatus: t.status,
+                quotedFare: t.quotedFare,
+                counterOffer: t.counterOffer,
+              };
+            });
+            setLiveTrips(mapped);
+          }
+        });
+
+        getAdminDriversApi(token).then((res) => {
+          if (res.success && res.data && Array.isArray(res.data.drivers)) {
+            setAvailableDrivers(res.data.drivers);
+          }
+        });
+      }
+    }
+  };
+
+  useEffect(() => {
+    fetchTripsAndDrivers();
+  }, []);
+
+  const handleAssignDriver = async (tripId: string) => {
+    if (typeof window !== "undefined") {
+      const token = window.localStorage.getItem("fiki_auth_token");
+      if (token) {
+        // Pick first available driver or default
+        const targetDriver = availableDrivers[0];
+        const driverId = targetDriver ? targetDriver._id : "6a797c271e262a8ed9ae2b25";
+        const res = await assignDriverApi(token, tripId, driverId);
+        if (res.success) {
+          fetchTripsAndDrivers();
+        }
+      }
+    }
+  };
+
+  const activeRequestsList = (liveTrips || requests).map((req: any) => ({
+    ...req,
+    onAssign: handleAssignDriver,
+  }));
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    return requests.filter((request) => {
+    return activeRequestsList.filter((request) => {
       const matchesTab = activeTab === "All" || request.status === activeTab;
       const matchesQuery =
         !normalized ||
@@ -183,7 +268,7 @@ export function RideRequestsPage() {
         ].some((value) => value.toLowerCase().includes(normalized));
       return matchesTab && matchesQuery;
     });
-  }, [activeTab, query]);
+  }, [activeRequestsList, activeTab, query]);
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const visibleRequests = filtered.slice(
     (page - 1) * pageSize,
@@ -202,10 +287,11 @@ export function RideRequestsPage() {
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap gap-1">
               {tabs.map((tab) => {
+                const dataSource = liveTrips || requests;
                 const count =
                   tab === "All"
-                    ? requests.length
-                    : requests.filter((request) => request.status === tab)
+                    ? dataSource.length
+                    : dataSource.filter((request) => request.status === tab)
                         .length;
                 return (
                   <button
@@ -412,6 +498,7 @@ function RequestRow({
           <button
             className="inline-flex items-center gap-1 font-bold text-brand-yellow-hover"
             type="button"
+            onClick={() => (request as any).onAssign?.((request as any).rawId)}
           >
             <UserPlus className="size-3.5" />
             Assign
@@ -425,7 +512,7 @@ function RequestRow({
         <Link
           aria-label={`View ${request.id}`}
           className="inline-grid size-9 place-items-center rounded-lg border border-border text-muted-foreground transition hover:border-primary/30 hover:bg-muted hover:text-primary"
-          href={`/ride-requests/${request.id}`}
+          href={`/ride-requests/${(request as any).rawId || request.id}`}
         >
           <Eye className="size-4" />
         </Link>
@@ -482,7 +569,7 @@ function RequestCard({
       <div className="ml-7 mt-4 flex items-center gap-2">
         <Link
           className="flex h-9 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-bold text-primary hover:bg-muted"
-          href={`/ride-requests/${request.id}`}
+          href={`/ride-requests/${(request as any).rawId || request.id}`}
         >
           <Eye className="size-3.5" />
           View details

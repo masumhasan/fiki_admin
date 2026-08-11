@@ -4,6 +4,7 @@ import {
   BarChart3,
   Bell,
   CalendarDays,
+  CarFront,
   ChevronDown,
   ClipboardList,
   LayoutDashboard,
@@ -28,6 +29,7 @@ const navigation = [
   { label: "Schedule", href: "/schedule", icon: CalendarDays },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
   { label: "Vehicle Report", href: "/vehicle-reports", icon: ClipboardList },
+  { label: "Vehicles", href: "/vehicles", icon: CarFront },
 ];
 
 export function DashboardShell({ children }: { children: ReactNode }) {

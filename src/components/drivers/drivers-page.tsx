@@ -10,16 +10,18 @@ import {
   Mail,
   Phone,
   Search,
-  Star,
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { getAdminDriversApi, deleteDriverApi } from "@/lib/api";
 
 type DriverStatus = "Active" | "On trip" | "Off duty";
 
 type Driver = {
   id: string;
+  mongoId: string;
   name: string;
   initials: string;
   avatar: string;
@@ -32,9 +34,10 @@ type Driver = {
   rating: string;
 };
 
-const drivers: Driver[] = [
+const defaultDrivers: Driver[] = [
   {
     id: "D-001",
+    mongoId: "D-001",
     name: "Marcus Williams",
     initials: "MW",
     avatar: "bg-primary",
@@ -48,6 +51,7 @@ const drivers: Driver[] = [
   },
   {
     id: "D-002",
+    mongoId: "D-002",
     name: "Aisha Patel",
     initials: "AP",
     avatar: "bg-violet-600",
@@ -61,6 +65,7 @@ const drivers: Driver[] = [
   },
   {
     id: "D-003",
+    mongoId: "D-003",
     name: "Robert Thompson",
     initials: "RT",
     avatar: "bg-blue-600",
@@ -72,106 +77,14 @@ const drivers: Driver[] = [
     trips: 18,
     rating: "4.7",
   },
-  {
-    id: "D-004",
-    name: "Linda Chen",
-    initials: "LC",
-    avatar: "bg-red-500",
-    joined: "Feb 2024",
-    status: "Active",
-    vehicle: "Dodge Grand Caravan",
-    plate: "FKT-4567",
-    phone: "(555) 456-7890",
-    trips: 22,
-    rating: "4.9",
-  },
-  {
-    id: "D-005",
-    name: "James Morrison",
-    initials: "JM",
-    avatar: "bg-cyan-600",
-    joined: "Apr 2024",
-    status: "Off duty",
-    vehicle: "Toyota Highlander",
-    plate: "FKT-5678",
-    phone: "(555) 567-8901",
-    trips: 19,
-    rating: "4.6",
-  },
 ];
-
-const applications = [
-  {
-    id: "APP-2024-001",
-    name: "Marcus Johnson",
-    phone: "(305) 847-2291",
-    email: "marcus.johnson@gmail.com",
-    type: "Ambulatory",
-    license: "CDL-A F3847291",
-    start: "Jan 15, 2025",
-    background: "Cleared",
-    submitted: "Dec 28, 2024",
-    status: "Pending review",
-  },
-  {
-    id: "APP-2024-007",
-    name: "Robert Okafor",
-    phone: "(954) 772-3349",
-    email: "r.okafor@gmail.com",
-    type: "Ambulatory",
-    license: "CDL-A R8812738",
-    start: "Jan 28, 2025",
-    background: "Cleared",
-    submitted: "Dec 8, 2024",
-    status: "Pending review",
-  },
-  {
-    id: "APP-2024-003",
-    name: "David Chen",
-    phone: "(954) 221-7784",
-    email: "dchen1987@yahoo.com",
-    type: "Ambulatory",
-    license: "CDL-A D1029384",
-    start: "Jan 20, 2025",
-    background: "Pending",
-    submitted: "Dec 20, 2024",
-    status: "Interview scheduled",
-  },
-  {
-    id: "APP-2024-004",
-    name: "Emily Rodriguez",
-    phone: "(561) 903-4421",
-    email: "emily.r@gmail.com",
-    type: "Wheelchair",
-    license: "CDL-B E8831029",
-    start: "Mar 1, 2025",
-    background: "Failed",
-    submitted: "Dec 18, 2024",
-    status: "Rejected",
-  },
-  {
-    id: "APP-2024-006",
-    name: "Lisa Park",
-    phone: "(786) 441-2210",
-    email: "lisa.park@hotmail.com",
-    type: "Wheelchair",
-    license: "CDL-B L5512987",
-    start: "Feb 15, 2025",
-    background: "Pending",
-    submitted: "Dec 10, 2024",
-    status: "Missing docs",
-  },
-];
-
-import { useEffect } from "react";
-import { getAdminDriversApi } from "@/lib/api";
 
 export function DriversPage() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"All" | DriverStatus>("All");
   const [liveDrivers, setLiveDrivers] = useState<Driver[] | null>(null);
 
-  useEffect(() => {
+  const fetchDrivers = () => {
     if (typeof window !== "undefined") {
       const token = window.localStorage.getItem("fiki_auth_token");
       if (token) {
@@ -198,6 +111,7 @@ export function DriversPage() {
 
               return {
                 id: `D-${String(idx + 1).padStart(3, "0")}`,
+                mongoId: d.id || d._id,
                 name: d.name || "Driver",
                 initials,
                 avatar: "bg-primary",
@@ -217,9 +131,28 @@ export function DriversPage() {
         });
       }
     }
+  };
+
+  useEffect(() => {
+    fetchDrivers();
   }, []);
 
-  const activeDriverList = liveDrivers || drivers;
+  const handleDeleteDriver = async (id: string) => {
+    if (typeof window !== "undefined") {
+      const token = window.localStorage.getItem("fiki_auth_token");
+      if (token && id) {
+        const res = await deleteDriverApi(token, id);
+        if (res.success) {
+          if (liveDrivers) {
+            setLiveDrivers(liveDrivers.filter((d) => d.mongoId !== id && d.id !== id));
+          }
+          fetchDrivers();
+        }
+      }
+    }
+  };
+
+  const activeDriverList = liveDrivers || defaultDrivers;
 
   const filteredDrivers = useMemo(
     () =>
@@ -294,7 +227,7 @@ export function DriversPage() {
       </section>
       <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
         {filteredDrivers.map((driver) => (
-          <DriverCard driver={driver} key={driver.id} />
+          <DriverCard driver={driver} key={driver.id} onDelete={handleDeleteDriver} />
         ))}
       </section>
     </div>
@@ -324,7 +257,7 @@ function Summary({
   );
 }
 
-function DriverCard({ driver }: { driver: Driver }) {
+function DriverCard({ driver, onDelete }: { driver: Driver; onDelete: (id: string) => void }) {
   return (
     <article className="rounded-xl border border-[#e1e6ee] bg-card p-5 shadow-[0_4px_14px_rgba(15,37,74,.04)]">
       <div className="flex items-start justify-between">
@@ -352,14 +285,17 @@ function DriverCard({ driver }: { driver: Driver }) {
         />
       </dl>
       <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
-        <span className="flex items-center gap-1.5 text-sm">
-          <Star className="size-4 fill-secondary text-secondary" />
-          <strong>{driver.rating}</strong>
-          <span className="text-muted-foreground">rating</span>
-        </span>
+        <button
+          type="button"
+          onClick={() => onDelete(driver.mongoId || driver.id)}
+          className="flex h-9 items-center gap-2 rounded-lg border border-red-200 bg-red-50/50 px-3 text-xs font-bold text-red-600 transition hover:bg-red-100 hover:text-red-700"
+        >
+          <Trash2 className="size-4" />
+          Delete
+        </button>
         <Link
           className="flex h-9 items-center gap-2 rounded-lg border border-border px-3 text-xs font-bold text-primary transition hover:bg-muted"
-          href={`/drivers/${driver.id}`}
+          href={`/drivers/${driver.mongoId || driver.id}`}
         >
           <Eye className="size-4" />
           View profile
@@ -408,6 +344,33 @@ function DriverStatus({ status }: { status: DriverStatus }) {
 }
 
 import { getDriverApplicationsApi } from "@/lib/api";
+
+const applications = [
+  {
+    id: "APP-2024-001",
+    name: "Marcus Johnson",
+    phone: "(305) 847-2291",
+    email: "marcus.johnson@gmail.com",
+    type: "Ambulatory",
+    license: "CDL-A F3847291",
+    start: "Jan 15, 2025",
+    background: "Cleared",
+    submitted: "Dec 28, 2024",
+    status: "Pending review",
+  },
+  {
+    id: "APP-2024-007",
+    name: "Robert Okafor",
+    phone: "(954) 772-3349",
+    email: "r.okafor@gmail.com",
+    type: "Ambulatory",
+    license: "CDL-A R8812738",
+    start: "Jan 28, 2025",
+    background: "Cleared",
+    submitted: "Dec 8, 2024",
+    status: "Pending review",
+  },
+];
 
 export function ApplicationsTable() {
   const [query, setQuery] = useState("");

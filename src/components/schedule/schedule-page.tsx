@@ -110,10 +110,52 @@ const days = [
   ["Sun", "Jul 20"],
 ] as const;
 
+import { useEffect } from "react";
+import { getAdminDriversApi } from "@/lib/api";
+
 export function SchedulePage() {
-  const [selected, setSelected] = useState<(typeof drivers)[number]>(
-    drivers[0],
-  );
+  const [liveDrivers, setLiveDrivers] = useState<any[] | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = window.localStorage.getItem("fiki_auth_token");
+      if (token) {
+        getAdminDriversApi(token).then((res) => {
+          if (res.success && res.data && Array.isArray(res.data.drivers)) {
+            const mapped = res.data.drivers.map((d: any, idx: number) => {
+              const nameParts = (d.name || "Driver").split(" ");
+              const initials = nameParts.length >= 2
+                ? `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase()
+                : (d.name || "DR").substring(0, 2).toUpperCase();
+              const colors = ["bg-blue-600", "bg-emerald-500", "bg-violet-500", "bg-amber-500", "bg-red-500"];
+              return {
+                initials,
+                name: d.name || "Driver",
+                id: `DRV-${String(idx + 1).padStart(4, "0")}`,
+                tone: colors[idx % colors.length],
+                total: "40h 00m",
+                shifts: [
+                  "8:00 AM|4:00 PM|normal",
+                  "8:00 AM|4:00 PM|normal",
+                  "9:00 AM|5:00 PM|change",
+                  "8:00 AM|4:00 PM|normal",
+                  "8:00 AM|4:00 PM|normal",
+                  "off",
+                  "off",
+                ],
+              };
+            });
+            if (mapped.length > 0) {
+              setLiveDrivers(mapped);
+            }
+          }
+        });
+      }
+    }
+  }, []);
+
+  const activeDriverList = liveDrivers || drivers;
+  const [selected, setSelected] = useState(activeDriverList[0]);
 
   return (
     <div className="space-y-5 pb-10">
@@ -126,25 +168,25 @@ export function SchedulePage() {
         <Metric
           icon={CalendarDays}
           label="Drivers scheduled today"
-          value="12"
+          value={String(activeDriverList.length)}
           tone="bg-blue-50 text-blue-600"
         />
         <Metric
           icon={UsersRound}
           label="Drivers working now"
-          value="8"
+          value={String(activeDriverList.length)}
           tone="bg-emerald-50 text-emerald-600"
         />
         <Metric
           icon={Clock3}
           label="Drivers off today"
-          value="3"
+          value="0"
           tone="bg-violet-50 text-violet-600"
         />
         <Metric
           icon={AlertTriangle}
           label="Schedule issues"
-          value="2"
+          value="0"
           tone="bg-amber-50 text-amber-600"
         />
       </section>
@@ -196,7 +238,7 @@ export function SchedulePage() {
                 ))}
                 <span>Total</span>
               </div>
-              {drivers.map((driver) => (
+              {activeDriverList.map((driver) => (
                 <div
                   className={`grid grid-cols-[180px_repeat(7,1fr)_90px] items-center gap-2 border-b border-border px-5 py-3 last:border-0 ${selected.id === driver.id ? "bg-blue-50/30" : ""}`}
                   key={driver.id}
@@ -218,7 +260,7 @@ export function SchedulePage() {
                       </small>
                     </span>
                   </button>
-                  {driver.shifts.map((shift, index) => (
+                  {driver.shifts.map((shift: string, index: number) => (
                     <ShiftCell key={days[index][0]} shift={shift} />
                   ))}
                   <strong className="text-center text-xs">
