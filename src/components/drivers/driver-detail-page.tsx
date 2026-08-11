@@ -65,9 +65,35 @@ const rideHistory = [
   ],
 ];
 
+import { useEffect } from "react";
+import { getAdminDriversApi } from "@/lib/api";
+
 export function DriverDetailPage({ driverId }: { driverId: string }) {
   const [tab, setTab] = useState<"profile" | "earnings">("profile");
   const [shift, setShift] = useState("Morning");
+  const [liveDriver, setLiveDriver] = useState<any>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const token = window.localStorage.getItem("fiki_auth_token");
+      if (token) {
+        getAdminDriversApi(token).then((res) => {
+          if (res.success && res.data && Array.isArray(res.data.drivers)) {
+            const found = res.data.drivers.find(
+              (d: any) => d._id === driverId || d.driverId === driverId
+            ) || res.data.drivers[0];
+            if (found) {
+              setLiveDriver(found);
+            }
+          }
+        });
+      }
+    }
+  }, [driverId]);
+
+  const assignedVehicleText = liveDriver?.vehicle
+    ? `${liveDriver.vehicle.model || liveDriver.vehicle.make || "BMW X5"} — ${liveDriver.vehicle.licensePlate || "9988-12345"}`
+    : "BMW X5 — 9988-12345";
 
   return (
     <div className="space-y-6">
@@ -83,7 +109,7 @@ export function DriverDetailPage({ driverId }: { driverId: string }) {
             </span>
           </div>
           <p className="mt-1 text-sm">
-            <strong className="text-foreground">Marcus Williams</strong>
+            <strong className="text-foreground">{liveDriver?.userId?.name || "Marcus Williams"}</strong>
             <span className="text-muted-foreground">
               {" "}
               · {driverId} · Morning shift
@@ -124,7 +150,7 @@ export function DriverDetailPage({ driverId }: { driverId: string }) {
       </div>
 
       {tab === "profile" ? (
-        <ProfileTab driverId={driverId} shift={shift} setShift={setShift} />
+        <ProfileTab driverId={driverId} shift={shift} setShift={setShift} assignedVehicleText={assignedVehicleText} driverName={liveDriver?.userId?.name} />
       ) : (
         <EarningsTab />
       )}
@@ -136,20 +162,24 @@ function ProfileTab({
   driverId,
   setShift,
   shift,
+  assignedVehicleText,
+  driverName,
 }: {
   driverId: string;
   setShift: (value: string) => void;
   shift: string;
+  assignedVehicleText: string;
+  driverName?: string;
 }) {
   return (
     <div className="grid items-start gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
       <aside className={`${cardClass} xl:sticky xl:top-24`}>
         <div className="text-center">
           <span className="mx-auto grid size-24 place-items-center rounded-2xl bg-primary text-3xl font-bold text-primary-foreground">
-            MW
+            {driverName ? driverName.split(" ").map((n: string) => n[0]).join("").toUpperCase().substring(0, 2) : "MW"}
           </span>
           <h2 className="mt-5 text-xl font-bold text-foreground">
-            Marcus Williams
+            {driverName || "Marcus Williams"}
           </h2>
           <p className="mt-1 text-xs text-muted-foreground">{driverId}</p>
           <span className="mt-3 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-bold text-emerald-700">
@@ -161,20 +191,15 @@ function ProfileTab({
           <Contact icon={Phone} value="+1 (555) 123-4567" />
           <Contact icon={Mail} value="marcus.w@fiki.app" />
           <Contact icon={MapPin} value="Zone B — Central District" />
-          <Contact icon={CarFront} value="Toyota Sienna — FKT-1234" />
+          <Contact icon={CarFront} value={assignedVehicleText} />
           <Contact icon={Clock3} value={`${shift} shift`} />
-        </div>
-        <div className="mt-5 flex items-center justify-center gap-1.5 rounded-xl bg-amber-50 py-3 text-sm">
-          <Star className="size-4 fill-secondary text-secondary" />
-          <strong>4.9</strong>
-          <span className="text-muted-foreground">driver rating</span>
         </div>
       </aside>
       <div className="space-y-5">
         <InformationCard
           title="Personal information"
           items={[
-            ["Full name", "Marcus Williams"],
+            ["Full name", driverName || "Marcus Williams"],
             ["Driver ID", driverId],
             ["Phone number", "+1 (555) 123-4567"],
             ["Email address", "marcus.w@fiki.app"],
@@ -189,7 +214,7 @@ function ProfileTab({
             ["License expiry", "Mar 20, 2028"],
             ["Join date", "Mar 12, 2024"],
             ["Employment status", "Full-time"],
-            ["Assigned vehicle", "Toyota Sienna — FKT-1234"],
+            ["Assigned vehicle", assignedVehicleText],
             ["Assigned area", "Zone B — Central"],
           ]}
         />

@@ -107,6 +107,22 @@ export async function createTripApi(token: string, tripData: { passengerId: stri
   }
 }
 
+export async function respondToCounterOfferApi(token: string, id: string, action: "ACCEPT" | "DECLINE") {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/trips/${id}/counter-response`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ action }),
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to respond to counter offer" } };
+  }
+}
+
 export async function getAdminAnalyticsApi(token: string) {
   try {
     const res = await fetch(`${API_BASE_URL}/admin/analytics`, {
@@ -153,5 +169,119 @@ export async function getDriverApplicationsApi(token: string) {
     return await res.json();
   } catch (error) {
     return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to fetch driver applications" } };
+  }
+}
+
+export async function getVehiclesApi(token: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/vehicles`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to fetch vehicles list" } };
+  }
+}
+
+export async function createVehicleApi(token: string, vehicleData: { modelName: string; licensePlate: string; vin: string; year: number }) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/vehicles`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(vehicleData),
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to add vehicle" } };
+  }
+}
+
+export async function updateVehicleApi(token: string, id: string, vehicleData: Partial<{ modelName: string; licensePlate: string; vin: string; year: number }>) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/vehicles/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(vehicleData),
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to update vehicle" } };
+  }
+}
+
+export async function deleteVehicleApi(token: string, id: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/vehicles/${id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to delete vehicle" } };
+  }
+}
+
+export async function approveDriverApplicationApi(token: string, id: string, vehicleId?: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/driver-applications/${id}/approve`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ vehicleId }),
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to approve driver application" } };
+  }
+}
+
+export async function sendQuoteApi(token: string, tripId: string, quotedFare: number, quoteNote?: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/trips/${tripId}/quote`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ quotedFare, quoteNote }),
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to send quote" } };
+  }
+}
+
+export async function getAdminTripDetailApi(token: string, tripId: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/trips/${tripId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to fetch trip detail" } };
+  }
+}
+
+export async function deleteDriverApi(token: string, id: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/drivers/${id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to delete driver" } };
   }
 }
