@@ -53,11 +53,15 @@ const tabs = [
   "Rejected",
 ] as const;
 
+import { useEffect } from "react";
+import { getAdminTripsApi, getAdminDriversApi, assignDriverApi } from "@/lib/api";
+
 export function RideRequestsPage() {
   const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>("All");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
+<<<<<<< HEAD
   const [trips, setTrips] = useState<RideRequest[]>([]);
   const [availableDrivers, setAvailableDrivers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -155,6 +159,64 @@ export function RideRequestsPage() {
       setTrips([]);
     } finally {
       setLoading(false);
+=======
+  const [liveTrips, setLiveTrips] = useState<RideRequest[] | null>(null);
+  const [availableDrivers, setAvailableDrivers] = useState<any[]>([]);
+
+  const fetchTripsAndDrivers = () => {
+    if (typeof window !== "undefined") {
+      const token = window.localStorage.getItem("fiki_auth_token");
+      if (token) {
+        getAdminTripsApi(token).then((res) => {
+          if (res.success && res.data && Array.isArray(res.data.trips)) {
+            const mapped: RideRequest[] = res.data.trips.map((t: any) => {
+              const passengerName = t.passengerId?.name || "Passenger";
+              const driverName = t.driverId?.name;
+
+              let statusStr: RequestStatus = "Pending";
+              if (t.status === "COMPLETED") statusStr = "Completed";
+              else if (t.status === "QUOTE_ACCEPTED") statusStr = "Need driver";
+              else if (t.status === "QUOTE_DENIED" || t.status === "CANCELLED") statusStr = "Rejected";
+              else if (t.status === "QUOTE_SENT") statusStr = "Approved";
+              else if (t.status === "ACCEPTED" || t.status === "DRIVER_ARRIVING" || t.status === "DRIVER_ARRIVED") statusStr = "Approved";
+              else if (t.status === "IN_PROGRESS") statusStr = "Scheduled";
+              else if (t.status === "QUOTE_COUNTERED") statusStr = "Pending";
+              else if (t.status === "REQUESTED") statusStr = driverName ? "Approved" : "Pending";
+
+              return {
+                id: `RR-${t._id.substring(t._id.length - 4).toUpperCase()}`,
+                rawId: t._id,
+                passenger: passengerName,
+                phone: t.passengerId?.phone || "(555) 000-0000",
+                initials: passengerName.split(" ").map((n: string) => n[0]).join("").toUpperCase().substring(0, 2) || "PA",
+                avatar: "bg-violet-600",
+                pickup: t.pickupLocation?.address || "Pickup Address",
+                destination: t.dropoffLocation?.address || "Dropoff Address",
+                date: t.scheduledTime
+                  ? new Date(t.scheduledTime).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                  : t.createdAt ? new Date(t.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—",
+                time: t.scheduledTime
+                  ? new Date(t.scheduledTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                  : t.createdAt ? new Date(t.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—",
+                roundTrip: false,
+                driver: driverName,
+                status: statusStr,
+                backendStatus: t.status,
+                quotedFare: t.quotedFare,
+                counterOffer: t.counterOffer,
+              };
+            });
+            setLiveTrips(mapped);
+          }
+        });
+
+        getAdminDriversApi(token).then((res) => {
+          if (res.success && res.data && Array.isArray(res.data.drivers)) {
+            setAvailableDrivers(res.data.drivers);
+          }
+        });
+      }
+>>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
     }
   };
 
@@ -163,6 +225,7 @@ export function RideRequestsPage() {
   }, []);
 
   const handleAssignDriver = async (tripId: string) => {
+<<<<<<< HEAD
     if (typeof window === "undefined") return;
     const token = window.localStorage.getItem("fiki_auth_token");
     if (!token) return;
@@ -179,6 +242,30 @@ export function RideRequestsPage() {
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     return tripsWithHandler.filter((request) => {
+=======
+    if (typeof window !== "undefined") {
+      const token = window.localStorage.getItem("fiki_auth_token");
+      if (token) {
+        // Pick first available driver or default
+        const targetDriver = availableDrivers[0];
+        const driverId = targetDriver ? targetDriver._id : "6a797c271e262a8ed9ae2b25";
+        const res = await assignDriverApi(token, tripId, driverId);
+        if (res.success) {
+          fetchTripsAndDrivers();
+        }
+      }
+    }
+  };
+
+  const activeRequestsList = (liveTrips || requests).map((req: any) => ({
+    ...req,
+    onAssign: handleAssignDriver,
+  }));
+
+  const filtered = useMemo(() => {
+    const normalized = query.trim().toLowerCase();
+    return activeRequestsList.filter((request) => {
+>>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
       const matchesTab = activeTab === "All" || request.status === activeTab;
       const matchesQuery =
         !normalized ||
@@ -187,8 +274,12 @@ export function RideRequestsPage() {
         );
       return matchesTab && matchesQuery;
     });
+<<<<<<< HEAD
   }, [tripsWithHandler, activeTab, query]);
 
+=======
+  }, [activeRequestsList, activeTab, query]);
+>>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
   const visibleRequests = filtered.slice((page - 1) * pageSize, page * pageSize);
 
@@ -204,8 +295,16 @@ export function RideRequestsPage() {
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap gap-1">
               {tabs.map((tab) => {
+                const dataSource = liveTrips || requests;
                 const count =
+<<<<<<< HEAD
                   tab === "All" ? trips.length : trips.filter((r) => r.status === tab).length;
+=======
+                  tab === "All"
+                    ? dataSource.length
+                    : dataSource.filter((request) => request.status === tab)
+                        .length;
+>>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
                 return (
                   <button
                     className={`relative -mb-px flex h-10 items-center gap-2 border-b-2 px-3 text-sm font-semibold transition-colors ${activeTab === tab ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground"}`}
@@ -403,7 +502,11 @@ function RequestRow({ serial, request }: { serial: number; request: RideRequest 
           <button
             className="inline-flex items-center gap-1 font-bold text-brand-yellow-hover"
             type="button"
+<<<<<<< HEAD
             onClick={() => request.onAssign?.(request.rawId)}
+=======
+            onClick={() => (request as any).onAssign?.((request as any).rawId)}
+>>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
           >
             <UserPlus className="size-3.5" />
             Assign
@@ -417,7 +520,11 @@ function RequestRow({ serial, request }: { serial: number; request: RideRequest 
         <Link
           aria-label={`View ${request.id}`}
           className="inline-grid size-9 place-items-center rounded-lg border border-border text-muted-foreground transition hover:border-primary/30 hover:bg-muted hover:text-primary"
+<<<<<<< HEAD
           href={`/ride-requests/${request.rawId || request.id}`}
+=======
+          href={`/ride-requests/${(request as any).rawId || request.id}`}
+>>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
         >
           <Eye className="size-4" />
         </Link>

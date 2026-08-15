@@ -9,13 +9,20 @@ import {
   MapPin,
   Route,
   Send,
+<<<<<<< HEAD
   UserPlus,
+=======
+>>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
   UserRound,
   X,
 } from "lucide-react";
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
+<<<<<<< HEAD
 import { assignDriverApi, getAdminDriversApi, getAdminTripDetailApi, respondToCounterOfferApi } from "@/lib/api";
+=======
+import { getAdminTripDetailApi, respondToCounterOfferApi } from "@/lib/api";
+>>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
 
 const card =
   "overflow-hidden rounded-xl border border-[#e1e6ee] bg-white shadow-[0_4px_14px_rgba(15,37,74,.04)]";
@@ -46,15 +53,19 @@ export default function RideRequestDetails({
   const [trip, setTrip] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+<<<<<<< HEAD
   const [drivers, setDrivers] = useState<any[]>([]);
   const [selectedDriverId, setSelectedDriverId] = useState("");
   const [assigning, setAssigning] = useState(false);
   const [assignFeedback, setAssignFeedback] = useState<{ ok: boolean; text: string } | null>(null);
+=======
+>>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const token = window.localStorage.getItem("fiki_auth_token");
     if (!token) { setLoading(false); return; }
+<<<<<<< HEAD
 
     Promise.all([
       getAdminTripDetailApi(token, id),
@@ -67,10 +78,15 @@ export default function RideRequestDetails({
         );
         setDrivers(active);
       }
+=======
+    getAdminTripDetailApi(token, id).then((res) => {
+      if (res.success && res.data) setTrip(res.data);
+>>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
       setLoading(false);
     });
   }, [id]);
 
+<<<<<<< HEAD
   async function handleAssignDriver() {
     if (!selectedDriverId) return;
     const token = window.localStorage.getItem("fiki_auth_token");
@@ -88,6 +104,8 @@ export default function RideRequestDetails({
     setAssigning(false);
   }
 
+=======
+>>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
   async function handleCounterAction(action: "ACCEPT" | "DECLINE") {
     if (typeof window === "undefined") return;
     const token = window.localStorage.getItem("fiki_auth_token");
@@ -225,7 +243,11 @@ export default function RideRequestDetails({
                   <Label value={pickup} label="Pickup address" />
                   <Label value={dropoff} label="Destination address" />
                   <Label value={scheduledAt} label="Scheduled time" />
+<<<<<<< HEAD
                   <Label value={trip.driverId?.name || "Not assigned"} label="Assigned driver" />
+=======
+                  <Label value={trip.driver?.name || "Not assigned"} label="Assigned driver" />
+>>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
                 </div>
                 <div className="border-t p-4">
                   <div className="mt-2 grid gap-3 md:grid-cols-2">
@@ -302,6 +324,7 @@ export default function RideRequestDetails({
                 <p className="mt-2 text-sm font-bold">{passengerName}</p>
                 <p className="text-[12px] text-[#8090a5]">{passengerEmail}</p>
               </article>
+<<<<<<< HEAD
 
               {/* Assign Driver */}
               {!["COMPLETED", "CANCELLED", "QUOTE_DENIED"].includes(status) && (
@@ -368,6 +391,8 @@ export default function RideRequestDetails({
                   </div>
                 </article>
               )}
+=======
+>>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
             </aside>
           </div>
 
