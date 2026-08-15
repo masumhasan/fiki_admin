@@ -9,12 +9,13 @@ import {
   MapPin,
   Route,
   Send,
+  UserPlus,
   UserRound,
   X,
 } from "lucide-react";
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
-import { getAdminTripDetailApi, respondToCounterOfferApi } from "@/lib/api";
+import { assignDriverApi, getAdminDriversApi, getAdminTripDetailApi, respondToCounterOfferApi } from "@/lib/api";
 
 const card =
   "overflow-hidden rounded-xl border border-[#e1e6ee] bg-white shadow-[0_4px_14px_rgba(15,37,74,.04)]";
@@ -45,16 +46,47 @@ export default function RideRequestDetails({
   const [trip, setTrip] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
+  const [drivers, setDrivers] = useState<any[]>([]);
+  const [selectedDriverId, setSelectedDriverId] = useState("");
+  const [assigning, setAssigning] = useState(false);
+  const [assignFeedback, setAssignFeedback] = useState<{ ok: boolean; text: string } | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const token = window.localStorage.getItem("fiki_auth_token");
     if (!token) { setLoading(false); return; }
-    getAdminTripDetailApi(token, id).then((res) => {
-      if (res.success && res.data) setTrip(res.data);
+
+    Promise.all([
+      getAdminTripDetailApi(token, id),
+      getAdminDriversApi(token, { approvalStatus: "APPROVED", limit: 100 }),
+    ]).then(([tripRes, driversRes]) => {
+      if (tripRes.success && tripRes.data) setTrip(tripRes.data);
+      if (driversRes.success && driversRes.data?.drivers) {
+        const active = driversRes.data.drivers.filter(
+          (d: any) => d.accountStatus === "ACTIVE" || d.profile?.approvalStatus === "APPROVED"
+        );
+        setDrivers(active);
+      }
       setLoading(false);
     });
   }, [id]);
+
+  async function handleAssignDriver() {
+    if (!selectedDriverId) return;
+    const token = window.localStorage.getItem("fiki_auth_token");
+    if (!token) return;
+    setAssigning(true);
+    setAssignFeedback(null);
+    const res = await assignDriverApi(token, id, selectedDriverId);
+    if (res.success) {
+      const refreshed = await getAdminTripDetailApi(token, id);
+      if (refreshed.success && refreshed.data) setTrip(refreshed.data);
+      setAssignFeedback({ ok: true, text: "Driver assigned successfully." });
+    } else {
+      setAssignFeedback({ ok: false, text: res.error?.message || "Failed to assign driver." });
+    }
+    setAssigning(false);
+  }
 
   async function handleCounterAction(action: "ACCEPT" | "DECLINE") {
     if (typeof window === "undefined") return;
@@ -193,7 +225,7 @@ export default function RideRequestDetails({
                   <Label value={pickup} label="Pickup address" />
                   <Label value={dropoff} label="Destination address" />
                   <Label value={scheduledAt} label="Scheduled time" />
-                  <Label value={trip.driver?.name || "Not assigned"} label="Assigned driver" />
+                  <Label value={trip.driverId?.name || "Not assigned"} label="Assigned driver" />
                 </div>
                 <div className="border-t p-4">
                   <div className="mt-2 grid gap-3 md:grid-cols-2">
@@ -270,6 +302,72 @@ export default function RideRequestDetails({
                 <p className="mt-2 text-sm font-bold">{passengerName}</p>
                 <p className="text-[12px] text-[#8090a5]">{passengerEmail}</p>
               </article>
+
+              {/* Assign Driver */}
+              {!["COMPLETED", "CANCELLED", "QUOTE_DENIED"].includes(status) && (
+                <article className={card}>
+                  <div className="flex items-center gap-2 border-b px-4 py-3">
+                    <span className="grid size-6 place-items-center rounded-full bg-[#edf2fb] text-[#365382]">
+                      <UserPlus className="size-3.5" />
+                    </span>
+                    <div>
+                      <h2 className="text-sm font-bold text-[#2a3b54]">Assign Driver</h2>
+                      <p className="text-[11px] text-[#8a97aa]">Select an active driver for this trip</p>
+                    </div>
+                  </div>
+                  <div className="space-y-3 p-4">
+                    {trip.driverId?.name && (
+                      <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2">
+                        <CheckCircle2 className="size-4 shrink-0 text-emerald-600" />
+                        <div>
+                          <p className="text-[11px] font-bold text-emerald-700">Currently assigned</p>
+                          <p className="text-[12px] font-semibold text-[#354255]">{trip.driverId.name}</p>
+                        </div>
+                      </div>
+                    )}
+                    <div>
+                      <label className="text-[11px] font-bold uppercase text-[#8190a5]" htmlFor="driver-select">
+                        Select driver
+                      </label>
+                      <select
+                        id="driver-select"
+                        className="mt-1.5 h-10 w-full rounded-lg border border-[#dce5f0] bg-white px-3 text-[13px] text-[#354255] outline-none focus:border-[#173d76] focus:ring-2 focus:ring-[#173d76]/10"
+                        value={selectedDriverId}
+                        onChange={(e) => { setSelectedDriverId(e.target.value); setAssignFeedback(null); }}
+                        disabled={assigning}
+                      >
+                        <option value="">— Choose a driver —</option>
+                        {drivers.map((d: any) => (
+                          <option key={d.id || d._id} value={d.id || d._id}>
+                            {d.name}
+                            {d.profile?.vehicle?.licensePlate ? ` (${d.profile.vehicle.licensePlate})` : ""}
+                          </option>
+                        ))}
+                      </select>
+                      {drivers.length === 0 && (
+                        <p className="mt-1.5 text-[11px] text-[#8090a5]">No active drivers found.</p>
+                      )}
+                    </div>
+                    {assignFeedback && (
+                      <p className={`text-[11px] font-semibold ${assignFeedback.ok ? "text-emerald-600" : "text-red-600"}`}>
+                        {assignFeedback.text}
+                      </p>
+                    )}
+                    <button
+                      onClick={handleAssignDriver}
+                      disabled={!selectedDriverId || assigning}
+                      className="flex h-9 w-full items-center justify-center gap-2 rounded-lg bg-[#173d76] text-xs font-bold text-white transition hover:bg-[#0d2c58] disabled:opacity-50"
+                      type="button"
+                    >
+                      {assigning ? (
+                        <><LoaderCircle className="size-3.5 animate-spin" /> Assigning…</>
+                      ) : (
+                        <><UserPlus className="size-3.5" /> Confirm Assignment</>
+                      )}
+                    </button>
+                  </div>
+                </article>
+              )}
             </aside>
           </div>
 

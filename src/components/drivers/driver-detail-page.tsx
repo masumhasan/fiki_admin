@@ -8,6 +8,7 @@ import {
   Clock3,
   DollarSign,
   Info,
+  LoaderCircle,
   Mail,
   MapPin,
   Phone,
@@ -15,85 +16,70 @@ import {
   WalletCards,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
-
-const rideHistory = [
-  [
-    "Jul 27",
-    "TRP-1001",
-    "Maria Chen",
-    "Standard",
-    "123 Main St",
-    "Miami Airport",
-    "$3",
-  ],
-  [
-    "Jul 27",
-    "TRP-1002",
-    "James Wilson",
-    "Express",
-    "45 Park Ave",
-    "Brickell City",
-    "$3",
-  ],
-  [
-    "Jul 26",
-    "TRP-1003",
-    "Sarah Johnson",
-    "Standard",
-    "789 Oak Blvd",
-    "Wynwood Arts",
-    "$3",
-  ],
-  [
-    "Jul 26",
-    "TRP-1004",
-    "Robert Davis",
-    "Standard",
-    "321 Elm St",
-    "Coral Gables",
-    "$3",
-  ],
-  [
-    "Jul 25",
-    "TRP-1005",
-    "Emily Martinez",
-    "Express",
-    "654 Pine Rd",
-    "South Beach",
-    "$3",
-  ],
-];
-
-import { useEffect } from "react";
-import { getAdminDriversApi } from "@/lib/api";
+import { useEffect, useState } from "react";
+import { getAdminDriverDetailApi } from "@/lib/api";
 
 export function DriverDetailPage({ driverId }: { driverId: string }) {
   const [tab, setTab] = useState<"profile" | "earnings">("profile");
-  const [shift, setShift] = useState("Morning");
-  const [liveDriver, setLiveDriver] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [driver, setDriver] = useState<any>(null);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const token = window.localStorage.getItem("fiki_auth_token");
-      if (token) {
-        getAdminDriversApi(token).then((res) => {
-          if (res.success && res.data && Array.isArray(res.data.drivers)) {
-            const found = res.data.drivers.find(
-              (d: any) => d._id === driverId || d.driverId === driverId
-            ) || res.data.drivers[0];
-            if (found) {
-              setLiveDriver(found);
-            }
-          }
-        });
-      }
-    }
+    if (typeof window === "undefined") return;
+    const token = window.localStorage.getItem("fiki_auth_token");
+    if (!token) { setLoading(false); return; }
+    getAdminDriverDetailApi(token, driverId).then((res) => {
+      if (res.success && res.data) setDriver(res.data);
+      setLoading(false);
+    });
   }, [driverId]);
 
-  const assignedVehicleText = liveDriver?.vehicle
-    ? `${liveDriver.vehicle.model || liveDriver.vehicle.make || "BMW X5"} — ${liveDriver.vehicle.licensePlate || "9988-12345"}`
-    : "BMW X5 — 9988-12345";
+  const name = driver?.name || "—";
+  const email = driver?.email || "—";
+  const phone = driver?.phone || "—";
+  const accountStatus = driver?.accountStatus || "—";
+  const isActive = accountStatus === "ACTIVE";
+  const createdAt = driver?.createdAt
+    ? new Date(driver.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    : "—";
+
+  const profile = driver?.profile || null;
+  const licenseNumber = profile?.licenseNumber || "—";
+
+  const vehicle = profile?.vehicle;
+  const vehicleText = vehicle
+    ? [vehicle.make, vehicle.model].filter(Boolean).join(" ") + (vehicle.licensePlate ? ` — ${vehicle.licensePlate}` : "")
+    : "—";
+
+  const rating = profile?.rating != null ? profile.rating.toFixed(1) : "—";
+  const completedTrips: any[] = (driver?.trips || []).filter((t: any) => t.status === "COMPLETED");
+  const allTrips: any[] = driver?.trips || [];
+  const stats = driver?.stats || { completedTrips: 0, totalTrips: 0, totalFare: 0 };
+
+  const statusColors: Record<string, string> = {
+    ACTIVE: "bg-emerald-50 text-emerald-700",
+    SUSPENDED: "bg-red-50 text-red-600",
+    PENDING: "bg-amber-50 text-amber-600",
+    INACTIVE: "bg-gray-100 text-gray-500",
+  };
+  const statusBadge = statusColors[accountStatus] || "bg-gray-100 text-gray-500";
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-32">
+        <LoaderCircle className="size-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!driver) {
+    return (
+      <div className="rounded-xl border border-border bg-card p-10 text-center">
+        <p className="text-sm font-semibold text-foreground">Driver not found or you are not authorized.</p>
+        <Link href="/drivers" className="mt-4 inline-block text-xs font-bold text-primary hover:underline">← Back to Drivers</Link>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -103,17 +89,14 @@ export function DriverDetailPage({ driverId }: { driverId: string }) {
             <h1 className="text-2xl font-bold tracking-[-0.03em] text-[#16345e]">
               Driver details
             </h1>
-            <span className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1.5 text-[11px] font-bold text-emerald-700">
-              <Check className="size-3.5" />
-              Active
+            <span className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold ${statusBadge}`}>
+              {isActive && <Check className="size-3.5" />}
+              {accountStatus.charAt(0) + accountStatus.slice(1).toLowerCase()}
             </span>
           </div>
           <p className="mt-1 text-sm">
-            <strong className="text-foreground">{liveDriver?.userId?.name || "Marcus Williams"}</strong>
-            <span className="text-muted-foreground">
-              {" "}
-              · {driverId} · Morning shift
-            </span>
+            <strong className="text-foreground">{name}</strong>
+            <span className="text-muted-foreground"> · {driverId}</span>
           </p>
         </div>
         <Link
@@ -127,32 +110,40 @@ export function DriverDetailPage({ driverId }: { driverId: string }) {
       </section>
 
       <div className="flex border-b border-border">
-        <button
-          className={`relative px-5 py-3 text-sm font-bold ${tab === "profile" ? "text-primary" : "text-muted-foreground"}`}
-          onClick={() => setTab("profile")}
-          type="button"
-        >
-          Driver profile
-          {tab === "profile" ? (
-            <span className="absolute inset-x-0 bottom-0 h-0.5 bg-primary" />
-          ) : null}
-        </button>
-        <button
-          className={`relative px-5 py-3 text-sm font-bold ${tab === "earnings" ? "text-primary" : "text-muted-foreground"}`}
-          onClick={() => setTab("earnings")}
-          type="button"
-        >
-          Earnings
-          {tab === "earnings" ? (
-            <span className="absolute inset-x-0 bottom-0 h-0.5 bg-primary" />
-          ) : null}
-        </button>
+        {(["profile", "earnings"] as const).map((t) => (
+          <button
+            key={t}
+            className={`relative px-5 py-3 text-sm font-bold capitalize ${tab === t ? "text-primary" : "text-muted-foreground"}`}
+            onClick={() => setTab(t)}
+            type="button"
+          >
+            {t === "profile" ? "Driver profile" : "Earnings"}
+            {tab === t && <span className="absolute inset-x-0 bottom-0 h-0.5 bg-primary" />}
+          </button>
+        ))}
       </div>
 
       {tab === "profile" ? (
-        <ProfileTab driverId={driverId} shift={shift} setShift={setShift} assignedVehicleText={assignedVehicleText} driverName={liveDriver?.userId?.name} />
+        <ProfileTab
+          driverId={driverId}
+          name={name}
+          email={email}
+          phone={phone}
+          licenseNumber={licenseNumber}
+          vehicleText={vehicleText}
+          createdAt={createdAt}
+          accountStatus={accountStatus}
+          rating={rating}
+          completedTripsCount={stats.completedTrips}
+          availabilityStatus={profile?.availabilityStatus || "—"}
+        />
       ) : (
-        <EarningsTab />
+        <EarningsTab
+          completedTrips={completedTrips}
+          allTrips={allTrips}
+          stats={stats}
+          driverName={name}
+        />
       )}
     </div>
   );
@@ -160,225 +151,204 @@ export function DriverDetailPage({ driverId }: { driverId: string }) {
 
 function ProfileTab({
   driverId,
-  setShift,
-  shift,
-  assignedVehicleText,
-  driverName,
+  name,
+  email,
+  phone,
+  licenseNumber,
+  vehicleText,
+  createdAt,
+  accountStatus,
+  rating,
+  completedTripsCount,
+  availabilityStatus,
 }: {
   driverId: string;
-  setShift: (value: string) => void;
-  shift: string;
-  assignedVehicleText: string;
-  driverName?: string;
+  name: string;
+  email: string;
+  phone: string;
+  licenseNumber: string;
+  vehicleText: string;
+  createdAt: string;
+  accountStatus: string;
+  rating: string;
+  completedTripsCount: number;
+  availabilityStatus: string;
 }) {
+  const initials = name !== "—"
+    ? name.split(" ").map((n: string) => n[0]).join("").toUpperCase().substring(0, 2)
+    : "—";
+
   return (
     <div className="grid items-start gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
       <aside className={`${cardClass} xl:sticky xl:top-24`}>
         <div className="text-center">
           <span className="mx-auto grid size-24 place-items-center rounded-2xl bg-primary text-3xl font-bold text-primary-foreground">
-            {driverName ? driverName.split(" ").map((n: string) => n[0]).join("").toUpperCase().substring(0, 2) : "MW"}
+            {initials}
           </span>
-          <h2 className="mt-5 text-xl font-bold text-foreground">
-            {driverName || "Marcus Williams"}
-          </h2>
+          <h2 className="mt-5 text-xl font-bold text-foreground">{name}</h2>
           <p className="mt-1 text-xs text-muted-foreground">{driverId}</p>
-          <span className="mt-3 inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-bold text-emerald-700">
-            <Check className="size-3" />
-            Active
+          <span className={`mt-3 inline-flex items-center gap-1 rounded-full px-3 py-1 text-[10px] font-bold ${accountStatus === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
+            {accountStatus === "ACTIVE" && <Check className="size-3" />}
+            {accountStatus.charAt(0) + accountStatus.slice(1).toLowerCase()}
           </span>
         </div>
         <div className="mt-6 space-y-3 border-t border-border pt-5">
-          <Contact icon={Phone} value="+1 (555) 123-4567" />
-          <Contact icon={Mail} value="marcus.w@fiki.app" />
-          <Contact icon={MapPin} value="Zone B — Central District" />
-          <Contact icon={CarFront} value={assignedVehicleText} />
-          <Contact icon={Clock3} value={`${shift} shift`} />
+          <Contact icon={Phone} value={phone} />
+          <Contact icon={Mail} value={email} />
+          <Contact icon={CarFront} value={vehicleText} />
+          <Contact icon={Star} value={`${rating} rating`} />
+          <Contact icon={Clock3} value={`${availabilityStatus.charAt(0) + availabilityStatus.slice(1).toLowerCase()} availability`} />
         </div>
       </aside>
+
       <div className="space-y-5">
         <InformationCard
           title="Personal information"
           items={[
-            ["Full name", driverName || "Marcus Williams"],
+            ["Full name", name],
             ["Driver ID", driverId],
-            ["Phone number", "+1 (555) 123-4567"],
-            ["Email address", "marcus.w@fiki.app"],
-            ["Date of birth", "Aug 14, 1992"],
-            ["Address", "142 Westside Ave, Chicago, IL"],
+            ["Phone number", phone],
+            ["Email address", email],
           ]}
         />
         <InformationCard
           title="Employment details"
           items={[
-            ["Driver license no.", "IL-DL-8821-4920"],
-            ["License expiry", "Mar 20, 2028"],
-            ["Join date", "Mar 12, 2024"],
-            ["Employment status", "Full-time"],
-            ["Assigned vehicle", assignedVehicleText],
-            ["Assigned area", "Zone B — Central"],
+            ["Driver license no.", licenseNumber],
+            ["Join date", createdAt],
+            ["Assigned vehicle", vehicleText],
+            ["Approval status", accountStatus],
+            ["Availability", availabilityStatus],
+            ["Completed trips", String(completedTripsCount)],
           ]}
         />
         <section className={cardClass}>
-          <div className="flex items-center justify-between">
-            <h2 className={sectionTitle}>Shift information</h2>
-            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <CalendarDays className="size-4" />
-              Weekly roster
-            </span>
+          <div className="flex items-center gap-2">
+            <MapPin className="size-4 text-muted-foreground" />
+            <h2 className={sectionTitle}>Service area</h2>
           </div>
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
-            {["Morning", "Evening", "Night"].map((item) => (
-              <button
-                className={`rounded-xl border px-4 py-4 text-sm font-bold transition ${shift === item ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:bg-muted"}`}
-                key={item}
-                onClick={() => setShift(item)}
-                type="button"
-              >
-                {item}
-                <span className="mt-1 block text-[10px] font-medium opacity-75">
-                  {item === "Morning"
-                    ? "7:00 AM – 3:00 PM"
-                    : item === "Evening"
-                      ? "3:00 PM – 11:00 PM"
-                      : "11:00 PM – 7:00 AM"}
-                </span>
-              </button>
-            ))}
-          </div>
+          <p className="mt-3 text-sm text-muted-foreground">
+            Service zone information is not stored in the system. Assign zones via fleet management.
+          </p>
         </section>
       </div>
     </div>
   );
 }
 
-function EarningsTab() {
+function EarningsTab({
+  completedTrips,
+  allTrips,
+  stats,
+  driverName,
+}: {
+  completedTrips: any[];
+  allTrips: any[];
+  stats: { completedTrips: number; totalTrips: number; totalFare: number };
+  driverName: string;
+}) {
+  const money = (v: number) => `$${v.toFixed(2)}`;
+
   return (
     <div className="space-y-5">
-      <div className="flex justify-end">
-        <button
-          className="flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-3 text-xs font-bold text-foreground"
-          type="button"
-        >
-          <CalendarDays className="size-4" />
-          Jul 14 – Jul 27, 2026
-        </button>
-      </div>
-      <section className="relative overflow-hidden rounded-xl bg-primary p-6 text-primary-foreground shadow-[0_8px_22px_rgba(8,37,82,0.12)] sm:p-7">
-        <div className="absolute -right-20 -top-20 size-72 rounded-full bg-primary-foreground/5" />
-        <div className="relative grid gap-8 lg:grid-cols-[1.4fr_1fr]">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-primary-foreground/50">
-              Estimated gross earnings
-            </p>
-            <p className="mt-3 text-4xl font-bold tracking-[-0.04em] text-secondary sm:text-5xl">
-              $1,240.00
-            </p>
-            <p className="mt-3 text-xs text-primary-foreground/55">
-              Current pay period · Jul 14 – Jul 27, 2026
-            </p>
-            <span className="mt-5 inline-flex items-center gap-2 rounded-xl bg-primary-foreground/8 px-3 py-2 text-xs">
-              <span className="size-2 rounded-full bg-emerald-400" />
-              Expected pay date: <strong>Jul 31, 2026</strong>
-            </span>
-          </div>
-          <div className="border-primary-foreground/10 lg:border-l lg:pl-8">
-            <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-primary-foreground/50">
-              Payroll status
-            </p>
-            <div className="mt-5 space-y-4">
-              <PayrollStep done label="Approved" />
-              <PayrollStep label="Entered into payroll" />
-              <PayrollStep label="Waiting deposit" />
-              <PayrollStep label="Paid" />
-            </div>
-          </div>
-        </div>
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <EarningMetric icon={CarFront} label="Total trips" value={String(stats.totalTrips)} />
+        <EarningMetric icon={Check} label="Completed trips" value={String(stats.completedTrips)} />
+        <EarningMetric icon={DollarSign} label="Total fares" value={money(stats.totalFare)} />
+        <EarningMetric icon={Star} label="Driver" value={driverName !== "—" ? driverName.split(" ")[0] : "—"} />
       </section>
-      <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <EarningMetric icon={DollarSign} label="Hourly rate" value="$14/hr" />
-        <EarningMetric icon={Clock3} label="Approved hours" value="80 hrs" />
-        <EarningMetric icon={CarFront} label="Completed trips" value="40" />
-        <EarningMetric icon={Star} label="Trip bonus" value="40 × $3" />
-        <EarningMetric
-          icon={WalletCards}
-          label="Total salary"
-          value="$1,240.00"
-        />
-      </section>
-      <section className={cardClass}>
-        <h2 className={sectionTitle}>Earnings breakdown</h2>
-        <div className="mt-5 divide-y divide-border">
-          <Breakdown
-            label="Regular wages"
-            detail="80 hrs × $14/hr"
-            value="$1,120.00"
-          />
-          <Breakdown
-            label="Trip bonus"
-            detail="40 trips × $3.00"
-            value="$120.00"
-          />
-          <Breakdown
-            label="Gross earnings"
-            detail="Current pay period total"
-            value="$1,240.00"
-            highlight
-          />
-        </div>
-      </section>
+
       <section className="overflow-hidden rounded-xl border border-[#e1e6ee] bg-card shadow-[0_4px_14px_rgba(15,37,74,.04)]">
         <div className="flex items-center justify-between border-b border-border px-5 py-5">
-          <h2 className={sectionTitle}>Ride history</h2>
+          <h2 className={sectionTitle}>Trip history</h2>
           <span className="text-[10px] text-muted-foreground">
-            20 rides this period
+            {allTrips.length} total trips on record
           </span>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-210 text-left text-xs">
-            <thead>
-              <tr className="bg-muted/55 text-[10px] uppercase tracking-[0.06em] text-muted-foreground">
-                <th className="px-5 py-3">Date</th>
-                <th>Trip ID</th>
-                <th>Passenger</th>
-                <th>Type</th>
-                <th>Pickup</th>
-                <th>Destination</th>
-                <th>Status</th>
-                <th>Bonus</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rideHistory.map((ride) => (
-                <tr className="border-t border-border" key={ride[1]}>
-                  {ride.map((value, index) => (
-                    <td
-                      className={`py-3.5 ${index === 0 ? "px-5" : ""} ${index === 1 ? "font-bold text-blue-600" : "text-muted-foreground"}`}
-                      key={value}
-                    >
-                      {index === 6 ? (
-                        <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-bold text-emerald-700">
-                          Completed
-                        </span>
-                      ) : (
-                        value
-                      )}
-                    </td>
-                  ))}
+        {allTrips.length === 0 ? (
+          <div className="px-5 py-14 text-center">
+            <CarFront className="mx-auto size-8 text-muted-foreground/40" />
+            <p className="mt-3 text-sm font-semibold text-foreground">No trips found</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              This driver has not completed any trips yet.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-210 text-left text-xs">
+              <thead>
+                <tr className="bg-muted/55 text-[10px] uppercase tracking-[0.06em] text-muted-foreground">
+                  <th className="px-5 py-3">Date</th>
+                  <th>Passenger</th>
+                  <th>Pickup</th>
+                  <th>Destination</th>
+                  <th>Fare</th>
+                  <th>Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {allTrips.map((trip) => (
+                  <tr className="border-t border-border" key={trip._id}>
+                    <td className="px-5 py-3.5 text-muted-foreground">
+                      {trip.createdAt ? new Date(trip.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                    </td>
+                    <td className="py-3.5 font-medium text-foreground">
+                      {trip.passengerName || "—"}
+                    </td>
+                    <td className="max-w-36 truncate py-3.5 pr-4 text-muted-foreground" title={trip.pickup || ""}>
+                      {trip.pickup || "—"}
+                    </td>
+                    <td className="max-w-36 truncate py-3.5 pr-4 text-muted-foreground" title={trip.dropoff || ""}>
+                      {trip.dropoff || "—"}
+                    </td>
+                    <td className="py-3.5 font-semibold text-foreground">
+                      {trip.fare != null ? money(trip.fare) : "—"}
+                    </td>
+                    <td className="py-3.5">
+                      <TripStatusBadge status={trip.status} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
+
       <aside className="flex gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-xs leading-5 text-blue-700">
         <Info className="size-4 shrink-0" />
         <p>
-          <strong>Payroll disclaimer:</strong> Earnings are estimated and
-          subject to final payroll processing. Contact your payroll coordinator
-          with discrepancies.
+          <strong>Earnings note:</strong> Fare totals are based on trip records in the system.
+          Payroll processing, bonuses, and deductions are managed separately by the payroll team.
         </p>
       </aside>
     </div>
+  );
+}
+
+function TripStatusBadge({ status }: { status: string }) {
+  const styles: Record<string, string> = {
+    COMPLETED: "bg-emerald-50 text-emerald-700",
+    IN_PROGRESS: "bg-blue-50 text-blue-600",
+    CANCELLED: "bg-red-50 text-red-600",
+    ACCEPTED: "bg-violet-50 text-violet-700",
+    REQUESTED: "bg-amber-50 text-amber-700",
+    DRIVER_ARRIVING: "bg-blue-50 text-blue-600",
+    DRIVER_ARRIVED: "bg-blue-50 text-blue-600",
+  };
+  const label: Record<string, string> = {
+    COMPLETED: "Completed",
+    IN_PROGRESS: "In progress",
+    CANCELLED: "Cancelled",
+    ACCEPTED: "Accepted",
+    REQUESTED: "Requested",
+    DRIVER_ARRIVING: "Arriving",
+    DRIVER_ARRIVED: "Arrived",
+  };
+  return (
+    <span className={`rounded-full px-2.5 py-1 text-[9px] font-bold ${styles[status] || "bg-muted text-muted-foreground"}`}>
+      {label[status] || status}
+    </span>
   );
 }
 
@@ -390,20 +360,15 @@ const sectionTitle =
 function Contact({ icon: Icon, value }: { icon: typeof Phone; value: string }) {
   return (
     <div className="flex items-center gap-3 text-xs text-brand-label">
-      <span className="grid size-8 place-items-center rounded-full bg-muted text-brand-icon">
+      <span className="grid size-8 shrink-0 place-items-center rounded-full bg-muted text-brand-icon">
         <Icon className="size-4" />
       </span>
-      {value}
+      <span className="min-w-0 truncate">{value}</span>
     </div>
   );
 }
-function InformationCard({
-  items,
-  title,
-}: {
-  items: string[][];
-  title: string;
-}) {
+
+function InformationCard({ items, title }: { items: string[][]; title: string }) {
   return (
     <section className={cardClass}>
       <h2 className={sectionTitle}>{title}</h2>
@@ -418,35 +383,8 @@ function InformationCard({
     </section>
   );
 }
-function PayrollStep({
-  done = false,
-  label,
-}: {
-  done?: boolean;
-  label: string;
-}) {
-  return (
-    <div
-      className={`flex items-center gap-3 text-xs ${done ? "font-bold text-primary-foreground" : "text-primary-foreground/35"}`}
-    >
-      <span
-        className={`grid size-5 place-items-center rounded-full border ${done ? "border-emerald-400 bg-emerald-400 text-primary" : "border-primary-foreground/25"}`}
-      >
-        {done ? <Check className="size-3" /> : null}
-      </span>
-      {label}
-    </div>
-  );
-}
-function EarningMetric({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: typeof DollarSign;
-  label: string;
-  value: string;
-}) {
+
+function EarningMetric({ icon: Icon, label, value }: { icon: typeof DollarSign; label: string; value: string }) {
   return (
     <article className="rounded-xl border border-[#e1e6ee] bg-card p-4 shadow-[0_4px_14px_rgba(15,37,74,.04)]">
       <span className="grid size-9 place-items-center rounded-xl bg-blue-50 text-blue-500">
@@ -455,32 +393,5 @@ function EarningMetric({
       <p className="mt-4 text-lg font-bold text-foreground">{value}</p>
       <p className="mt-1 text-[10px] text-muted-foreground">{label}</p>
     </article>
-  );
-}
-function Breakdown({
-  detail,
-  highlight = false,
-  label,
-  value,
-}: {
-  detail: string;
-  highlight?: boolean;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex items-center justify-between py-4">
-      <div>
-        <p className="text-xs font-bold text-foreground">{label}</p>
-        <p className="mt-1 text-[10px] text-muted-foreground">{detail}</p>
-      </div>
-      <strong
-        className={
-          highlight ? "text-lg text-secondary" : "text-sm text-foreground"
-        }
-      >
-        {value}
-      </strong>
-    </div>
   );
 }

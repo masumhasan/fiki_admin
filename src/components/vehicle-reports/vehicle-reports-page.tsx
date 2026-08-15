@@ -6,124 +6,96 @@ import {
   Clock3,
   Eye,
   Gauge,
+  Loader2,
   Search,
 } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { getVehicleReportsApi } from "@/lib/api";
 
 type ReportStatus = "Completed" | "In progress" | "Missing report";
 
-const reports = [
-  {
-    id: "VR-2026-0803-01",
-    driver: "Marcus Williams",
-    initials: "MW",
-    avatar: "bg-primary",
-    vehicle: "Toyota Sienna",
-    plate: "FKT-1234",
-    date: "Aug 3, 2026",
-    shift: "7:00 AM – 3:00 PM",
-    distance: "318 km",
-    status: "Completed" as ReportStatus,
-  },
-  {
-    id: "VR-2026-0803-02",
-    driver: "Aisha Patel",
-    initials: "AP",
-    avatar: "bg-violet-600",
-    vehicle: "Honda Odyssey",
-    plate: "FKT-2345",
-    date: "Aug 3, 2026",
-    shift: "7:00 AM – 3:00 PM",
-    distance: "286 km",
-    status: "Completed" as ReportStatus,
-  },
-  {
-    id: "VR-2026-0803-03",
-    driver: "Robert Thompson",
-    initials: "RT",
-    avatar: "bg-blue-600",
-    vehicle: "Ford Transit",
-    plate: "FKT-3456",
-    date: "Aug 3, 2026",
-    shift: "3:00 PM – 11:00 PM",
-    distance: "164 km",
-    status: "In progress" as ReportStatus,
-  },
-  {
-    id: "VR-2026-0802-04",
-    driver: "Linda Chen",
-    initials: "LC",
-    avatar: "bg-red-500",
-    vehicle: "Dodge Grand Caravan",
-    plate: "FKT-4567",
-    date: "Aug 2, 2026",
-    shift: "7:00 AM – 3:00 PM",
-    distance: "301 km",
-    status: "Completed" as ReportStatus,
-  },
-  {
-    id: "VR-2026-0802-05",
-    driver: "James Morrison",
-    initials: "JM",
-    avatar: "bg-cyan-600",
-    vehicle: "Toyota Highlander",
-    plate: "FKT-5678",
-    date: "Aug 2, 2026",
-    shift: "11:00 PM – 7:00 AM",
-    distance: "—",
-    status: "Missing report" as ReportStatus,
-  },
-];
-
-import { useEffect } from "react";
-import { getVehicleReportsApi } from "@/lib/api";
+type Report = {
+  id: string;
+  driver: string;
+  initials: string;
+  avatar: string;
+  vehicle: string;
+  plate: string;
+  date: string;
+  shift: string;
+  distance: string;
+  status: ReportStatus;
+};
 
 export function VehicleReportsPage() {
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState<"All" | ReportStatus>("All");
-  const [liveReports, setLiveReports] = useState<typeof reports | null>(null);
+  const [statusFilter, setStatusFilter] = useState<"All" | ReportStatus>("All");
+  const [reports, setReports] = useState<Report[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
-      const token = window.localStorage.getItem("fiki_auth_token");
-      if (token) {
-        getVehicleReportsApi(token).then((res) => {
-          if (res.success && res.data && Array.isArray(res.data)) {
-            const mapped = res.data.map((r: any) => ({
-              id: `VR-${r.vehicleId}`,
-              driver: r.inspectorName || "Admin Inspector",
-              initials: "AI",
-              avatar: "bg-primary",
-              vehicle: `${r.make} ${r.vehicleModel}`,
-              plate: r.licensePlate,
-              date: r.createdAt ? new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Aug 3, 2026",
-              shift: "7:00 AM – 3:00 PM",
-              distance: `${r.fuelLevelPercentage}% fuel`,
-              status: r.inspectionStatus === "PASS" ? ("Completed" as ReportStatus) : ("Missing report" as ReportStatus),
-            }));
-            if (mapped.length > 0) {
-              setLiveReports(mapped);
-            }
-          }
-        });
-      }
+    if (typeof window === "undefined") return;
+    const token = window.localStorage.getItem("fiki_auth_token");
+    if (!token) {
+      setLoading(false);
+      return;
     }
-  }, []);
+    getVehicleReportsApi(token)
+      .then((res) => {
+        if (res.success && res.data && Array.isArray(res.data)) {
+          const mapped: Report[] = res.data.map((r: any) => {
+            const driverName = r.inspectorName || "Admin Inspector";
+            const nameParts = driverName.split(" ");
+            const initials =
+              nameParts.length >= 2
+                ? `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase()
+                : driverName.substring(0, 2).toUpperCase();
 
-  const activeReports = liveReports || reports;
+            return {
+              id: `VR-${r.vehicleId || r._id}`,
+              driver: driverName,
+              initials,
+              avatar: "bg-primary",
+              vehicle: [r.make, r.vehicleModel].filter(Boolean).join(" ") || "—",
+              plate: r.licensePlate || "—",
+              date: r.createdAt
+                ? new Date(r.createdAt).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                  })
+                : "—",
+              shift: r.shift || "—",
+              distance: r.fuelLevelPercentage != null ? `${r.fuelLevelPercentage}% fuel` : "—",
+              status:
+                r.inspectionStatus === "PASS"
+                  ? "Completed"
+                  : r.inspectionStatus === "IN_PROGRESS"
+                    ? "In progress"
+                    : "Missing report",
+            };
+          });
+          setReports(mapped);
+        } else {
+          setReports([]);
+        }
+      })
+      .catch(() => setReports([]))
+      .finally(() => setLoading(false));
+  }, []);
 
   const filtered = useMemo(
     () =>
-      activeReports.filter(
+      reports.filter(
         (report) =>
-          (status === "All" || report.status === status) &&
-          [report.driver, report.vehicle, report.plate, report.id].some(
-            (value) => value.toLowerCase().includes(query.toLowerCase()),
+          (statusFilter === "All" || report.status === statusFilter) &&
+          [report.driver, report.vehicle, report.plate, report.id].some((value) =>
+            value.toLowerCase().includes(query.toLowerCase()),
           ),
       ),
-    [activeReports, query, status],
+    [reports, query, statusFilter],
   );
 
   return (
@@ -133,23 +105,25 @@ export function VehicleReportsPage() {
         description="Review driver-submitted shift and vehicle inspection reports."
       />
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Summary label="Total reports" value={reports.length} />
+        <Summary
+          label="Total reports"
+          value={loading ? null : reports.length}
+          tone="text-primary"
+        />
         <Summary
           label="Completed"
           tone="text-emerald-500"
-          value={reports.filter((item) => item.status === "Completed").length}
+          value={loading ? null : reports.filter((r) => r.status === "Completed").length}
         />
         <Summary
           label="In progress"
           tone="text-blue-500"
-          value={reports.filter((item) => item.status === "In progress").length}
+          value={loading ? null : reports.filter((r) => r.status === "In progress").length}
         />
         <Summary
           label="Needs attention"
           tone="text-red-500"
-          value={
-            reports.filter((item) => item.status === "Missing report").length
-          }
+          value={loading ? null : reports.filter((r) => r.status === "Missing report").length}
         />
       </section>
       <section className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -163,25 +137,44 @@ export function VehicleReportsPage() {
           />
         </div>
         <div className="flex gap-1 overflow-x-auto sm:justify-end">
-          {(["All", "Completed", "In progress", "Missing report"] as const).map(
-            (item) => (
-              <button
-                className={`h-9 whitespace-nowrap rounded-lg px-3 text-xs font-bold ${status === item ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
-                key={item}
-                onClick={() => setStatus(item)}
-                type="button"
-              >
-                {item}
-              </button>
-            ),
-          )}
+          {(["All", "Completed", "In progress", "Missing report"] as const).map((item) => (
+            <button
+              className={`h-9 whitespace-nowrap rounded-lg px-3 text-xs font-bold ${statusFilter === item ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+              key={item}
+              onClick={() => setStatusFilter(item)}
+              type="button"
+            >
+              {item}
+            </button>
+          ))}
         </div>
       </section>
-      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {filtered.map((report) => (
-          <ReportCard key={report.id} report={report} />
-        ))}
-      </section>
+
+      {loading ? (
+        <div className="flex min-h-48 items-center justify-center">
+          <Loader2 className="size-8 animate-spin text-primary/50" />
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="flex min-h-64 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 text-center">
+          <CarFront className="size-10 text-muted-foreground/40" />
+          <p className="text-sm font-semibold text-muted-foreground">
+            {reports.length === 0
+              ? "No vehicle reports submitted yet"
+              : "No reports match your search"}
+          </p>
+          {reports.length === 0 && (
+            <p className="text-xs text-muted-foreground/70">
+              Driver-submitted shift and inspection reports will appear here.
+            </p>
+          )}
+        </div>
+      ) : (
+        <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {filtered.map((report) => (
+            <ReportCard key={report.id} report={report} />
+          ))}
+        </section>
+      )}
     </div>
   );
 }
@@ -193,17 +186,23 @@ function Summary({
 }: {
   label: string;
   tone?: string;
-  value: number;
+  value: number | null;
 }) {
   return (
     <article className="rounded-2xl border border-border bg-card p-5 shadow-[0_6px_22px_rgba(8,37,82,0.06)]">
       <p className="text-xs font-semibold text-muted-foreground">{label}</p>
-      <p className={`mt-2 text-3xl font-bold ${tone}`}>{value}</p>
+      <p className={`mt-2 text-3xl font-bold ${tone}`}>
+        {value === null ? (
+          <span className="inline-block h-8 w-7 animate-pulse rounded bg-muted" />
+        ) : (
+          value
+        )}
+      </p>
     </article>
   );
 }
 
-function ReportCard({ report }: { report: (typeof reports)[number] }) {
+function ReportCard({ report }: { report: Report }) {
   return (
     <article className="rounded-2xl border border-border bg-card p-5 shadow-[0_6px_22px_rgba(8,37,82,0.06)] sm:p-6">
       <div className="flex items-start justify-between">
@@ -216,9 +215,7 @@ function ReportCard({ report }: { report: (typeof reports)[number] }) {
           <Status status={report.status} />
         </div>
       </div>
-      <h2 className="mt-5 text-lg font-bold text-foreground">
-        {report.driver}
-      </h2>
+      <h2 className="mt-5 text-lg font-bold text-foreground">{report.driver}</h2>
       <p className="mt-1 text-xs text-muted-foreground">{report.id}</p>
       <dl className="mt-5 grid grid-cols-2 gap-4 text-xs">
         <Info icon={CarFront} label="Vehicle" value={report.vehicle} />
@@ -262,6 +259,7 @@ function Info({
     </div>
   );
 }
+
 function Status({ status }: { status: ReportStatus }) {
   const tone =
     status === "Completed"
@@ -270,8 +268,6 @@ function Status({ status }: { status: ReportStatus }) {
         ? "bg-blue-50 text-blue-600"
         : "bg-red-50 text-red-600";
   return (
-    <span className={`rounded-full px-3 py-1 text-[10px] font-bold ${tone}`}>
-      {status}
-    </span>
+    <span className={`rounded-full px-3 py-1 text-[10px] font-bold ${tone}`}>{status}</span>
   );
 }

@@ -43,6 +43,17 @@ export async function loginApi(email: string, password: string): Promise<LoginRe
   }
 }
 
+export async function getAdminDriverDetailApi(token: string, driverId: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/drivers/${driverId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to fetch driver detail" } };
+  }
+}
+
 export async function getAdminDriversApi(token: string, queryParams?: { page?: number; limit?: number; approvalStatus?: string; availabilityStatus?: string; search?: string }) {
   try {
     const params = new URLSearchParams();
@@ -169,6 +180,17 @@ export async function getDriverApplicationsApi(token: string) {
     return await res.json();
   } catch (error) {
     return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to fetch driver applications" } };
+  }
+}
+
+export async function getDriverApplicationByIdApi(token: string, id: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/driver-applications/${id}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to fetch driver application details" } };
   }
 }
 

@@ -30,7 +30,7 @@ import { useState } from "react";
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getVehiclesApi, approveDriverApplicationApi } from "@/lib/api";
+import { getVehiclesApi, approveDriverApplicationApi, getDriverApplicationByIdApi } from "@/lib/api";
 
 type Decision = "Pending review" | "Approved" | "Rejected";
 
@@ -54,6 +54,7 @@ export function DriverApplicationPage({
   const [comments, setComments] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [vehicles, setVehicles] = useState<any[]>([]);
+  const [liveApp, setLiveApp] = useState<any>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -64,9 +65,17 @@ export function DriverApplicationPage({
             setVehicles(res.data);
           }
         });
+        getDriverApplicationByIdApi(token, applicationId).then((res) => {
+          if (res.success && res.data) {
+            setLiveApp(res.data);
+            if (res.data.status === "APPROVED") setDecision("Approved");
+            else if (res.data.status === "REJECTED") setDecision("Rejected");
+            else setDecision("Pending review");
+          }
+        });
       }
     }
-  }, []);
+  }, [applicationId]);
 
   const handleApproveClick = () => {
     setModalOpen(true);
@@ -76,17 +85,23 @@ export function DriverApplicationPage({
     if (typeof window !== "undefined") {
       const token = window.localStorage.getItem("fiki_auth_token");
       if (token) {
-        const res = await approveDriverApplicationApi(token, applicationId, vehicleId);
+        const targetId = liveApp?._id || applicationId;
+        const res = await approveDriverApplicationApi(token, targetId, vehicleId);
         if (res.success) {
           setDecision("Approved");
           setModalOpen(false);
-          if (res.data?.driverId) {
-            router.push(`/drivers/${res.data.driverId}`);
+          if (res.data?.driverId || res.data?.driverProfile?._id) {
+            const dId = res.data.driverId || res.data.driverProfile._id;
+            router.push(`/drivers/${dId}`);
           }
         }
       }
     }
   };
+
+  const fullName = liveApp?.fullName || "Marcus Johnson";
+  const initials = fullName.split(" ").map((n: string) => n[0]).join("").toUpperCase().substring(0, 2) || "MJ";
+  const cityState = `${liveApp?.city || "Miami"}, ${liveApp?.state || "FL"}`;
 
   return (
     <div className="pb-20">
@@ -98,7 +113,7 @@ export function DriverApplicationPage({
             </h1>
             <DecisionBadge decision={decision} />
           </div>
-          <p className="mt-1 text-xs text-brand-placeholder">{applicationId}</p>
+          <p className="mt-1 text-xs text-brand-placeholder">{liveApp?.applicationId || applicationId}</p>
         </div>
         <Link
           aria-label="Back to applications"
@@ -116,23 +131,23 @@ export function DriverApplicationPage({
             <div className="grid gap-5 sm:grid-cols-[110px_1fr]">
               <div className="text-center">
                 <span className="mx-auto grid size-20 place-items-center rounded-2xl bg-primary text-xl font-bold text-primary-foreground">
-                  MJ
+                  {initials}
                 </span>
                 <p className="mt-2 text-xs font-bold text-foreground">
-                  Marcus Johnson
+                  {fullName}
                 </p>
-                <p className="text-[10px] text-muted-foreground">Miami, FL</p>
+                <p className="text-[10px] text-muted-foreground">{cityState}</p>
               </div>
               <InfoGrid
                 items={[
-                  ["Full name", "Marcus Darnell Johnson"],
-                  ["Email address", "marcus.johnson@gmail.com"],
-                  ["Phone number", "(305) 847-2291"],
-                  ["Street address", "1842 NW 17th Avenue"],
-                  ["City", "Miami"],
-                  ["State", "Florida"],
-                  ["Postal code", "33125"],
-                  ["Country", "United States"],
+                  ["Full name", fullName],
+                  ["Email address", liveApp?.email || "N/A"],
+                  ["Phone number", liveApp?.phone || "N/A"],
+                  ["Street address", liveApp?.streetAddress || "—"],
+                  ["City", liveApp?.city || "—"],
+                  ["State", liveApp?.state || "—"],
+                  ["Postal code", liveApp?.zipCode || "—"],
+                  ["Country", liveApp?.country || "—"],
                 ]}
               />
             </div>
@@ -144,20 +159,20 @@ export function DriverApplicationPage({
           >
             <InfoGrid
               items={[
-                ["Position applying for", "Driver (Ambulatory & Wheelchair)"],
-                ["Employment status", "Full time"],
-                ["Desired salary", "$42,000 / year"],
-                ["Available start date", "January 15, 2025"],
-                ["How did you hear about us", "LinkedIn job posting"],
+                ["Position applying for", liveApp?.position || (liveApp?.positionType ? `Driver (${liveApp.positionType.charAt(0) + liveApp.positionType.slice(1).toLowerCase()})` : "Driver")],
+                ["Employment status", liveApp?.employmentStatus || "Full time"],
+                ["Desired salary", liveApp?.desiredSalary || "—"],
+                ["Available start date", liveApp?.availableStartDate || (liveApp?.submittedDate ? new Date(liveApp.submittedDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "—")],
+                ["How did you hear about us", liveApp?.howDidYouHear || "—"],
               ]}
             />
           </ReviewSection>
           <ReviewSection icon={ShieldCheck} title="Eligibility">
             <InfoGrid
               items={[
-                ["Authorized to work in US", "✓ Yes"],
-                ["Felony conviction", "✓ No"],
-                ["Felony explanation", "N/A — No felony conviction"],
+                ["Authorized to work in US", liveApp?.authorizedInUS === "no" ? "✗ No" : liveApp?.authorizedInUS === "yes" ? "✓ Yes" : "✓ Yes"],
+                ["Felony conviction", liveApp?.felonyConviction === "yes" ? "Yes" : "✓ No"],
+                ["Felony explanation", liveApp?.felonyExplanation || "N/A — No felony conviction"],
               ]}
             />
           </ReviewSection>
@@ -167,16 +182,16 @@ export function DriverApplicationPage({
               <InsetCard title="High school">
                 <InfoGrid
                   items={[
-                    ["School name", "Miami Senior High School"],
-                    ["Graduated", "✓ Yes"],
+                    ["School name", liveApp?.highSchool || "—"],
+                    ["Graduated", liveApp?.highSchoolGraduated === "no" ? "No" : "✓ Yes"],
                   ]}
                 />
               </InsetCard>
               <InsetCard title="College / university">
                 <InfoGrid
                   items={[
-                    ["Institution", "Miami Dade College"],
-                    ["Degree", "Associate of Applied Science — Transportation"],
+                    ["Institution", liveApp?.college || "—"],
+                    ["Degree", liveApp?.degree || "—"],
                   ]}
                 />
               </InsetCard>
@@ -186,18 +201,11 @@ export function DriverApplicationPage({
           <ReviewSection icon={BriefcaseBusiness} title="Employment history">
             <div className="space-y-4">
               <HistoryCard
-                company="Miami-Dade Transit"
-                dates="Mar 2018 – Nov 2022"
-                position="Bus operator"
-                salary="$36,000 → $44,000"
-                reason="Seeking new opportunities in medical transport"
-              />
-              <HistoryCard
-                company="Yellow Cab Miami"
-                dates="Jan 2016 – Feb 2018"
-                position="Driver / dispatcher"
-                salary="$28,000 → $34,000"
-                reason="Better compensation at Miami-Dade Transit"
+                company={liveApp?.previousEmployer || "—"}
+                dates={liveApp?.employmentFromDate || liveApp?.employmentToDate ? `${liveApp?.employmentFromDate || ""} – ${liveApp?.employmentToDate || ""}` : "—"}
+                position={liveApp?.jobTitle || "—"}
+                salary={liveApp?.startingSalary || liveApp?.endingSalary ? `${liveApp?.startingSalary || ""} → ${liveApp?.endingSalary || ""}` : "—"}
+                reason={liveApp?.reasonForLeaving || "—"}
               />
             </div>
           </ReviewSection>
@@ -205,28 +213,22 @@ export function DriverApplicationPage({
           <ReviewSection icon={UsersRound} title="Professional references">
             <div className="grid gap-4 sm:grid-cols-2">
               <Reference
-                initials="RA"
-                name="Robert A. Diaz"
-                position="Former supervisor — Miami-Dade Transit"
-                phone="(305) 741-3392"
-              />
-              <Reference
-                initials="PL"
-                name="Patricia L. Moreno"
-                position="HR manager — Yellow Cab Miami"
-                phone="(786) 229-4871"
+                initials={liveApp?.referenceName ? liveApp.referenceName.split(" ").map((n: string) => n[0]).join("").toUpperCase().substring(0, 2) : "PR"}
+                name={liveApp?.referenceName || "—"}
+                position={liveApp?.referenceRelationship || "—"}
+                phone={liveApp?.referencePhone || "—"}
               />
             </div>
           </ReviewSection>
           <ReviewSection icon={KeyRound} title="Driver information">
             <InfoGrid
               items={[
-                ["Driver license number", "F3847291"],
-                ["Social security number", "•••-••-7821"],
-                ["Date of birth", "March 14, 1987"],
+                ["Driver license number", liveApp?.licenseNumber || "—"],
+                ["Social security number", liveApp?.socialSecurityNumber ? `•••-••-${liveApp.socialSecurityNumber.slice(-4)}` : "—"],
+                ["Date of birth", liveApp?.dateOfBirth || (liveApp?.dobMonth ? `${liveApp.dobMonth}/${liveApp.dobDay}/${liveApp.dobYear}` : "—")],
                 ["Years of driving experience", "7 years"],
-                ["Driver category", "CDL-A (Class A)"],
-                ["License expiration date", "February 14, 2025 · 14 days left"],
+                ["Driver category", liveApp?.driverCategory || "CDL-A (Class A)"],
+                ["License expiration date", liveApp?.licenseExpirationDate ? new Date(liveApp.licenseExpirationDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "—"],
               ]}
             />
           </ReviewSection>
@@ -241,13 +243,13 @@ export function DriverApplicationPage({
           <ReviewSection icon={Signature} title="Digital signature">
             <div className="grid h-24 place-items-center rounded-xl border border-border bg-muted/45">
               <p className="font-serif text-2xl italic text-primary/70">
-                Marcus Johnson
+                {liveApp?.signature || fullName}
               </p>
             </div>
             <InfoGrid
               items={[
-                ["Signed by", "Marcus D. Johnson"],
-                ["Signed date", "December 28, 2024 — 9:22 AM"],
+                ["Signed by", fullName],
+                ["Signed date", liveApp?.submittedDate ? new Date(liveApp.submittedDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "December 28, 2025"],
                 ["Verification status", "✓ Verified"],
               ]}
             />
@@ -289,10 +291,10 @@ export function DriverApplicationPage({
             </p>
             <div className="mt-5 text-center">
               <span className="mx-auto grid size-20 place-items-center rounded-full bg-primary text-xl font-bold text-primary-foreground ring-4 ring-secondary/30">
-                MJ
+                {initials}
               </span>
-              <h2 className="mt-3 font-bold text-foreground">Marcus Johnson</h2>
-              <p className="text-xs text-muted-foreground">Miami, FL</p>
+              <h2 className="mt-3 font-bold text-foreground">{fullName}</h2>
+              <p className="text-xs text-muted-foreground">{cityState}</p>
               <div className="mt-2">
                 <DecisionBadge decision={decision} />
               </div>
@@ -301,7 +303,7 @@ export function DriverApplicationPage({
               <SummaryLine
                 icon={BriefcaseBusiness}
                 label="Position"
-                value="Driver — Ambulatory"
+                value={`Driver — ${liveApp?.positionType ? liveApp.positionType.charAt(0) + liveApp.positionType.slice(1).toLowerCase() : "Ambulatory"}`}
               />
               <SummaryLine
                 icon={CalendarDays}
@@ -311,17 +313,17 @@ export function DriverApplicationPage({
               <SummaryLine
                 icon={IdCard}
                 label="License"
-                value="CDL-A · F3847291"
+                value={liveApp?.licenseNumber || "CDL-A · F3847291"}
               />
               <SummaryLine
                 icon={CalendarDays}
                 label="Application date"
-                value="Dec 28, 2024"
+                value={liveApp?.submittedDate ? new Date(liveApp.submittedDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Dec 28, 2025"}
               />
               <SummaryLine
                 icon={CalendarDays}
                 label="Available start"
-                value="Jan 15, 2025"
+                value={liveApp?.availableStartDate || "Jan 15, 2026"}
               />
             </dl>
             <div className="mt-5">
