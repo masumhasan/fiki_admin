@@ -306,3 +306,19 @@ export async function deleteDriverApi(token: string, id: string) {
     return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to delete driver" } };
   }
 }
+
+export async function updateDriverScheduleApi(token: string, driverId: string, weeklySchedule: any[]) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/drivers/${driverId}/schedule`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ weeklySchedule }),
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to update driver schedule" } };
+  }
+}

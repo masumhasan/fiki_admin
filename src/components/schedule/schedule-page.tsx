@@ -16,6 +16,56 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { WeeklyScheduleModal } from "@/components/schedule/weekly-schedule-modal";
+
+function calculateHours(start: string, end: string): { hours: number; text: string } {
+  try {
+    const parseTime = (t: string) => {
+      const match = t.match(/^(\d+):(\d+)\s*(AM|PM)$/i);
+      if (!match) return 0;
+      let h = parseInt(match[1], 10);
+      const m = parseInt(match[2], 10);
+      const ampm = match[3].toUpperCase();
+      if (ampm === "PM" && h !== 12) h += 12;
+      if (ampm === "AM" && h === 12) h = 0;
+      return h * 60 + m;
+    };
+    const startMins = parseTime(start);
+    let endMins = parseTime(end);
+    if (endMins < startMins) {
+      endMins += 24 * 60;
+    }
+    const diff = endMins - startMins;
+    const hrs = Math.floor(diff / 60);
+    const mins = diff % 60;
+    return {
+      hours: hrs + mins / 60,
+      text: `${hrs}h ${String(mins).padStart(2, "0")}m`,
+    };
+  } catch {
+    return { hours: 0, text: "-" };
+  }
+}
+
+function getWorkDaysText(weeklySchedule: any[]) {
+  if (!weeklySchedule || weeklySchedule.length === 0) return "Mon – Fri";
+  const workingDays = weeklySchedule.filter((item) => item.working).map((item) => item.day);
+  if (workingDays.length === 0) return "None";
+  if (workingDays.length === 5 && ["Mon", "Tue", "Wed", "Thu", "Fri"].every(d => workingDays.includes(d))) return "Mon – Fri";
+  return workingDays.join(", ");
+}
+
+function getScheduleFromShifts(shifts: readonly string[]) {
+  if (!shifts) return [];
+  const days: ("Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun")[] = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  return shifts.map((shift, i) => {
+    if (shift === "off") {
+      return { day: days[i], working: false };
+    }
+    const [start, end] = shift.split("|");
+    return { day: days[i], working: true, startTime: start, endTime: end };
+  });
+}
 
 const drivers = [
   {
@@ -115,6 +165,8 @@ import { getAdminDriversApi } from "@/lib/api";
 
 export function SchedulePage() {
   const [liveDrivers, setLiveDrivers] = useState<any[] | null>(null);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -128,21 +180,55 @@ export function SchedulePage() {
                 ? `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase()
                 : (d.name || "DR").substring(0, 2).toUpperCase();
               const colors = ["bg-blue-600", "bg-emerald-500", "bg-violet-500", "bg-amber-500", "bg-red-500"];
+
+              const weeklySchedule = d.profile?.weeklySchedule || [
+                { day: "Mon", working: true, startTime: "8:00 AM", endTime: "4:00 PM" },
+                { day: "Tue", working: true, startTime: "8:00 AM", endTime: "4:00 PM" },
+                { day: "Wed", working: true, startTime: "8:00 AM", endTime: "4:00 PM" },
+                { day: "Thu", working: true, startTime: "8:00 AM", endTime: "4:00 PM" },
+                { day: "Fri", working: true, startTime: "8:00 AM", endTime: "4:00 PM" },
+                { day: "Sat", working: false },
+                { day: "Sun", working: false },
+              ];
+
+              const shifts = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => {
+                const daySched = weeklySchedule.find((item: any) => item.day === day);
+                if (!daySched || !daySched.working) return "off";
+                return `${daySched.startTime || "8:00 AM"}|${daySched.endTime || "4:00 PM"}|normal`;
+              });
+
+              let totalMins = 0;
+              weeklySchedule.forEach((item: any) => {
+                if (item.working && item.startTime && item.endTime) {
+                  const parseTime = (t: string) => {
+                    const match = t.match(/^(\d+):(\d+)\s*(AM|PM)$/i);
+                    if (!match) return 0;
+                    let h = parseInt(match[1], 10);
+                    const m = parseInt(match[2], 10);
+                    const ampm = match[3].toUpperCase();
+                    if (ampm === "PM" && h !== 12) h += 12;
+                    if (ampm === "AM" && h === 12) h = 0;
+                    return h * 60 + m;
+                  };
+                  const startVal = parseTime(item.startTime);
+                  let endVal = parseTime(item.endTime);
+                  if (endVal < startVal) endVal += 24 * 60;
+                  totalMins += (endVal - startVal);
+                }
+              });
+              const totalHrs = Math.floor(totalMins / 60);
+              const totalMns = totalMins % 60;
+              const totalStr = `${totalHrs}h ${String(totalMns).padStart(2, "0")}m`;
+
               return {
                 initials,
                 name: d.name || "Driver",
                 id: `DRV-${String(idx + 1).padStart(4, "0")}`,
+                mongoId: d.id || d._id,
                 tone: colors[idx % colors.length],
-                total: "40h 00m",
-                shifts: [
-                  "8:00 AM|4:00 PM|normal",
-                  "8:00 AM|4:00 PM|normal",
-                  "9:00 AM|5:00 PM|change",
-                  "8:00 AM|4:00 PM|normal",
-                  "8:00 AM|4:00 PM|normal",
-                  "off",
-                  "off",
-                ],
+                total: totalStr,
+                weeklySchedule,
+                shifts,
               };
             });
             if (mapped.length > 0) {
@@ -155,7 +241,8 @@ export function SchedulePage() {
   }, []);
 
   const activeDriverList = liveDrivers || drivers;
-  const [selected, setSelected] = useState(activeDriverList[0]);
+  const selected = activeDriverList.find((d) => d.id === selectedId) || activeDriverList[0];
+  const selectedSchedule = (selected as any).weeklySchedule || getScheduleFromShifts((selected as any).shifts);
 
   return (
     <div className="space-y-5 pb-10">
@@ -245,7 +332,7 @@ export function SchedulePage() {
                 >
                   <button
                     className="flex items-center gap-3 text-left"
-                    onClick={() => setSelected(driver)}
+                    onClick={() => setSelectedId(driver.id)}
                     type="button"
                   >
                     <span
@@ -289,21 +376,34 @@ export function SchedulePage() {
 
         <aside className="space-y-5">
           <article className={cardClass}>
-            <div className="flex items-center gap-3 rounded-xl border border-border p-3">
-              <span
-                className={`grid size-9 place-items-center rounded-full text-xs font-bold text-white ${selected.tone}`}
+            <div className="relative">
+              <select
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                value={selected.id}
+                onChange={(e) => setSelectedId(e.target.value)}
               >
-                {selected.initials}
-              </span>
-              <div className="min-w-0 flex-1">
-                <strong className="block truncate text-xs">
-                  {selected.name}
-                </strong>
-                <span className="text-[10px] text-muted-foreground">
-                  {selected.id}
+                {activeDriverList.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} ({d.id})
+                  </option>
+                ))}
+              </select>
+              <div className="flex items-center gap-3 rounded-xl border border-border p-3 bg-card relative z-0">
+                <span
+                  className={`grid size-9 place-items-center rounded-full text-xs font-bold text-white ${selected.tone}`}
+                >
+                  {selected.initials}
                 </span>
+                <div className="min-w-0 flex-1">
+                  <strong className="block truncate text-xs">
+                    {selected.name}
+                  </strong>
+                  <span className="text-[10px] text-muted-foreground">
+                    {selected.id}
+                  </span>
+                </div>
+                <ChevronDown className="size-4 text-muted-foreground" />
               </div>
-              <ChevronDown className="size-4 text-muted-foreground" />
             </div>
             <div className="mt-5 flex justify-between">
               <h3 className="text-sm font-bold">Current schedule</h3>
@@ -313,10 +413,10 @@ export function SchedulePage() {
             </div>
             <div className="mt-3 divide-y divide-border">
               {[
-                ["Work days", "Mon – Fri"],
-                ["Start time", "8:00 AM"],
-                ["End time", "4:00 PM"],
-                ["Daily hours", "8h 00m"],
+                ["Work days", getWorkDaysText(selectedSchedule)],
+                ["Start time", (selectedSchedule.find((item: any) => item.working)?.startTime) || "8:00 AM"],
+                ["End time", (selectedSchedule.find((item: any) => item.working)?.endTime) || "4:00 PM"],
+                ["Daily hours", selectedSchedule.find((item: any) => item.working) ? calculateHours((selectedSchedule.find((item: any) => item.working).startTime), (selectedSchedule.find((item: any) => item.working).endTime)).text : "-"],
                 ["Effective date", "Jun 30, 2026"],
               ].map(([label, value]) => (
                 <div className="flex justify-between py-3 text-xs" key={label}>
@@ -329,7 +429,7 @@ export function SchedulePage() {
           <article className={cardClass}>
             <h3 className="text-sm font-bold">Quick actions</h3>
             <div className="mt-4 space-y-2">
-              <Action icon={Pencil} label="Edit schedule" />
+              <Action icon={Pencil} label="Edit schedule" onClick={() => setEditModalOpen(true)} />
               <Action icon={Plus} label="Add one-time change" />
               <Action icon={Moon} label="Add day off" />
               <Action danger icon={Trash2} label="Remove schedule" />
@@ -337,6 +437,86 @@ export function SchedulePage() {
           </article>
         </aside>
       </section>
+
+      <WeeklyScheduleModal
+        open={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        driverId={(selected as any).mongoId || selected.id}
+        driverName={selected.name}
+        driverDisplayId={selected.id}
+        initialSchedule={(selected as any).weeklySchedule || []}
+        onSaveSuccess={() => {
+          if (typeof window !== "undefined") {
+            const token = window.localStorage.getItem("fiki_auth_token");
+            if (token) {
+              getAdminDriversApi(token).then((res) => {
+                if (res.success && res.data && Array.isArray(res.data.drivers)) {
+                  const mapped = res.data.drivers.map((d: any, idx: number) => {
+                    const nameParts = (d.name || "Driver").split(" ");
+                    const initials = nameParts.length >= 2
+                      ? `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase()
+                      : (d.name || "DR").substring(0, 2).toUpperCase();
+                    const colors = ["bg-blue-600", "bg-emerald-500", "bg-violet-500", "bg-amber-500", "bg-red-500"];
+
+                    const weeklySchedule = d.profile?.weeklySchedule || [
+                      { day: "Mon", working: true, startTime: "8:00 AM", endTime: "4:00 PM" },
+                      { day: "Tue", working: true, startTime: "8:00 AM", endTime: "4:00 PM" },
+                      { day: "Wed", working: true, startTime: "8:00 AM", endTime: "4:00 PM" },
+                      { day: "Thu", working: true, startTime: "8:00 AM", endTime: "4:00 PM" },
+                      { day: "Fri", working: true, startTime: "8:00 AM", endTime: "4:00 PM" },
+                      { day: "Sat", working: false },
+                      { day: "Sun", working: false },
+                    ];
+
+                    const shifts = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => {
+                      const daySched = weeklySchedule.find((item: any) => item.day === day);
+                      if (!daySched || !daySched.working) return "off";
+                      return `${daySched.startTime || "8:00 AM"}|${daySched.endTime || "4:00 PM"}|normal`;
+                    });
+
+                    let totalMins = 0;
+                    weeklySchedule.forEach((item: any) => {
+                      if (item.working && item.startTime && item.endTime) {
+                        const parseTime = (t: string) => {
+                          const match = t.match(/^(\d+):(\d+)\s*(AM|PM)$/i);
+                          if (!match) return 0;
+                          let h = parseInt(match[1], 10);
+                          const m = parseInt(match[2], 10);
+                          const ampm = match[3].toUpperCase();
+                          if (ampm === "PM" && h !== 12) h += 12;
+                          if (ampm === "AM" && h === 12) h = 0;
+                          return h * 60 + m;
+                        };
+                        const startVal = parseTime(item.startTime);
+                        let endVal = parseTime(item.endTime);
+                        if (endVal < startVal) endVal += 24 * 60;
+                        totalMins += (endVal - startVal);
+                      }
+                    });
+                    const totalHrs = Math.floor(totalMins / 60);
+                    const totalMns = totalMins % 60;
+                    const totalStr = `${totalHrs}h ${String(totalMns).padStart(2, "0")}m`;
+
+                    return {
+                      initials,
+                      name: d.name || "Driver",
+                      id: `DRV-${String(idx + 1).padStart(4, "0")}`,
+                      mongoId: d.id || d._id,
+                      tone: colors[idx % colors.length],
+                      total: totalStr,
+                      weeklySchedule,
+                      shifts,
+                    };
+                  });
+                  if (mapped.length > 0) {
+                    setLiveDrivers(mapped);
+                  }
+                }
+              });
+            }
+          }
+        }}
+      />
 
       <section className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
         <article className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
@@ -530,15 +710,18 @@ function Action({
   icon: Icon,
   label,
   danger = false,
+  onClick,
 }: {
   icon: typeof Pencil;
   label: string;
   danger?: boolean;
+  onClick?: () => void;
 }) {
   return (
     <button
       className={`flex w-full items-center gap-3 rounded-full border px-4 py-3 text-left text-xs font-semibold ${danger ? "border-red-200 text-red-500" : "border-border"}`}
       type="button"
+      onClick={onClick}
     >
       <Icon className="size-4" />
       {label}

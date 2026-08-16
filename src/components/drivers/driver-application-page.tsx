@@ -31,6 +31,7 @@ import { useState } from "react";
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { getVehiclesApi, approveDriverApplicationApi, getDriverApplicationByIdApi } from "@/lib/api";
+import { WeeklyScheduleModal } from "@/components/schedule/weekly-schedule-modal";
 
 type Decision = "Pending review" | "Approved" | "Rejected";
 
@@ -55,6 +56,9 @@ export function DriverApplicationPage({
   const [modalOpen, setModalOpen] = useState(false);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [liveApp, setLiveApp] = useState<any>(null);
+  const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
+  const [approvedDriverId, setApprovedDriverId] = useState("");
+  const [approvedDriverName, setApprovedDriverName] = useState("");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -92,7 +96,9 @@ export function DriverApplicationPage({
           setModalOpen(false);
           if (res.data?.driverId || res.data?.driverProfile?._id) {
             const dId = res.data.driverId || res.data.driverProfile._id;
-            router.push(`/drivers/${dId}`);
+            setApprovedDriverId(dId);
+            setApprovedDriverName(fullName);
+            setScheduleModalOpen(true);
           }
         }
       }
@@ -425,6 +431,20 @@ export function DriverApplicationPage({
         onClose={() => setModalOpen(false)}
         onAssign={handleVehicleAssign}
         vehicles={vehicles}
+      />
+
+      <WeeklyScheduleModal
+        open={scheduleModalOpen}
+        onClose={() => {
+          setScheduleModalOpen(false);
+          router.push(`/drivers/${approvedDriverId}`);
+        }}
+        driverId={approvedDriverId}
+        driverName={approvedDriverName}
+        driverDisplayId={liveApp?.applicationId || applicationId}
+        onSaveSuccess={() => {
+          router.push(`/drivers/${approvedDriverId}`);
+        }}
       />
     </div>
   );
