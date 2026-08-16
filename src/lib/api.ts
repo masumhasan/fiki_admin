@@ -322,3 +322,19 @@ export async function updateDriverScheduleApi(token: string, driverId: string, w
     return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to update driver schedule" } };
   }
 }
+
+export async function addOneTimeChangeApi(token: string, driverId: string, payload: { date: string; working: boolean; startTime?: string; endTime?: string; reason?: string }) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/drivers/${driverId}/one-time-change`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to set one-time schedule change" } };
+  }
+}

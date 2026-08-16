@@ -17,6 +17,7 @@ import {
 import { useState } from "react";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { WeeklyScheduleModal } from "@/components/schedule/weekly-schedule-modal";
+import { OneTimeChangeModal } from "@/components/schedule/one-time-change-modal";
 
 function calculateHours(start: string, end: string): { hours: number; text: string } {
   try {
@@ -166,6 +167,7 @@ import { getAdminDriversApi } from "@/lib/api";
 export function SchedulePage() {
   const [liveDrivers, setLiveDrivers] = useState<any[] | null>(null);
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [oneTimeModalOpen, setOneTimeModalOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -430,7 +432,7 @@ export function SchedulePage() {
             <h3 className="text-sm font-bold">Quick actions</h3>
             <div className="mt-4 space-y-2">
               <Action icon={Pencil} label="Edit schedule" onClick={() => setEditModalOpen(true)} />
-              <Action icon={Plus} label="Add one-time change" />
+              <Action icon={Plus} label="Add one-time change" onClick={() => setOneTimeModalOpen(true)} />
               <Action icon={Moon} label="Add day off" />
               <Action danger icon={Trash2} label="Remove schedule" />
             </div>
@@ -445,6 +447,85 @@ export function SchedulePage() {
         driverName={selected.name}
         driverDisplayId={selected.id}
         initialSchedule={(selected as any).weeklySchedule || []}
+        onSaveSuccess={() => {
+          if (typeof window !== "undefined") {
+            const token = window.localStorage.getItem("fiki_auth_token");
+            if (token) {
+              getAdminDriversApi(token).then((res) => {
+                if (res.success && res.data && Array.isArray(res.data.drivers)) {
+                  const mapped = res.data.drivers.map((d: any, idx: number) => {
+                    const nameParts = (d.name || "Driver").split(" ");
+                    const initials = nameParts.length >= 2
+                      ? `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase()
+                      : (d.name || "DR").substring(0, 2).toUpperCase();
+                    const colors = ["bg-blue-600", "bg-emerald-500", "bg-violet-500", "bg-amber-500", "bg-red-500"];
+
+                    const weeklySchedule = d.profile?.weeklySchedule || [
+                      { day: "Mon", working: true, startTime: "8:00 AM", endTime: "4:00 PM" },
+                      { day: "Tue", working: true, startTime: "8:00 AM", endTime: "4:00 PM" },
+                      { day: "Wed", working: true, startTime: "8:00 AM", endTime: "4:00 PM" },
+                      { day: "Thu", working: true, startTime: "8:00 AM", endTime: "4:00 PM" },
+                      { day: "Fri", working: true, startTime: "8:00 AM", endTime: "4:00 PM" },
+                      { day: "Sat", working: false },
+                      { day: "Sun", working: false },
+                    ];
+
+                    const shifts = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((day) => {
+                      const daySched = weeklySchedule.find((item: any) => item.day === day);
+                      if (!daySched || !daySched.working) return "off";
+                      return `${daySched.startTime || "8:00 AM"}|${daySched.endTime || "4:00 PM"}|normal`;
+                    });
+
+                    let totalMins = 0;
+                    weeklySchedule.forEach((item: any) => {
+                      if (item.working && item.startTime && item.endTime) {
+                        const parseTime = (t: string) => {
+                          const match = t.match(/^(\d+):(\d+)\s*(AM|PM)$/i);
+                          if (!match) return 0;
+                          let h = parseInt(match[1], 10);
+                          const m = parseInt(match[2], 10);
+                          const ampm = match[3].toUpperCase();
+                          if (ampm === "PM" && h !== 12) h += 12;
+                          if (ampm === "AM" && h === 12) h = 0;
+                          return h * 60 + m;
+                        };
+                        const startVal = parseTime(item.startTime);
+                        let endVal = parseTime(item.endTime);
+                        if (endVal < startVal) endVal += 24 * 60;
+                        totalMins += (endVal - startVal);
+                      }
+                    });
+                    const totalHrs = Math.floor(totalMins / 60);
+                    const totalMns = totalMins % 60;
+                    const totalStr = `${totalHrs}h ${String(totalMns).padStart(2, "0")}m`;
+
+                    return {
+                      initials,
+                      name: d.name || "Driver",
+                      id: `DRV-${String(idx + 1).padStart(4, "0")}`,
+                      mongoId: d.id || d._id,
+                      tone: colors[idx % colors.length],
+                      total: totalStr,
+                      weeklySchedule,
+                      shifts,
+                    };
+                  });
+                  if (mapped.length > 0) {
+                    setLiveDrivers(mapped);
+                  }
+                }
+              });
+            }
+          }
+        }}
+      />
+
+      <OneTimeChangeModal
+        open={oneTimeModalOpen}
+        onClose={() => setOneTimeModalOpen(false)}
+        driverId={(selected as any).mongoId || selected.id}
+        driverName={selected.name}
+        driverDisplayId={selected.id}
         onSaveSuccess={() => {
           if (typeof window !== "undefined") {
             const token = window.localStorage.getItem("fiki_auth_token");
