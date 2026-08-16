@@ -19,12 +19,8 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getAdminDriverDetailApi } from "@/lib/api";
 
-import { useEffect } from "react";
-import { getAdminDriversApi } from "@/lib/api";
-
 export function DriverDetailPage({ driverId }: { driverId: string }) {
   const [tab, setTab] = useState<"profile" | "earnings">("profile");
-<<<<<<< HEAD
   const [loading, setLoading] = useState(true);
   const [driver, setDriver] = useState<any>(null);
 
@@ -84,32 +80,6 @@ export function DriverDetailPage({ driverId }: { driverId: string }) {
       </div>
     );
   }
-=======
-  const [shift, setShift] = useState("Morning");
-  const [liveDriver, setLiveDriver] = useState<any>(null);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const token = window.localStorage.getItem("fiki_auth_token");
-      if (token) {
-        getAdminDriversApi(token).then((res) => {
-          if (res.success && res.data && Array.isArray(res.data.drivers)) {
-            const found = res.data.drivers.find(
-              (d: any) => d._id === driverId || d.driverId === driverId
-            ) || res.data.drivers[0];
-            if (found) {
-              setLiveDriver(found);
-            }
-          }
-        });
-      }
-    }
-  }, [driverId]);
-
-  const assignedVehicleText = liveDriver?.vehicle
-    ? `${liveDriver.vehicle.model || liveDriver.vehicle.make || "BMW X5"} — ${liveDriver.vehicle.licensePlate || "9988-12345"}`
-    : "BMW X5 — 9988-12345";
->>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
 
   return (
     <div className="space-y-6">
@@ -125,16 +95,8 @@ export function DriverDetailPage({ driverId }: { driverId: string }) {
             </span>
           </div>
           <p className="mt-1 text-sm">
-<<<<<<< HEAD
             <strong className="text-foreground">{name}</strong>
             <span className="text-muted-foreground"> · {driverId}</span>
-=======
-            <strong className="text-foreground">{liveDriver?.userId?.name || "Marcus Williams"}</strong>
-            <span className="text-muted-foreground">
-              {" "}
-              · {driverId} · Morning shift
-            </span>
->>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
           </p>
         </div>
         <Link
@@ -162,7 +124,6 @@ export function DriverDetailPage({ driverId }: { driverId: string }) {
       </div>
 
       {tab === "profile" ? (
-<<<<<<< HEAD
         <ProfileTab
           driverId={driverId}
           name={name}
@@ -176,9 +137,6 @@ export function DriverDetailPage({ driverId }: { driverId: string }) {
           completedTripsCount={stats.completedTrips}
           availabilityStatus={profile?.availabilityStatus || "—"}
         />
-=======
-        <ProfileTab driverId={driverId} shift={shift} setShift={setShift} assignedVehicleText={assignedVehicleText} driverName={liveDriver?.userId?.name} />
->>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
       ) : (
         <EarningsTab
           completedTrips={completedTrips}
@@ -193,7 +151,6 @@ export function DriverDetailPage({ driverId }: { driverId: string }) {
 
 function ProfileTab({
   driverId,
-<<<<<<< HEAD
   name,
   email,
   phone,
@@ -216,18 +173,6 @@ function ProfileTab({
   rating: string;
   completedTripsCount: number;
   availabilityStatus: string;
-=======
-  setShift,
-  shift,
-  assignedVehicleText,
-  driverName,
-}: {
-  driverId: string;
-  setShift: (value: string) => void;
-  shift: string;
-  assignedVehicleText: string;
-  driverName?: string;
->>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
 }) {
   const initials = name !== "—"
     ? name.split(" ").map((n: string) => n[0]).join("").toUpperCase().substring(0, 2)
@@ -238,17 +183,9 @@ function ProfileTab({
       <aside className={`${cardClass} xl:sticky xl:top-24`}>
         <div className="text-center">
           <span className="mx-auto grid size-24 place-items-center rounded-2xl bg-primary text-3xl font-bold text-primary-foreground">
-<<<<<<< HEAD
             {initials}
           </span>
           <h2 className="mt-5 text-xl font-bold text-foreground">{name}</h2>
-=======
-            {driverName ? driverName.split(" ").map((n: string) => n[0]).join("").toUpperCase().substring(0, 2) : "MW"}
-          </span>
-          <h2 className="mt-5 text-xl font-bold text-foreground">
-            {driverName || "Marcus Williams"}
-          </h2>
->>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
           <p className="mt-1 text-xs text-muted-foreground">{driverId}</p>
           <span className={`mt-3 inline-flex items-center gap-1 rounded-full px-3 py-1 text-[10px] font-bold ${accountStatus === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
             {accountStatus === "ACTIVE" && <Check className="size-3" />}
@@ -256,19 +193,11 @@ function ProfileTab({
           </span>
         </div>
         <div className="mt-6 space-y-3 border-t border-border pt-5">
-<<<<<<< HEAD
           <Contact icon={Phone} value={phone} />
           <Contact icon={Mail} value={email} />
           <Contact icon={CarFront} value={vehicleText} />
           <Contact icon={Star} value={`${rating} rating`} />
           <Contact icon={Clock3} value={`${availabilityStatus.charAt(0) + availabilityStatus.slice(1).toLowerCase()} availability`} />
-=======
-          <Contact icon={Phone} value="+1 (555) 123-4567" />
-          <Contact icon={Mail} value="marcus.w@fiki.app" />
-          <Contact icon={MapPin} value="Zone B — Central District" />
-          <Contact icon={CarFront} value={assignedVehicleText} />
-          <Contact icon={Clock3} value={`${shift} shift`} />
->>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
         </div>
       </aside>
 
@@ -276,11 +205,7 @@ function ProfileTab({
         <InformationCard
           title="Personal information"
           items={[
-<<<<<<< HEAD
             ["Full name", name],
-=======
-            ["Full name", driverName || "Marcus Williams"],
->>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
             ["Driver ID", driverId],
             ["Phone number", phone],
             ["Email address", email],
@@ -289,21 +214,12 @@ function ProfileTab({
         <InformationCard
           title="Employment details"
           items={[
-<<<<<<< HEAD
             ["Driver license no.", licenseNumber],
             ["Join date", createdAt],
             ["Assigned vehicle", vehicleText],
             ["Approval status", accountStatus],
             ["Availability", availabilityStatus],
             ["Completed trips", String(completedTripsCount)],
-=======
-            ["Driver license no.", "IL-DL-8821-4920"],
-            ["License expiry", "Mar 20, 2028"],
-            ["Join date", "Mar 12, 2024"],
-            ["Employment status", "Full-time"],
-            ["Assigned vehicle", assignedVehicleText],
-            ["Assigned area", "Zone B — Central"],
->>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
           ]}
         />
         <section className={cardClass}>

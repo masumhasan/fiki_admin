@@ -183,7 +183,6 @@ export async function getDriverApplicationsApi(token: string) {
   }
 }
 
-<<<<<<< HEAD
 export async function getDriverApplicationByIdApi(token: string, id: string) {
   try {
     const res = await fetch(`${API_BASE_URL}/admin/driver-applications/${id}`, {
@@ -194,9 +193,6 @@ export async function getDriverApplicationByIdApi(token: string, id: string) {
     return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to fetch driver application details" } };
   }
 }
-
-=======
->>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
 export async function getVehiclesApi(token: string) {
   try {
     const res = await fetch(`${API_BASE_URL}/admin/vehicles`, {

@@ -30,11 +30,7 @@ import { useState } from "react";
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-<<<<<<< HEAD
 import { getVehiclesApi, approveDriverApplicationApi, getDriverApplicationByIdApi } from "@/lib/api";
-=======
-import { getVehiclesApi, approveDriverApplicationApi } from "@/lib/api";
->>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
 
 type Decision = "Pending review" | "Approved" | "Rejected";
 
@@ -58,10 +54,7 @@ export function DriverApplicationPage({
   const [comments, setComments] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [vehicles, setVehicles] = useState<any[]>([]);
-<<<<<<< HEAD
   const [liveApp, setLiveApp] = useState<any>(null);
-=======
->>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -72,7 +65,6 @@ export function DriverApplicationPage({
             setVehicles(res.data);
           }
         });
-<<<<<<< HEAD
         getDriverApplicationByIdApi(token, applicationId).then((res) => {
           if (res.success && res.data) {
             setLiveApp(res.data);
@@ -84,11 +76,6 @@ export function DriverApplicationPage({
       }
     }
   }, [applicationId]);
-=======
-      }
-    }
-  }, []);
->>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
 
   const handleApproveClick = () => {
     setModalOpen(true);
@@ -98,7 +85,6 @@ export function DriverApplicationPage({
     if (typeof window !== "undefined") {
       const token = window.localStorage.getItem("fiki_auth_token");
       if (token) {
-<<<<<<< HEAD
         const targetId = liveApp?._id || applicationId;
         const res = await approveDriverApplicationApi(token, targetId, vehicleId);
         if (res.success) {
@@ -107,26 +93,15 @@ export function DriverApplicationPage({
           if (res.data?.driverId || res.data?.driverProfile?._id) {
             const dId = res.data.driverId || res.data.driverProfile._id;
             router.push(`/drivers/${dId}`);
-=======
-        const res = await approveDriverApplicationApi(token, applicationId, vehicleId);
-        if (res.success) {
-          setDecision("Approved");
-          setModalOpen(false);
-          if (res.data?.driverId) {
-            router.push(`/drivers/${res.data.driverId}`);
->>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
           }
         }
       }
     }
   };
-<<<<<<< HEAD
 
   const fullName = liveApp?.fullName || "Marcus Johnson";
   const initials = fullName.split(" ").map((n: string) => n[0]).join("").toUpperCase().substring(0, 2) || "MJ";
   const cityState = `${liveApp?.city || "Miami"}, ${liveApp?.state || "FL"}`;
-=======
->>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
 
   return (
     <div className="pb-20">

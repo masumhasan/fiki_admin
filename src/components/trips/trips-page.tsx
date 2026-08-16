@@ -18,11 +18,7 @@ type TripStatus = "Onboard" | "Completed" | "Scheduled" | "Need driver" | "Cance
 
 type Trip = {
   id: string;
-<<<<<<< HEAD
   mongoId: string;
-=======
-  mongoId?: string;
->>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
   passenger: string;
   initials: string;
   avatar: string;
@@ -43,14 +39,10 @@ const filters = [
   "Cancelled",
 ] as const;
 
-import { useEffect } from "react";
-import { getAdminTripsApi } from "@/lib/api";
-
 export function TripsPage() {
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<(typeof filters)[number]>("All statuses");
   const [pageSize, setPageSize] = useState("10");
-<<<<<<< HEAD
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -134,98 +126,23 @@ export function TripsPage() {
     {
       label: "Onboard now",
       value: trips.filter((t) => t.status === "Onboard").length,
-=======
-  const [liveTrips, setLiveTrips] = useState<Trip[] | null>(null);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const token = window.localStorage.getItem("fiki_auth_token");
-      if (token) {
-        getAdminTripsApi(token).then((res) => {
-          if (res.success && res.data && Array.isArray(res.data.trips)) {
-            const mapped: Trip[] = res.data.trips.map((t: any) => {
-              const passName = t.passengerId?.name || "Rider Passenger";
-              const driverName = t.driverId?.name || (t.driverId ? "Assigned Driver" : undefined);
-              const statusMap: Record<string, TripStatus> = {
-                REQUESTED: "Need driver",
-                ACCEPTED: "Scheduled",
-                DRIVER_ARRIVING: "Scheduled",
-                DRIVER_ARRIVED: "Scheduled",
-                IN_PROGRESS: "Onboard",
-                COMPLETED: "Completed",
-                CANCELLED: "Cancelled",
-              };
-              const statusVal = statusMap[t.status] || "Scheduled";
-
-              const dateStr = t.createdAt
-                ? new Date(t.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })
-                : "Today";
-              const timeStr = t.createdAt
-                ? new Date(t.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
-                : "9:00 AM";
-
-              const nameParts = passName.split(" ");
-              const initials = nameParts.length >= 2
-                ? `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase()
-                : passName.substring(0, 2).toUpperCase();
-
-              return {
-                id: `TRP-${t._id.substring(t._id.length - 4)}`,
-                mongoId: t._id,
-                passenger: passName,
-                initials,
-                avatar: "bg-violet-600",
-                driver: driverName,
-                pickup: t.pickupLocation?.address || "Pickup Location",
-                destination: t.dropoffLocation?.address || "Destination Location",
-                status: statusVal,
-                time: timeStr,
-                date: "Today" as const,
-              };
-            });
-            if (mapped.length > 0) {
-              setLiveTrips(mapped);
-            }
-          }
-        });
-      }
-    }
-  }, []);
-
-  const activeTripList = liveTrips || trips;
-
-  const summary = [
-    { label: "Total trips", value: activeTripList.length, tone: "text-primary" },
-    {
-      label: "Onboard now",
-      value: activeTripList.filter((trip) => trip.status === "Onboard").length,
->>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
       tone: "text-emerald-500",
     },
     {
       label: "Need driver",
-<<<<<<< HEAD
       value: trips.filter((t) => t.status === "Need driver").length,
       tone: "text-red-500",
     },
     {
       label: "Completed",
       value: trips.filter((t) => t.status === "Completed").length,
-=======
-      value: activeTripList.filter((trip) => trip.status === "Need driver").length,
-      tone: "text-red-500",
-    },
-    {
-      label: "Completed today",
-      value: activeTripList.filter((trip) => trip.status === "Completed").length,
->>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
       tone: "text-blue-500",
     },
   ];
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    return activeTripList.filter((trip) => {
+    return trips.filter((trip) => {
       const matchesStatus = status === "All statuses" || trip.status === status;
       const matchesQuery =
         !normalized ||
@@ -234,14 +151,10 @@ export function TripsPage() {
         );
       return matchesStatus && matchesQuery;
     });
-<<<<<<< HEAD
   }, [trips, query, status]);
 
   const pageSizeNum = Number(pageSize);
   const visibleTrips = filtered.slice(0, pageSizeNum);
-=======
-  }, [activeTripList, query, status]);
->>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
 
   function exportTrips() {
     const rows = [

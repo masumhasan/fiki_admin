@@ -12,10 +12,7 @@ import {
   Phone,
   Search,
   Trash2,
-<<<<<<< HEAD
   Users,
-=======
->>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, useEffect } from "react";
@@ -39,54 +36,6 @@ type Driver = {
   rating: string;
 };
 
-<<<<<<< HEAD
-=======
-const defaultDrivers: Driver[] = [
-  {
-    id: "D-001",
-    mongoId: "D-001",
-    name: "Marcus Williams",
-    initials: "MW",
-    avatar: "bg-primary",
-    joined: "Mar 2024",
-    status: "Active",
-    vehicle: "Toyota Sienna",
-    plate: "FKT-1234",
-    phone: "(555) 123-4567",
-    trips: 24,
-    rating: "4.9",
-  },
-  {
-    id: "D-002",
-    mongoId: "D-002",
-    name: "Aisha Patel",
-    initials: "AP",
-    avatar: "bg-violet-600",
-    joined: "Jan 2024",
-    status: "Active",
-    vehicle: "Honda Odyssey",
-    plate: "FKT-2345",
-    phone: "(555) 234-5678",
-    trips: 21,
-    rating: "4.8",
-  },
-  {
-    id: "D-003",
-    mongoId: "D-003",
-    name: "Robert Thompson",
-    initials: "RT",
-    avatar: "bg-blue-600",
-    joined: "Jun 2024",
-    status: "On trip",
-    vehicle: "Ford Transit",
-    plate: "FKT-3456",
-    phone: "(555) 345-6789",
-    trips: 18,
-    rating: "4.7",
-  },
-];
-
->>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
 export function DriversPage() {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"All" | DriverStatus>("All");
@@ -156,64 +105,11 @@ export function DriversPage() {
     }
   };
 
-<<<<<<< HEAD
-=======
-  const fetchDrivers = () => {
-    if (typeof window !== "undefined") {
-      const token = window.localStorage.getItem("fiki_auth_token");
-      if (token) {
-        getAdminDriversApi(token).then((res) => {
-          if (res.success && res.data && res.data.drivers) {
-            const mapped: Driver[] = res.data.drivers.map((d: any, idx: number) => {
-              const profile = d.profile || {};
-              const statusMap: Record<string, DriverStatus> = {
-                ONLINE: "Active",
-                ASSIGNED: "On trip",
-                OFFLINE: "Off duty",
-                UNAVAILABLE: "Off duty",
-              };
-              const status = statusMap[profile.availabilityStatus] || "Active";
-              const vehicleStr = profile.vehicle
-                ? `${profile.vehicle.make || ""} ${profile.vehicle.model || ""}`.trim() || "Toyota Sienna"
-                : "Toyota Sienna";
-              const plateStr = profile.vehicle?.licensePlate || "FKT-1234";
-
-              const nameParts = (d.name || "Driver").split(" ");
-              const initials = nameParts.length >= 2
-                ? `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase()
-                : (d.name || "DR").substring(0, 2).toUpperCase();
-
-              return {
-                id: `D-${String(idx + 1).padStart(3, "0")}`,
-                mongoId: d.id || d._id,
-                name: d.name || "Driver",
-                initials,
-                avatar: "bg-primary",
-                joined: d.createdAt ? new Date(d.createdAt).toLocaleDateString("en-US", { month: "short", year: "numeric" }) : "Jan 2026",
-                status,
-                vehicle: vehicleStr,
-                plate: plateStr,
-                phone: d.phone || "(555) 000-0000",
-                trips: profile.completedTripsCount || 0,
-                rating: profile.rating ? String(profile.rating) : "5.0",
-              };
-            });
-            if (mapped.length > 0) {
-              setLiveDrivers(mapped);
-            }
-          }
-        });
-      }
-    }
-  };
-
->>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
   useEffect(() => {
     fetchDrivers();
   }, []);
 
   const handleDeleteDriver = async (id: string) => {
-<<<<<<< HEAD
     if (typeof window === "undefined") return;
     const token = window.localStorage.getItem("fiki_auth_token");
     if (!token || !id) return;
@@ -222,23 +118,6 @@ export function DriversPage() {
       await fetchDrivers();
     }
   };
-=======
-    if (typeof window !== "undefined") {
-      const token = window.localStorage.getItem("fiki_auth_token");
-      if (token && id) {
-        const res = await deleteDriverApi(token, id);
-        if (res.success) {
-          if (liveDrivers) {
-            setLiveDrivers(liveDrivers.filter((d) => d.mongoId !== id && d.id !== id));
-          }
-          fetchDrivers();
-        }
-      }
-    }
-  };
-
-  const activeDriverList = liveDrivers || defaultDrivers;
->>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
 
   const filteredDrivers = useMemo(
     () =>
@@ -311,8 +190,6 @@ export function DriversPage() {
           ))}
         </div>
       </section>
-<<<<<<< HEAD
-
       {loading ? (
         <div className="flex min-h-48 items-center justify-center">
           <Loader2 className="size-8 animate-spin text-primary/50" />
@@ -336,13 +213,6 @@ export function DriversPage() {
           ))}
         </section>
       )}
-=======
-      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {filteredDrivers.map((driver) => (
-          <DriverCard driver={driver} key={driver.id} onDelete={handleDeleteDriver} />
-        ))}
-      </section>
->>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
     </div>
   );
 }
@@ -449,7 +319,6 @@ function DriverStatus({ status }: { status: DriverStatus }) {
 
 import { getDriverApplicationsApi } from "@/lib/api";
 
-<<<<<<< HEAD
 type Application = {
   id: string;
   mongoId: string;
@@ -463,34 +332,6 @@ type Application = {
   submitted: string;
   status: string;
 };
-=======
-const applications = [
-  {
-    id: "APP-2024-001",
-    name: "Marcus Johnson",
-    phone: "(305) 847-2291",
-    email: "marcus.johnson@gmail.com",
-    type: "Ambulatory",
-    license: "CDL-A F3847291",
-    start: "Jan 15, 2025",
-    background: "Cleared",
-    submitted: "Dec 28, 2024",
-    status: "Pending review",
-  },
-  {
-    id: "APP-2024-007",
-    name: "Robert Okafor",
-    phone: "(954) 772-3349",
-    email: "r.okafor@gmail.com",
-    type: "Ambulatory",
-    license: "CDL-A R8812738",
-    start: "Jan 28, 2025",
-    background: "Cleared",
-    submitted: "Dec 8, 2024",
-    status: "Pending review",
-  },
-];
->>>>>>> 74911872dfb1867923d8aa02428793c8c6a525f4
 
 export function ApplicationsTable() {
   const [query, setQuery] = useState("");
