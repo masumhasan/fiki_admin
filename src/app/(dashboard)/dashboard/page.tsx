@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { getAdminTripsApi, getAdminAnalyticsApi } from "@/lib/api";
 import {
   ArrowRight,
@@ -307,12 +308,12 @@ export default function DashboardPage() {
             <h2 className="text-lg font-bold text-[#172033]">
               Recent Ride Requests
             </h2>
-            <button
-              type="button"
+            <Link
+              href="/ride-requests"
               className="flex items-center gap-1 text-xs font-bold"
             >
               View all <ArrowRight className="size-3.5" />
-            </button>
+            </Link>
           </div>
           <div className="mt-5 space-y-2.5">
             {stats === null ? (
