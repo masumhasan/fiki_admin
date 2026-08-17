@@ -68,88 +68,7 @@ function getScheduleFromShifts(shifts: readonly string[]) {
   });
 }
 
-const drivers = [
-  {
-    initials: "JR",
-    name: "John Rivera",
-    id: "DRV-0421",
-    tone: "bg-blue-600",
-    total: "40h 00m",
-    shifts: [
-      "8:00 AM|4:00 PM|normal",
-      "8:00 AM|4:00 PM|normal",
-      "9:00 AM|5:00 PM|change",
-      "8:00 AM|4:00 PM|normal",
-      "8:00 AM|4:00 PM|normal",
-      "off",
-      "off",
-    ],
-  },
-  {
-    initials: "AS",
-    name: "Ahmed Smith",
-    id: "DRV-0312",
-    tone: "bg-emerald-500",
-    total: "40h 00m",
-    shifts: [
-      "7:00 AM|3:00 PM|normal",
-      "7:00 AM|3:00 PM|normal",
-      "7:00 AM|3:00 PM|normal",
-      "8:00 AM|4:00 PM|change",
-      "7:00 AM|3:00 PM|normal",
-      "off",
-      "off",
-    ],
-  },
-  {
-    initials: "MJ",
-    name: "Maria Johnson",
-    id: "DRV-0198",
-    tone: "bg-violet-500",
-    total: "32h 00m",
-    shifts: [
-      "9:00 AM|5:00 PM|normal",
-      "off",
-      "9:00 AM|5:00 PM|normal",
-      "9:00 AM|5:00 PM|normal",
-      "9:00 AM|5:00 PM|normal",
-      "off",
-      "off",
-    ],
-  },
-  {
-    initials: "CM",
-    name: "Carlos Mendez",
-    id: "DRV-0554",
-    tone: "bg-amber-500",
-    total: "40h 00m",
-    shifts: [
-      "6:00 AM|2:00 PM|normal",
-      "6:00 AM|2:00 PM|normal",
-      "6:00 AM|2:00 PM|issue",
-      "6:00 AM|2:00 PM|normal",
-      "6:00 AM|2:00 PM|normal",
-      "off",
-      "off",
-    ],
-  },
-  {
-    initials: "SW",
-    name: "Sarah Williams",
-    id: "DRV-0677",
-    tone: "bg-red-500",
-    total: "24h 00m",
-    shifts: [
-      "off",
-      "10:00 AM|6:00 PM|normal",
-      "10:00 AM|6:00 PM|normal",
-      "10:00 AM|6:00 PM|issue",
-      "10:00 AM|6:00 PM|normal",
-      "off",
-      "off",
-    ],
-  },
-] as const;
+const drivers: any[] = [];
 
 const days = [
   ["Mon", "Jul 14"],
@@ -243,8 +162,8 @@ export function SchedulePage() {
   }, []);
 
   const activeDriverList = liveDrivers || drivers;
-  const selected = activeDriverList.find((d) => d.id === selectedId) || activeDriverList[0];
-  const selectedSchedule = (selected as any).weeklySchedule || getScheduleFromShifts((selected as any).shifts);
+  const selected = activeDriverList.find((d) => d.id === selectedId) || activeDriverList[0] || null;
+  const selectedSchedule = selected ? ((selected as any).weeklySchedule || getScheduleFromShifts((selected as any).shifts)) : [];
 
   return (
     <div className="space-y-5 pb-10">
@@ -327,9 +246,14 @@ export function SchedulePage() {
                 ))}
                 <span>Total</span>
               </div>
+              {activeDriverList.length === 0 && (
+                <div className="py-10 text-center text-sm text-muted-foreground">
+                  Loading schedules...
+                </div>
+              )}
               {activeDriverList.map((driver) => (
                 <div
-                  className={`grid grid-cols-[180px_repeat(7,1fr)_90px] items-center gap-2 border-b border-border px-5 py-3 last:border-0 ${selected.id === driver.id ? "bg-blue-50/30" : ""}`}
+                  className={`grid grid-cols-[180px_repeat(7,1fr)_90px] items-center gap-2 border-b border-border px-5 py-3 last:border-0 ${selected?.id === driver.id ? "bg-blue-50/30" : ""}`}
                   key={driver.id}
                 >
                   <button
@@ -381,7 +305,7 @@ export function SchedulePage() {
             <div className="relative">
               <select
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                value={selected.id}
+                value={selected?.id || ""}
                 onChange={(e) => setSelectedId(e.target.value)}
               >
                 {activeDriverList.map((d) => (
@@ -390,22 +314,29 @@ export function SchedulePage() {
                   </option>
                 ))}
               </select>
-              <div className="flex items-center gap-3 rounded-xl border border-border p-3 bg-card relative z-0">
-                <span
-                  className={`grid size-9 place-items-center rounded-full text-xs font-bold text-white ${selected.tone}`}
-                >
-                  {selected.initials}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <strong className="block truncate text-xs">
-                    {selected.name}
-                  </strong>
-                  <span className="text-[10px] text-muted-foreground">
-                    {selected.id}
+              {selected ? (
+                <div className="flex items-center gap-3 rounded-xl border border-border p-3 bg-card relative z-0">
+                  <span
+                    className={`grid size-9 place-items-center rounded-full text-xs font-bold text-white ${selected.tone}`}
+                  >
+                    {selected.initials}
                   </span>
+                  <div className="min-w-0 flex-1">
+                    <strong className="block truncate text-xs">
+                      {selected.name}
+                    </strong>
+                    <span className="text-[10px] text-muted-foreground">
+                      {selected.id}
+                    </span>
+                  </div>
+                  <ChevronDown className="size-4 text-muted-foreground" />
                 </div>
-                <ChevronDown className="size-4 text-muted-foreground" />
-              </div>
+              ) : (
+                <div className="flex items-center gap-3 rounded-xl border border-border p-3 bg-card relative z-0 text-muted-foreground">
+                  Select a driver...
+                  <ChevronDown className="size-4 ml-auto" />
+                </div>
+              )}
             </div>
             <div className="mt-5 flex justify-between">
               <h3 className="text-sm font-bold">Current schedule</h3>
@@ -443,10 +374,10 @@ export function SchedulePage() {
       <WeeklyScheduleModal
         open={editModalOpen}
         onClose={() => setEditModalOpen(false)}
-        driverId={(selected as any).mongoId || selected.id}
-        driverName={selected.name}
-        driverDisplayId={selected.id}
-        initialSchedule={(selected as any).weeklySchedule || []}
+        driverId={selected ? ((selected as any).mongoId || selected.id) : ""}
+        driverName={selected ? selected.name : ""}
+        driverDisplayId={selected ? selected.id : ""}
+        initialSchedule={selected ? ((selected as any).weeklySchedule || []) : []}
         onSaveSuccess={() => {
           if (typeof window !== "undefined") {
             const token = window.localStorage.getItem("fiki_auth_token");
@@ -523,9 +454,9 @@ export function SchedulePage() {
       <OneTimeChangeModal
         open={oneTimeModalOpen}
         onClose={() => setOneTimeModalOpen(false)}
-        driverId={(selected as any).mongoId || selected.id}
-        driverName={selected.name}
-        driverDisplayId={selected.id}
+        driverId={selected ? ((selected as any).mongoId || selected.id) : ""}
+        driverName={selected ? selected.name : ""}
+        driverDisplayId={selected ? selected.id : ""}
         onSaveSuccess={() => {
           if (typeof window !== "undefined") {
             const token = window.localStorage.getItem("fiki_auth_token");
