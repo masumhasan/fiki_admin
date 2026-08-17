@@ -27,63 +27,7 @@ const drivers = [
   ["JM", "James Morrison", "Highlander", "Off Duty", "#0794b5"],
 ];
 
-const trips = [
-  [
-    "T-0391",
-    "SJ",
-    "Sarah",
-    "Marcus",
-    "123 Oak Avenue",
-    "City Medical Center",
-    "Onboard",
-    "9:00 AM",
-    "#7c3aed",
-  ],
-  [
-    "T-0390",
-    "JC",
-    "James",
-    "Aisha",
-    "45 Maple Street",
-    "Downtown Terminal",
-    "Completed",
-    "7:30 AM",
-    "#2563eb",
-  ],
-  [
-    "T-0389",
-    "MR",
-    "Maria",
-    "Robert",
-    "78 Pine Road",
-    "Westside Mall",
-    "Scheduled",
-    "11:00 AM",
-    "#dc2626",
-  ],
-  [
-    "T-0388",
-    "DK",
-    "David",
-    "Linda",
-    "156 Elm Street",
-    "Central Library",
-    "Completed",
-    "2:00 PM",
-    "#0891b2",
-  ],
-  [
-    "T-0387",
-    "ET",
-    "Emma",
-    "—",
-    "220 Birch Ave",
-    "Airport Terminal 2",
-    "Need Driver",
-    "5:30 AM",
-    "#16a34a",
-  ],
-];
+const trips: any[] = [];
 
 const requests = [
   [
@@ -160,7 +104,7 @@ export default function DashboardPage() {
     }
   }, []);
 
-  const activeTripsList = liveTrips || trips;
+  const activeTripsList = liveTrips || [];
 
   return (
     <div className="space-y-5">
@@ -295,6 +239,13 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
+                {activeTripsList.length === 0 && (
+                  <tr>
+                    <td colSpan={7} className="py-10 text-center text-sm text-[#687386]">
+                      {liveTrips === null ? "Loading trips..." : "No trips found."}
+                    </td>
+                  </tr>
+                )}
                 {activeTripsList.map(
                   (
                     [
