@@ -281,8 +281,7 @@ export default function DashboardPage() {
                       No trips found.
                     </td>
                   </tr>
-                ) : (
-                {activeTripsList.map(
+                ) : activeTripsList.map(
                   (
                     [
                       id,
