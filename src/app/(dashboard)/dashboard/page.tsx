@@ -332,10 +332,10 @@ export default function DashboardPage() {
             ) : recentRideRequests.length === 0 ? (
               <p className="text-xs text-[#8b95a7] py-4 text-center border rounded-xl">No recent ride requests.</p>
             ) : (
-              recentRideRequests.map(([ini, name, route, status, date, color]: string[]) => (
+              recentRideRequests.map(([ini, name, route, status, date, color, tripId]: string[]) => (
                 <div
                   className="flex items-center gap-3 rounded-xl border p-3"
-                  key={name}
+                  key={tripId || name}
                 >
                   <Avatar initials={ini} color={color} />
                   <div className="min-w-0 flex-1">
