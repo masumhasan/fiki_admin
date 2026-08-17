@@ -126,7 +126,7 @@ export default function DashboardPage() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-lg font-bold text-[#172033]">
-                Weekly Trip Volume
+                {tripFilter === "week" ? "Weekly" : tripFilter === "month" ? "Monthly" : "Yearly"} Trip Volume
               </h2>
               <p className="mt-0.5 text-xs text-[#8b95a7]">
                 Jul 9 — Jul 15, 2026
