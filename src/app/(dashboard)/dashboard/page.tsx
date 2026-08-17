@@ -28,6 +28,7 @@ const trips: any[] = [];
 export default function DashboardPage() {
   const [liveTrips, setLiveTrips] = useState<any[] | null>(null);
   const [stats, setStats] = useState<any | null>(null);
+  const [tripFilter, setTripFilter] = useState("week"); // "week", "month", "year"
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -75,6 +76,10 @@ export default function DashboardPage() {
   const activeTripsList = liveTrips || [];
   const metrics = stats?.metrics || { todayTrips: 0, pendingRequests: 0, activeDrivers: 0, completedTrips: 0 };
   const weeklyTripVolume = stats?.weeklyTripVolume || [];
+  const monthlyTripVolume = stats?.monthlyTripVolume || [];
+  const yearlyTripVolume = stats?.yearlyTripVolume || [];
+  const tripVolumeData = tripFilter === "week" ? weeklyTripVolume : tripFilter === "month" ? monthlyTripVolume : yearlyTripVolume;
+  
   const driverStatusList = stats?.driverStatus || [];
   const activityFeedList = stats?.activityFeed || [];
   const recentRideRequests = stats?.recentRideRequests || [];
@@ -130,19 +135,22 @@ export default function DashboardPage() {
             <div className="flex gap-1.5 text-xs">
               <button
                 type="button"
-                className="rounded-lg bg-[#0b2b58] px-3 py-2 text-white"
+                onClick={() => setTripFilter("week")}
+                className={`rounded-lg px-3 py-2 ${tripFilter === "week" ? "bg-[#0b2b58] text-white" : "border text-[#69758a]"}`}
               >
                 Week
               </button>
               <button
                 type="button"
-                className="rounded-lg border px-3 py-2 text-[#69758a]"
+                onClick={() => setTripFilter("month")}
+                className={`rounded-lg px-3 py-2 ${tripFilter === "month" ? "bg-[#0b2b58] text-white" : "border text-[#69758a]"}`}
               >
                 Month
               </button>
               <button
                 type="button"
-                className="rounded-lg border px-3 py-2 text-[#69758a]"
+                onClick={() => setTripFilter("year")}
+                className={`rounded-lg px-3 py-2 ${tripFilter === "year" ? "bg-[#0b2b58] text-white" : "border text-[#69758a]"}`}
               >
                 Year
               </button>
@@ -151,7 +159,7 @@ export default function DashboardPage() {
           {stats === null ? (
             <div className="mt-4 h-48 w-full animate-pulse rounded-lg bg-slate-100" />
           ) : (
-            <WeeklyTripChart className="mt-4 h-48 w-full" data={weeklyTripVolume} />
+            <WeeklyTripChart className="mt-4 h-48 w-full" data={tripVolumeData} />
           )}
           <div className="mt-2 flex gap-6 text-xs text-[#7c8799]">
             <span className="flex items-center gap-2">
