@@ -28,7 +28,15 @@ function useChart(option: echarts.EChartsOption) {
 const axisLabel = { color: "#7c8799", fontSize: 11 };
 const splitLine = { lineStyle: { color: "#e5e9ee", type: "dashed" as const } };
 
-export function WeeklyTripChart({ className }: ChartProps) {
+export function WeeklyTripChart({ className, data = [] }: ChartProps & { data?: { date: string; total: number; completed: number }[] }) {
+  const days = data.length > 0 ? data.map(d => d.date) : ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  const totalData = data.length > 0 ? data.map(d => d.total) : [0, 0, 0, 0, 0, 0, 0];
+  const completedData = data.length > 0 ? data.map(d => d.completed) : [0, 0, 0, 0, 0, 0, 0];
+  
+  // calculate max value for y-axis dynamically
+  const maxTotal = Math.max(...totalData, 10);
+  const yAxisMax = Math.ceil(maxTotal / 20) * 20;
+
   const ref = useChart({
     animationDuration: 700,
     color: ["#173d76", "#f5ad00"],
@@ -42,7 +50,7 @@ export function WeeklyTripChart({ className }: ChartProps) {
     xAxis: {
       type: "category",
       boundaryGap: false,
-      data: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+      data: days,
       axisLabel,
       axisLine: { lineStyle: { color: "#9aa3af" } },
       axisTick: { show: false },
@@ -50,8 +58,8 @@ export function WeeklyTripChart({ className }: ChartProps) {
     yAxis: {
       type: "value",
       min: 0,
-      max: 80,
-      interval: 20,
+      max: yAxisMax,
+      interval: Math.max(10, Math.floor(yAxisMax / 4)),
       axisLabel,
       axisLine: { show: true, lineStyle: { color: "#9aa3af" } },
       axisTick: { show: false },
@@ -63,7 +71,7 @@ export function WeeklyTripChart({ className }: ChartProps) {
         type: "line",
         smooth: 0.35,
         symbol: "none",
-        data: [48, 62, 56, 68, 77, 45, 36],
+        data: totalData,
         lineStyle: { width: 2.5, color: "#173d76" },
       },
       {
@@ -71,7 +79,7 @@ export function WeeklyTripChart({ className }: ChartProps) {
         type: "line",
         smooth: 0.35,
         symbol: "none",
-        data: [42, 55, 49, 63, 71, 39, 30],
+        data: completedData,
         lineStyle: { width: 2.5, color: "#f5ad00" },
         areaStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [

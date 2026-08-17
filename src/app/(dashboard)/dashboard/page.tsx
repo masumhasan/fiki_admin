@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getAdminTripsApi } from "@/lib/api";
+import { getAdminTripsApi, getAdminAnalyticsApi } from "@/lib/api";
 import {
   ArrowRight,
   CheckCircle2,
@@ -19,13 +19,7 @@ import {
 const card =
   "rounded-[18px] border border-[#e1e5ea] bg-white shadow-[0_9px_24px_rgba(15,35,65,0.07)]";
 
-const drivers = [
-  ["MW", "Marcus Williams", "Sienna", "Active", "#082552"],
-  ["AP", "Aisha Patel", "Odyssey", "Active", "#7439ed"],
-  ["RT", "Robert Thompson", "Transit", "On Trip", "#2665e7"],
-  ["LC", "Linda Chen", "Caravan", "Active", "#dc2626"],
-  ["JM", "James Morrison", "Highlander", "Off Duty", "#0794b5"],
-];
+
 
 const trips: any[] = [];
 
@@ -66,6 +60,7 @@ const requests = [
 
 export default function DashboardPage() {
   const [liveTrips, setLiveTrips] = useState<any[] | null>(null);
+  const [stats, setStats] = useState<any | null>(null);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -100,11 +95,21 @@ export default function DashboardPage() {
             }
           }
         });
+        
+        getAdminAnalyticsApi(token).then((res) => {
+          if (res.success && res.data) {
+            setStats(res.data);
+          }
+        });
       }
     }
   }, []);
 
   const activeTripsList = liveTrips || [];
+  const metrics = stats?.metrics || { todayTrips: 0, pendingRequests: 0, activeDrivers: 0, completedTrips: 0 };
+  const weeklyTripVolume = stats?.weeklyTripVolume || [];
+  const driverStatusList = stats?.driverStatus || [];
+  const activityFeedList = stats?.activityFeed || [];
 
   return (
     <div className="space-y-5">
@@ -112,30 +117,34 @@ export default function DashboardPage() {
         <Metric
           icon={<Send />}
           label="Today's Trips"
-          value="71"
-          change="+12%"
+          value={metrics.todayTrips.toString()}
+          change=""
           color="#173d76"
+          isLoading={stats === null}
         />
         <Metric
           icon={<CircleAlert />}
           label="Pending Requests"
-          value="14"
-          change="+3"
+          value={metrics.pendingRequests.toString()}
+          change=""
           color="#f39200"
+          isLoading={stats === null}
         />
         <Metric
           icon={<UserRoundCheck />}
           label="Active Drivers"
-          value="18"
-          change="+2"
+          value={metrics.activeDrivers.toString()}
+          change=""
           color="#10ac7b"
+          isLoading={stats === null}
         />
         <Metric
           icon={<CheckCircle2 />}
           label="Completed Trips"
-          value="65"
-          change="91.5%"
+          value={metrics.completedTrips.toString()}
+          change=""
           color="#8345ed"
+          isLoading={stats === null}
         />
       </section>
 
@@ -171,7 +180,11 @@ export default function DashboardPage() {
               </button>
             </div>
           </div>
-          <WeeklyTripChart className="mt-4 h-48 w-full" />
+          {stats === null ? (
+            <div className="mt-4 h-48 w-full animate-pulse rounded-lg bg-slate-100" />
+          ) : (
+            <WeeklyTripChart className="mt-4 h-48 w-full" data={weeklyTripVolume} />
+          )}
           <div className="mt-2 flex gap-6 text-xs text-[#7c8799]">
             <span className="flex items-center gap-2">
               <i className="h-0.5 w-3 bg-[#0b2b58]" />
@@ -186,18 +199,33 @@ export default function DashboardPage() {
         <article className={`${card} p-5`}>
           <h2 className="text-lg font-bold text-[#172033]">Driver Status</h2>
           <div className="mt-5 space-y-4">
-            {drivers.map(([initials, name, car, status, color]) => (
-              <div className="flex items-center gap-3" key={name}>
-                <Avatar initials={initials} color={color} />
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-xs font-bold text-[#273044]">
-                    {name}
-                  </p>
-                  <p className="text-[11px] text-[#8a94a6]">{car}</p>
+            {stats === null ? (
+              [...Array(5)].map((_, i) => (
+                <div className="flex items-center gap-3 animate-pulse" key={i}>
+                  <div className="size-8 rounded-full bg-slate-200 shrink-0" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="h-3.5 w-24 rounded bg-slate-200" />
+                    <div className="h-2.5 w-16 rounded bg-slate-200" />
+                  </div>
+                  <div className="h-5 w-12 rounded-full bg-slate-200" />
                 </div>
-                <Badge status={status} />
-              </div>
-            ))}
+              ))
+            ) : driverStatusList.length === 0 ? (
+              <p className="text-xs text-[#8a94a6]">No active drivers.</p>
+            ) : (
+              driverStatusList.map((driver: any) => (
+                <div className="flex items-center gap-3" key={driver.id}>
+                  <Avatar initials={driver.initials} color={driver.color} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-xs font-bold text-[#273044]">
+                      {driver.name}
+                    </p>
+                    <p className="text-[11px] text-[#8a94a6]">{driver.vehicle}</p>
+                  </div>
+                  <Badge status={driver.status} />
+                </div>
+              ))
+            )}
           </div>
         </article>
       </section>
@@ -239,13 +267,21 @@ export default function DashboardPage() {
                 </tr>
               </thead>
               <tbody>
-                {activeTripsList.length === 0 && (
+                {liveTrips === null ? (
+                  [...Array(5)].map((_, i) => (
+                    <tr className={`border-b ${i % 2 ? "bg-[#fafafa]" : ""}`} key={i}>
+                      <td colSpan={7} className="px-2.5 py-3">
+                        <div className="h-5 w-full animate-pulse rounded bg-slate-100" />
+                      </td>
+                    </tr>
+                  ))
+                ) : activeTripsList.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="py-10 text-center text-sm text-[#687386]">
-                      {liveTrips === null ? "Loading trips..." : "No trips found."}
+                      No trips found.
                     </td>
                   </tr>
-                )}
+                ) : (
                 {activeTripsList.map(
                   (
                     [
@@ -284,8 +320,8 @@ export default function DashboardPage() {
                       </td>
                       <td className="px-2.5 py-3 text-[#7d8799]">{time}</td>
                     </tr>
-                  ),
-                )}
+                  )
+                ))}
               </tbody>
             </table>
           </div>
@@ -296,7 +332,7 @@ export default function DashboardPage() {
             View all trips <ArrowRight className="size-3.5" />
           </button>
         </article>
-        <ActivityFeed />
+        <ActivityFeed items={activityFeedList} isLoading={stats === null} />
       </section>
 
       <section className="grid gap-5 xl:grid-cols-2">
@@ -388,13 +424,24 @@ function Metric({
   value,
   change,
   color,
+  isLoading = false,
 }: {
   icon: React.ReactNode;
   label: string;
   value: string;
   change: string;
   color: string;
+  isLoading?: boolean;
 }) {
+  if (isLoading) {
+    return (
+      <article className="relative min-h-39 overflow-hidden rounded-[18px] bg-slate-100 p-5 shadow-sm animate-pulse">
+        <div className="h-11 w-11 rounded-xl bg-slate-200" />
+        <div className="mt-4 h-4 w-24 rounded bg-slate-200" />
+        <div className="mt-2 h-8 w-16 rounded bg-slate-200" />
+      </article>
+    );
+  }
   return (
     <article
       className="relative min-h-39 overflow-hidden rounded-[18px] p-5 text-white shadow-sm"
@@ -456,40 +503,46 @@ function Badge({ status }: { status: string }) {
     </span>
   );
 }
-function ActivityFeed() {
-  const items = [
-    ["Trip T-0390 completed successfully", "8 min ago", "#22c55e"],
-    ["New ride request from Patricia Lee", "12 min ago", "#3b82f6"],
-    ["Trip T-0387 needs driver assignment", "24 min ago", "#f59e0b"],
-    ["Ride request RR-2843 was rejected", "41 min ago", "#ff5a5f"],
-    ["Marcus Williams checked in — on duty", "1h ago", "#22c55e"],
-    ["Trip T-0391 started — passenger boarded", "1h 12m ago", "#16345e"],
-  ];
+function ActivityFeed({ items = [], isLoading = false }: { items?: { title: string; time: string; color: string }[], isLoading?: boolean }) {
   return (
     <article className={`${card} p-5`}>
       <h2 className="text-lg font-bold text-[#172033]">Activity Feed</h2>
       <p className="text-xs text-[#8b95a7]">Latest updates</p>
       <div className="mt-5 space-y-4">
-        {items.map(([title, time, color], i) => (
-          <div className="relative flex gap-3" key={title}>
-            {i < items.length - 1 && (
-              <span className="absolute left-[9px] top-4 h-9 w-px bg-[#e4e8ee]" />
-            )}
-            <span
-              className="relative mt-0.5 size-5 shrink-0 rounded-full border-2 bg-white"
-              style={{ borderColor: color }}
-            >
-              <i
-                className="absolute left-1/2 top-1/2 size-1 -translate-x-1/2 -translate-y-1/2 rounded-full"
-                style={{ backgroundColor: color }}
-              />
-            </span>
-            <div>
-              <p className="text-xs text-[#343c4d]">{title}</p>
-              <p className="mt-1 text-[11px] text-[#a0a9b7]">{time}</p>
+        {isLoading ? (
+          [...Array(5)].map((_, i) => (
+            <div className="relative flex gap-3 animate-pulse" key={i}>
+              <div className="size-5 rounded-full bg-slate-200 shrink-0" />
+              <div className="flex-1 space-y-2 pt-1">
+                <div className="h-3 w-3/4 rounded bg-slate-200" />
+                <div className="h-2 w-1/4 rounded bg-slate-200" />
+              </div>
             </div>
-          </div>
-        ))}
+          ))
+        ) : items.length === 0 ? (
+          <p className="text-xs text-[#8b95a7]">No recent activity.</p>
+        ) : (
+          items.map(({ title, time, color }, i) => (
+            <div className="relative flex gap-3" key={i}>
+              {i < items.length - 1 && (
+                <span className="absolute left-[9px] top-4 h-9 w-px bg-[#e4e8ee]" />
+              )}
+              <span
+                className="relative mt-0.5 size-5 shrink-0 rounded-full border-2 bg-white"
+                style={{ borderColor: color }}
+              >
+                <i
+                  className="absolute left-1/2 top-1/2 size-1 -translate-x-1/2 -translate-y-1/2 rounded-full"
+                  style={{ backgroundColor: color }}
+                />
+              </span>
+              <div>
+                <p className="text-xs text-[#343c4d]">{title}</p>
+                <p className="mt-1 text-[11px] text-[#a0a9b7]">{time}</p>
+              </div>
+            </div>
+          ))
+        )}
       </div>
     </article>
   );
