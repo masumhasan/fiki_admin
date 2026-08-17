@@ -23,40 +23,6 @@ const card =
 
 const trips: any[] = [];
 
-const requests = [
-  [
-    "SJ",
-    "Sarah Johnson",
-    "123 Oak Avenue, District 5 → City Medical Center, Block A",
-    "Pending",
-    "Jul 16, 2026",
-    "#7c3aed",
-  ],
-  [
-    "JC",
-    "James Chen",
-    "45 Maple Street, Unit 3B → Downtown Bus Terminal",
-    "Approved",
-    "Jul 16, 2026",
-    "#2563eb",
-  ],
-  [
-    "MR",
-    "Maria Rodriguez",
-    "78 Pine Road, Apt 12 → Westside Shopping Center",
-    "Need Driver",
-    "Jul 17, 2026",
-    "#dc2626",
-  ],
-  [
-    "DK",
-    "David Kim",
-    "156 Elm Street → Central Library",
-    "Completed",
-    "Jul 15, 2026",
-    "#0891b2",
-  ],
-];
 
 export default function DashboardPage() {
   const [liveTrips, setLiveTrips] = useState<any[] | null>(null);
@@ -110,6 +76,7 @@ export default function DashboardPage() {
   const weeklyTripVolume = stats?.weeklyTripVolume || [];
   const driverStatusList = stats?.driverStatus || [];
   const activityFeedList = stats?.activityFeed || [];
+  const recentRideRequests = stats?.recentRideRequests || [];
 
   return (
     <div className="space-y-5">
@@ -348,22 +315,40 @@ export default function DashboardPage() {
             </button>
           </div>
           <div className="mt-5 space-y-2.5">
-            {requests.map(([ini, name, route, status, date, color]) => (
-              <div
-                className="flex items-center gap-3 rounded-xl border p-3"
-                key={name}
-              >
-                <Avatar initials={ini} color={color} />
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-bold text-[#293246]">{name}</p>
-                  <p className="truncate text-xs text-[#8993a5]">{route}</p>
+            {stats === null ? (
+              [...Array(4)].map((_, i) => (
+                <div className="flex items-center gap-3 rounded-xl border p-3 animate-pulse" key={i}>
+                  <div className="size-8 rounded-full bg-slate-200 shrink-0" />
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <div className="h-4 w-32 rounded bg-slate-200" />
+                    <div className="h-3 w-48 rounded bg-slate-200" />
+                  </div>
+                  <div className="text-right space-y-2">
+                    <div className="h-5 w-16 rounded-full bg-slate-200 ml-auto" />
+                    <div className="h-3 w-12 rounded bg-slate-200 ml-auto" />
+                  </div>
                 </div>
-                <div className="text-right">
-                  <Badge status={status} />
-                  <p className="mt-1 text-[11px] text-[#9aa3b2]">{date}</p>
+              ))
+            ) : recentRideRequests.length === 0 ? (
+              <p className="text-xs text-[#8b95a7] py-4 text-center border rounded-xl">No recent ride requests.</p>
+            ) : (
+              recentRideRequests.map(([ini, name, route, status, date, color]: string[]) => (
+                <div
+                  className="flex items-center gap-3 rounded-xl border p-3"
+                  key={name}
+                >
+                  <Avatar initials={ini} color={color} />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-[#293246]">{name}</p>
+                    <p className="truncate text-xs text-[#8993a5]">{route}</p>
+                  </div>
+                  <div className="text-right">
+                    <Badge status={status} />
+                    <p className="mt-1 text-[11px] text-[#9aa3b2]">{date}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </article>
         <article className={`${card} p-6`}>
