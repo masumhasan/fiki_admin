@@ -138,8 +138,15 @@ export function AnalyticsPage() {
       const token = window.localStorage.getItem("fiki_auth_token");
       if (token) {
         getAdminAnalyticsApi(token).then((res) => {
-          if (res.success && res.data) {
-            setLiveAnalytics(res.data);
+          if (res.success && res.data && res.data.metrics) {
+            setLiveAnalytics({
+              totalDrivers: res.data.metrics.totalDrivers || 0,
+              activeDrivers: res.data.metrics.activeDrivers || 0,
+              totalTrips: res.data.metrics.totalTrips || 0,
+              completedTrips: res.data.metrics.completedTrips || 0,
+              pendingTrips: res.data.metrics.pendingRequests || 0,
+              totalRevenue: res.data.metrics.totalRevenue || 0,
+            });
           }
         });
       }
