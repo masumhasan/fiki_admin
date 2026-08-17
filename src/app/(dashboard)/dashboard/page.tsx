@@ -320,7 +320,7 @@ export default function DashboardPage() {
                       <td className="px-2.5 py-3 text-[#7d8799]">{time}</td>
                     </tr>
                   )
-                ))}
+                )}
               </tbody>
             </table>
           </div>
