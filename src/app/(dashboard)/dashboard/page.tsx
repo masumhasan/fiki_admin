@@ -29,6 +29,7 @@ export default function DashboardPage() {
   const [liveTrips, setLiveTrips] = useState<any[] | null>(null);
   const [stats, setStats] = useState<any | null>(null);
   const [tripFilter, setTripFilter] = useState("week"); // "week", "month", "year"
+  const [driverPerfFilter, setDriverPerfFilter] = useState("week"); // "week", "fortnight", "month", "year"
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -83,6 +84,14 @@ export default function DashboardPage() {
   const driverStatusList = stats?.driverStatus || [];
   const activityFeedList = stats?.activityFeed || [];
   const recentRideRequests = stats?.recentRideRequests || [];
+
+  const driverPerformance = stats?.driverPerformance || {};
+  const driverPerfData = driverPerformance[driverPerfFilter] || [];
+  const driverPerfText = 
+    driverPerfFilter === "week" ? "Trips this week" :
+    driverPerfFilter === "fortnight" ? "Trips this fortnight" :
+    driverPerfFilter === "month" ? "Trips this month" :
+    "Trips this year";
 
   return (
     <div className="space-y-5">
@@ -361,11 +370,49 @@ export default function DashboardPage() {
           </div>
         </article>
         <article className={`${card} p-6`}>
-          <h2 className="text-lg font-bold text-[#172033]">
-            Driver Performance
-          </h2>
-          <p className="text-xs text-[#8b95a7]">Trips this week</p>
-          <DriverPerformanceChart className="mt-5 h-52 w-full" />
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold text-[#172033]">
+                Driver Performance
+              </h2>
+              <p className="mt-0.5 text-xs text-[#8b95a7]">{driverPerfText}</p>
+            </div>
+            <div className="flex flex-wrap gap-1.5 text-xs">
+              <button
+                type="button"
+                onClick={() => setDriverPerfFilter("week")}
+                className={`rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 ${driverPerfFilter === "week" ? "bg-[#0b2b58] text-white" : "border text-[#69758a]"}`}
+              >
+                Weekly
+              </button>
+              <button
+                type="button"
+                onClick={() => setDriverPerfFilter("fortnight")}
+                className={`rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 ${driverPerfFilter === "fortnight" ? "bg-[#0b2b58] text-white" : "border text-[#69758a]"}`}
+              >
+                Fortnightly
+              </button>
+              <button
+                type="button"
+                onClick={() => setDriverPerfFilter("month")}
+                className={`rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 ${driverPerfFilter === "month" ? "bg-[#0b2b58] text-white" : "border text-[#69758a]"}`}
+              >
+                Monthly
+              </button>
+              <button
+                type="button"
+                onClick={() => setDriverPerfFilter("year")}
+                className={`rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 ${driverPerfFilter === "year" ? "bg-[#0b2b58] text-white" : "border text-[#69758a]"}`}
+              >
+                Yearly
+              </button>
+            </div>
+          </div>
+          {stats === null ? (
+            <div className="mt-5 h-52 w-full animate-pulse rounded-lg bg-slate-100" />
+          ) : (
+            <DriverPerformanceChart className="mt-5 h-52 w-full" data={driverPerfData} />
+          )}
         </article>
       </section>
 

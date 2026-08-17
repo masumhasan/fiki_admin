@@ -100,7 +100,13 @@ export function WeeklyTripChart({ className, data = [] }: ChartProps & { data?: 
   );
 }
 
-export function DriverPerformanceChart({ className }: ChartProps) {
+export function DriverPerformanceChart({ className, data = [] }: ChartProps & { data?: { name: string; trips: number }[] }) {
+  const driverNames = data.length > 0 ? data.map(d => d.name) : ["Marcus W.", "Aisha P.", "Robert T.", "Linda C.", "James M."];
+  const tripCounts = data.length > 0 ? data.map(d => d.trips) : [24, 21, 18, 22, 19];
+  
+  const maxTrips = Math.max(...tripCounts, 30);
+  const yAxisMax = Math.ceil(maxTrips / 10) * 10;
+
   const ref = useChart({
     animationDuration: 700,
     grid: { left: 40, right: 10, top: 14, bottom: 38 },
@@ -111,7 +117,7 @@ export function DriverPerformanceChart({ className }: ChartProps) {
     },
     xAxis: {
       type: "category",
-      data: ["Marcus W.", "Aisha P.", "Robert T.", "Linda C.", "James M."],
+      data: driverNames,
       axisLabel: { ...axisLabel, interval: 0 },
       axisLine: { lineStyle: { color: "#9aa3af" } },
       axisTick: { show: false },
@@ -119,8 +125,8 @@ export function DriverPerformanceChart({ className }: ChartProps) {
     yAxis: {
       type: "value",
       min: 0,
-      max: 30,
-      interval: 10,
+      max: yAxisMax,
+      interval: Math.max(10, yAxisMax / 5),
       axisLabel,
       axisLine: { show: true, lineStyle: { color: "#9aa3af" } },
       axisTick: { show: false },
@@ -129,7 +135,7 @@ export function DriverPerformanceChart({ className }: ChartProps) {
     series: [
       {
         type: "bar",
-        data: [24, 21, 18, 22, 19],
+        data: tripCounts,
         barMaxWidth: 38,
         itemStyle: { color: "#f9b310", borderRadius: [5, 5, 0, 0] },
       },
