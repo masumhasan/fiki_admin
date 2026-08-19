@@ -250,7 +250,16 @@ export default function ManualRideRequestsPage() {
               router.push("/ride-requests");
             }, 1500);
           } else {
-            setErrorMsg(result.error?.message || "Failed to create manual ride request.");
+            console.error("Validation error details:", result.error);
+            const details = result.error?.details
+              ? Object.entries(result.error.details)
+                  .map(([k, v]) => `${k}: ${(v as string[]).join(", ")}`)
+                  .join("; ")
+              : "";
+            setErrorMsg(
+              (result.error?.message || "Failed to create manual ride request.") +
+                (details ? ` Details: ${details}` : "")
+            );
           }
         } catch (err) {
           setErrorMsg("A network error occurred. Please try again.");
