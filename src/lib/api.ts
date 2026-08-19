@@ -338,3 +338,30 @@ export async function addOneTimeChangeApi(token: string, driverId: string, paylo
     return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to set one-time schedule change" } };
   }
 }
+
+export async function getDispatchNumberApi(token: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/settings/dispatch-number`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to fetch dispatch number" } };
+  }
+}
+
+export async function updateDispatchNumberApi(token: string, dispatchNumber: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/settings/dispatch-number`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ dispatchNumber }),
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to update dispatch number" } };
+  }
+}

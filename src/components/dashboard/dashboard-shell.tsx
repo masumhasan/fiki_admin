@@ -13,6 +13,7 @@ import {
   Send,
   UsersRound,
   X,
+  PhoneCall,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -30,6 +31,7 @@ const navigation = [
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
   { label: "Vehicle Report", href: "/vehicle-reports", icon: ClipboardList },
   { label: "Vehicles", href: "/vehicles", icon: CarFront },
+  { label: "Dispatch Management", href: "/dispatch-management", icon: PhoneCall },
 ];
 
 export function DashboardShell({ children }: { children: ReactNode }) {
