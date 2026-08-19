@@ -230,6 +230,11 @@ export default function ManualRideRequestsPage() {
 
       if (token) {
         try {
+          console.log("Submitting form data payload:", JSON.stringify({
+            ...formData,
+            fare: Number(formData.fare),
+          }, null, 2));
+
           const res = await fetch(`${API_URL}/admin/trips`, {
             method: "POST",
             headers: {
@@ -250,7 +255,7 @@ export default function ManualRideRequestsPage() {
               router.push("/ride-requests");
             }, 1500);
           } else {
-            console.error("Validation error details:", result.error);
+            console.error("Validation error details (raw):", JSON.stringify(result.error, null, 2));
             const details = result.error?.details
               ? Object.entries(result.error.details)
                   .map(([k, v]) => `${k}: ${(v as string[]).join(", ")}`)
