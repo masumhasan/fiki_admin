@@ -43,10 +43,8 @@ export default function DispatchManagementPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        breadcrumbs={[
-          { label: "Dashboard", href: "/dashboard" },
-          { label: "Dispatch Management", href: "/dispatch-management" },
-        ]}
+        title="Dispatch Management"
+        description="Manage and update the global dispatch contact number."
       />
       <div className="rounded-[18px] border border-[#e1e5ea] bg-white p-6 shadow-[0_9px_24px_rgba(15,35,65,0.07)] max-w-2xl">
         <h2 className="text-lg font-bold text-[#172033] mb-4">Manage Dispatch Number</h2>

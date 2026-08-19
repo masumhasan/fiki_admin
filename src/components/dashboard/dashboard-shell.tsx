@@ -14,6 +14,7 @@ import {
   UsersRound,
   X,
   PhoneCall,
+  PlusCircle,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -25,6 +26,7 @@ import { clearMockSession } from "@/lib/mock-auth";
 const navigation = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "Ride Requests", href: "/ride-requests", icon: ClipboardList },
+  { label: "Manual Ride Requests", href: "/manual-ride-requests", icon: PlusCircle },
   { label: "Trips", href: "/trips", icon: Send },
   { label: "Drivers", href: "/drivers", icon: UsersRound },
   { label: "Schedule", href: "/schedule", icon: CalendarDays },
