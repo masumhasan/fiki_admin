@@ -50,7 +50,7 @@ export function DriversPage() {
       return;
     }
     try {
-      const res = await getAdminDriversApi(token);
+      const res = await getAdminDriversApi(token, { approvalStatus: "APPROVED" });
       if (res.success && res.data && res.data.drivers) {
         const statusMap: Record<string, DriverStatus> = {
           ONLINE: "Active",

@@ -93,7 +93,7 @@ export function SchedulePage() {
     if (typeof window !== "undefined") {
       const token = window.localStorage.getItem("fiki_auth_token");
       if (token) {
-        getAdminDriversApi(token).then((res) => {
+        getAdminDriversApi(token, { approvalStatus: "APPROVED" }).then((res) => {
           if (res.success && res.data && Array.isArray(res.data.drivers)) {
             const mapped = res.data.drivers.map((d: any, idx: number) => {
               const nameParts = (d.name || "Driver").split(" ");
