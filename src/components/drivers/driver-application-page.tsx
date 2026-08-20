@@ -243,9 +243,22 @@ export function DriverApplicationPage({
 
           <ReviewSection icon={FileText} title="Uploaded documents">
             <div className="grid gap-3 sm:grid-cols-2">
-              {documents.map(([name, status]) => (
-                <DocumentCard key={name} name={name} status={status} />
-              ))}
+              {documents.map(([name, status]) => {
+                let currentStatus = status;
+                let fileData = "";
+                if (name === "BID form") {
+                  currentStatus = liveApp?.bidForm ? "Verified" : "Missing";
+                  fileData = liveApp?.bidForm || "";
+                }
+                return (
+                  <DocumentCard
+                    key={name}
+                    name={name}
+                    status={currentStatus}
+                    fileData={fileData}
+                  />
+                );
+              })}
             </div>
           </ReviewSection>
           <ReviewSection icon={Signature} title="Digital signature">
@@ -695,9 +708,11 @@ function Reference({
 function DocumentCard({
   name,
   status,
+  fileData = "",
 }: {
   name: string;
   status: "Verified" | "Pending" | "Missing";
+  fileData?: string;
 }) {
   const tone =
     status === "Verified"
@@ -705,6 +720,39 @@ function DocumentCard({
       : status === "Missing"
         ? "border-red-200 bg-red-50/65 text-red-600"
         : "border-amber-200 bg-amber-50/65 text-amber-700";
+
+  const handleView = () => {
+    if (!fileData) {
+      alert("This document is mock / pending upload.");
+      return;
+    }
+    const newWindow = window.open();
+    if (newWindow) {
+      newWindow.document.write(
+        `<iframe src="${fileData}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`
+      );
+    }
+  };
+
+  const handleDownload = () => {
+    if (!fileData) {
+      alert("This document is mock / pending upload.");
+      return;
+    }
+    const link = document.createElement("a");
+    link.href = fileData;
+    const mimeType = fileData.split(";")[0]?.split(":")[1] || "";
+    let extension = "pdf";
+    if (mimeType.includes("image/png")) extension = "png";
+    else if (mimeType.includes("image/jpeg")) extension = "jpg";
+    else if (mimeType.includes("word") || mimeType.includes("officedocument")) extension = "docx";
+    
+    link.download = `Wisconsin_BID_Form_${name.replace(/\s+/g, "_")}.${extension}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <article
       className={`flex items-center gap-3 rounded-xl border p-3 ${tone}`}
@@ -718,15 +766,17 @@ function DocumentCard({
       </div>
       <button
         aria-label={`View ${name}`}
-        className="grid size-7 place-items-center rounded-full bg-card/80"
+        className="grid size-7 place-items-center rounded-full bg-card/80 cursor-pointer hover:bg-card transition"
         type="button"
+        onClick={handleView}
       >
         <Eye className="size-3" />
       </button>
       <button
         aria-label={`Download ${name}`}
-        className="grid size-7 place-items-center rounded-full bg-card/80"
+        className="grid size-7 place-items-center rounded-full bg-card/80 cursor-pointer hover:bg-card transition"
         type="button"
+        onClick={handleDownload}
       >
         <Download className="size-3" />
       </button>
