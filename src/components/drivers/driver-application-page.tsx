@@ -149,7 +149,7 @@ export function DriverApplicationPage({
                   ["Full name", fullName],
                   ["Email address", liveApp?.email || "N/A"],
                   ["Phone number", liveApp?.phone || "N/A"],
-                  ["Street address", liveApp?.streetAddress || "—"],
+                  ["Street address", liveApp?.streetAddress ? `${liveApp.streetAddress}${liveApp.streetAddress2 ? `, ${liveApp.streetAddress2}` : ""}` : "—"],
                   ["City", liveApp?.city || "—"],
                   ["State", liveApp?.state || "—"],
                   ["Postal code", liveApp?.zipCode || "—"],
@@ -198,6 +198,7 @@ export function DriverApplicationPage({
                   items={[
                     ["Institution", liveApp?.college || "—"],
                     ["Degree", liveApp?.degree || "—"],
+                    ["Graduated", liveApp?.collegeGraduated === "no" ? "No" : liveApp?.collegeGraduated === "yes" ? "✓ Yes" : "—"],
                   ]}
                 />
               </InsetCard>
@@ -206,12 +207,13 @@ export function DriverApplicationPage({
 
           <ReviewSection icon={BriefcaseBusiness} title="Employment history">
             <div className="space-y-4">
-              <HistoryCard
+               <HistoryCard
                 company={liveApp?.previousEmployer || "—"}
                 dates={liveApp?.employmentFromDate || liveApp?.employmentToDate ? `${liveApp?.employmentFromDate || ""} – ${liveApp?.employmentToDate || ""}` : "—"}
                 position={liveApp?.jobTitle || "—"}
                 salary={liveApp?.startingSalary || liveApp?.endingSalary ? `${liveApp?.startingSalary || ""} → ${liveApp?.endingSalary || ""}` : "—"}
                 reason={liveApp?.reasonForLeaving || "—"}
+                responsibilities={liveApp?.responsibilities || ""}
               />
             </div>
           </ReviewSection>
@@ -621,12 +623,14 @@ function HistoryCard({
   position,
   reason,
   salary,
+  responsibilities,
 }: {
   company: string;
   dates: string;
   position: string;
   reason: string;
   salary: string;
+  responsibilities?: string;
 }) {
   return (
     <article className="rounded-xl bg-muted/60 p-4">
@@ -650,6 +654,13 @@ function HistoryCard({
           <br />
           <strong className="text-xs text-foreground">{reason}</strong>
         </p>
+        {responsibilities && (
+          <p className="text-[10px] text-muted-foreground sm:col-span-2 mt-2">
+            Responsibilities
+            <br />
+            <strong className="text-xs text-foreground font-medium block whitespace-pre-wrap">{responsibilities}</strong>
+          </p>
+        )}
       </div>
     </article>
   );
