@@ -294,6 +294,23 @@ export async function getAdminTripDetailApi(token: string, tripId: string) {
   }
 }
 
+export async function cancelTripAdminApi(token: string, tripId: string, reason?: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/trips/${tripId}/cancel`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ reason }),
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to cancel trip" } };
+  }
+}
+
+
 export async function deleteDriverApi(token: string, id: string) {
   try {
     const res = await fetch(`${API_BASE_URL}/admin/drivers/${id}`, {
