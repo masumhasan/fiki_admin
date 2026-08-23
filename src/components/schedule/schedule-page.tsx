@@ -336,7 +336,7 @@ function OneTimeChangesTable({
                 </span>
                 {c.driverName}
               </td>
-              <td>{new Date(c.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</td>
+              <td>{new Date(c.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}</td>
               <td>{c.working ? (c.startTime || "—") : <span className="text-muted-foreground">Day off</span>}</td>
               <td>{c.working ? (c.endTime || "—") : "—"}</td>
               <td>
@@ -556,13 +556,8 @@ export function SchedulePage() {
     ? (selected as any).weeklySchedule || getScheduleFromShifts((selected as any).shifts)
     : [];
 
-  // Show upcoming (future or today) changes, max 5 in the preview table
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const upcomingChanges = allOneTimeChanges.filter(
-    (c) => new Date(c.date) >= now
-  );
-  const previewChanges = upcomingChanges.slice(0, 5);
+  // Show latest 5 one-time changes on the schedule page
+  const previewChanges = allOneTimeChanges.slice(0, 5);
 
   return (
     <>
