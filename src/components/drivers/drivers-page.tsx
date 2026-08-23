@@ -59,7 +59,9 @@ export function DriversPage() {
           UNAVAILABLE: "Off duty",
         };
 
-        const mapped: Driver[] = res.data.drivers.map((d: any, idx: number) => {
+        const mapped: Driver[] = res.data.drivers
+          .filter((d: any) => d.profile && d.profile.approvalStatus === "APPROVED")
+          .map((d: any, idx: number) => {
           const profile = d.profile || {};
           const status = statusMap[profile.availabilityStatus] ?? "Off duty";
 
