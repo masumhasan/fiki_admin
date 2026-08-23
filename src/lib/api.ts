@@ -193,6 +193,7 @@ export async function getDriverApplicationByIdApi(token: string, id: string) {
     return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to fetch driver application details" } };
   }
 }
+
 export async function getVehiclesApi(token: string) {
   try {
     const res = await fetch(`${API_BASE_URL}/admin/vehicles`, {
@@ -336,6 +337,45 @@ export async function addOneTimeChangeApi(token: string, driverId: string, paylo
     return await res.json();
   } catch (error) {
     return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to set one-time schedule change" } };
+  }
+}
+
+export async function getOneTimeChangesApi(token: string, driverId: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/drivers/${driverId}/one-time-changes`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to fetch one-time changes" } };
+  }
+}
+
+export async function updateOneTimeChangeApi(token: string, driverId: string, changeId: string, payload: { date?: string; working: boolean; startTime?: string; endTime?: string; reason?: string }) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/drivers/${driverId}/one-time-changes/${changeId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(payload),
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to update one-time change" } };
+  }
+}
+
+export async function deleteOneTimeChangeApi(token: string, driverId: string, changeId: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/drivers/${driverId}/one-time-changes/${changeId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to delete one-time change" } };
   }
 }
 
