@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import {
   ArrowDownRight,
   ArrowUpRight,
@@ -13,75 +14,9 @@ import {
   XCircle,
 } from "lucide-react";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { getAdminAnalyticsApi } from "@/lib/api";
 
-const metrics = [
-  [
-    "Total ride requests",
-    "1,248",
-    "+12% from last month",
-    TicketCheck,
-    "bg-blue-50 text-blue-600",
-    true,
-  ],
-  [
-    "Completed rides",
-    "1,050",
-    "84% completion rate",
-    UserRoundCheck,
-    "bg-emerald-50 text-emerald-600",
-    true,
-  ],
-  [
-    "Pending rides",
-    "138",
-    "Waiting for approval",
-    Clock3,
-    "bg-amber-50 text-amber-600",
-    null,
-  ],
-  [
-    "Cancelled rides",
-    "60",
-    "4.8% cancellation rate",
-    XCircle,
-    "bg-red-50 text-red-500",
-    false,
-  ],
-  [
-    "Total revenue",
-    "$52,480",
-    "+8.3% from last month",
-    CircleDollarSign,
-    "bg-emerald-50 text-emerald-600",
-    true,
-  ],
-  [
-    "Outstanding payments",
-    "$8,750",
-    "16.7% of total revenue",
-    CircleDollarSign,
-    "bg-amber-50 text-amber-600",
-    null,
-  ],
-  [
-    "Active drivers",
-    "42",
-    "6 currently on a trip",
-    UserRoundCheck,
-    "bg-blue-50 text-blue-600",
-    null,
-  ],
-  [
-    "Total passengers",
-    "865",
-    "+34 new this week",
-    UsersRound,
-    "bg-violet-50 text-violet-600",
-    true,
-  ],
-] as const;
-
-const months = [
+const defaultMonths = [
   ["Jan", 56, 55],
   ["Feb", 64, 63],
   ["Mar", 72, 71],
@@ -96,7 +31,7 @@ const months = [
   ["Dec", 77, 76],
 ] as const;
 
-const drivers = [
+const defaultDrivers = [
   ["MR", "Marcus Rivera", "142", "4.9", "$6,840", "Active"],
   ["AT", "Angela Thompson", "128", "4.8", "$6,120", "Active"],
   ["JO", "James O'Brien", "119", "4.7", "$5,680", "Active"],
@@ -105,7 +40,7 @@ const drivers = [
   ["LP", "Linda Park", "87", "4.8", "$4,180", "Off Duty"],
 ] as const;
 
-const rides = [
+const defaultRides = [
   ["FT-4821", "Dorothy Hayes", "Hartford Medical Ctr", "Completed", "$28.50"],
   ["FT-4820", "Robert Kim", "Bridgeport Hospital", "In Progress", "$34.00"],
   ["FT-4819", "Susan Clark", "Stamford Health Clinic", "Pending", "$41.75"],
@@ -120,17 +55,34 @@ const rides = [
   ["FT-4816", "George Adams", "Danbury Hospital", "Completed", "$38.90"],
 ] as const;
 
-import { useEffect, useState } from "react";
-import { getAdminAnalyticsApi } from "@/lib/api";
-
 export function AnalyticsPage() {
-  const [liveAnalytics, setLiveAnalytics] = useState<{
-    totalDrivers: number;
-    activeDrivers: number;
-    totalTrips: number;
-    completedTrips: number;
-    pendingTrips: number;
-    totalRevenue: number;
+  const [analyticsData, setAnalyticsData] = useState<{
+    metrics?: {
+      totalTrips: number;
+      completedTrips: number;
+      pendingTrips: number;
+      cancelledTrips: number;
+      rejectedTrips: number;
+      totalRevenue: number;
+      outstandingPayments: number;
+      activeDrivers: number;
+      onTripDrivers: number;
+      totalDrivers: number;
+      totalPassengers: number;
+      newPassengersThisWeek: number;
+    };
+    revenueSummary?: {
+      todayRevenue: number;
+      weeklyRevenue: number;
+      monthlyRevenue: number;
+      yearlyRevenue: number;
+      outstandingBalance: number;
+      avgRidePrice: number;
+    };
+    monthlyRidePerformance?: Array<{ month: string; requested: number; completed: number }>;
+    revenueOverview?: Array<{ month: string; monthlyRevenue: number; outstanding: number }>;
+    topDrivers?: Array<{ id: string; initials: string; name: string; trips: number; rating: string; revenue: string; status: string }>;
+    recentRideRequests?: Array<{ id: string; rawId?: string; passenger: string; destination: string; status: string; price: string }>;
   } | null>(null);
 
   useEffect(() => {
@@ -138,25 +90,36 @@ export function AnalyticsPage() {
       const token = window.localStorage.getItem("fiki_auth_token");
       if (token) {
         getAdminAnalyticsApi(token).then((res) => {
-          if (res.success && res.data && res.data.metrics) {
-            setLiveAnalytics({
-              totalDrivers: res.data.metrics.totalDrivers || 0,
-              activeDrivers: res.data.metrics.activeDrivers || 0,
-              totalTrips: res.data.metrics.totalTrips || 0,
-              completedTrips: res.data.metrics.completedTrips || 0,
-              pendingTrips: res.data.metrics.pendingRequests || 0,
-              totalRevenue: res.data.metrics.totalRevenue || 0,
-            });
+          if (res.success && res.data) {
+            setAnalyticsData(res.data);
           }
         });
       }
     }
   }, []);
 
+  const m = analyticsData?.metrics;
+  const rev = analyticsData?.revenueSummary;
+
+  const totalTripsVal = m ? m.totalTrips : 1248;
+  const completedTripsVal = m ? m.completedTrips : 1050;
+  const pendingTripsVal = m ? m.pendingTrips : 138;
+  const cancelledTripsVal = m ? m.cancelledTrips : 60;
+  const rejectedTripsVal = m ? m.rejectedTrips : 32;
+
+  const completionRate = totalTripsVal > 0 ? ((completedTripsVal / totalTripsVal) * 100).toFixed(1) : "84.0";
+  const cancellationRate = totalTripsVal > 0 ? ((cancelledTripsVal / totalTripsVal) * 100).toFixed(1) : "4.8";
+  const pendingRate = totalTripsVal > 0 ? ((pendingTripsVal / totalTripsVal) * 100).toFixed(1) : "11.1";
+  const rejectedRate = totalTripsVal > 0 ? ((rejectedTripsVal / totalTripsVal) * 100).toFixed(1) : "2.6";
+
+  const totalRevenueVal = m ? m.totalRevenue : 52480;
+  const outstandingVal = m ? m.outstandingPayments : 8750;
+  const outstandingPct = totalRevenueVal > 0 ? ((outstandingVal / totalRevenueVal) * 100).toFixed(1) : "16.7";
+
   const dynamicMetrics = [
     [
       "Total ride requests",
-      liveAnalytics ? String(liveAnalytics.totalTrips) : "1,248",
+      m ? m.totalTrips.toLocaleString() : "1,248",
       "+12% from last month",
       TicketCheck,
       "bg-blue-50 text-blue-600",
@@ -164,15 +127,15 @@ export function AnalyticsPage() {
     ],
     [
       "Completed rides",
-      liveAnalytics ? String(liveAnalytics.completedTrips) : "1,050",
-      "84% completion rate",
+      m ? m.completedTrips.toLocaleString() : "1,050",
+      `${completionRate}% completion rate`,
       UserRoundCheck,
       "bg-emerald-50 text-emerald-600",
       true,
     ],
     [
       "Pending rides",
-      liveAnalytics ? String(liveAnalytics.pendingTrips) : "138",
+      m ? m.pendingTrips.toLocaleString() : "138",
       "Waiting for approval",
       Clock3,
       "bg-amber-50 text-amber-600",
@@ -180,15 +143,15 @@ export function AnalyticsPage() {
     ],
     [
       "Cancelled rides",
-      "60",
-      "4.8% cancellation rate",
+      m ? m.cancelledTrips.toLocaleString() : "60",
+      `${cancellationRate}% cancellation rate`,
       XCircle,
       "bg-red-50 text-red-500",
       false,
     ],
     [
       "Total revenue",
-      liveAnalytics ? `$${liveAnalytics.totalRevenue.toFixed(2)}` : "$52,480",
+      m ? `$${m.totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$52,480",
       "+8.3% from last month",
       CircleDollarSign,
       "bg-emerald-50 text-emerald-600",
@@ -196,34 +159,55 @@ export function AnalyticsPage() {
     ],
     [
       "Outstanding payments",
-      "$8,750",
-      "16.7% of total revenue",
+      m ? `$${m.outstandingPayments.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$8,750",
+      `${outstandingPct}% of total revenue`,
       CircleDollarSign,
       "bg-amber-50 text-amber-600",
       null,
     ],
     [
       "Active drivers",
-      liveAnalytics ? String(liveAnalytics.activeDrivers) : "42",
-      "6 currently on a trip",
+      m ? String(m.activeDrivers) : "42",
+      `${m ? m.onTripDrivers : 6} currently on a trip`,
       UserRoundCheck,
       "bg-blue-50 text-blue-600",
       null,
     ],
     [
       "Total passengers",
-      "865",
-      "+34 new this week",
+      m ? m.totalPassengers.toLocaleString() : "865",
+      `+${m ? m.newPassengersThisWeek : 34} new this week`,
       UsersRound,
       "bg-violet-50 text-violet-600",
       true,
     ],
   ] as const;
 
+  // Monthly performance chart bars calculation
+  const liveMonthlyPerf = analyticsData?.monthlyRidePerformance || [];
+  const maxPerfVal = Math.max(1, ...liveMonthlyPerf.map(i => Math.max(i.requested, i.completed)));
+  const monthlyBars = liveMonthlyPerf.length > 0
+    ? liveMonthlyPerf.map(i => [
+        i.month,
+        Math.min(100, Math.max(6, Math.round((i.requested / maxPerfVal) * 100))),
+        Math.min(100, Math.max(6, Math.round((i.completed / maxPerfVal) * 100))),
+      ] as const)
+    : defaultMonths;
+
+  // Driver Table Data
+  const topDriversData = analyticsData?.topDrivers && analyticsData.topDrivers.length > 0
+    ? analyticsData.topDrivers.map(d => [d.initials, d.name, String(d.trips), d.rating, d.revenue, d.status] as const)
+    : defaultDrivers;
+
+  // Ride Table Data
+  const recentRidesData = analyticsData?.recentRideRequests && analyticsData.recentRideRequests.length > 0
+    ? analyticsData.recentRideRequests.map(r => [r.id, r.passenger, r.destination, r.status, r.price] as const)
+    : defaultRides;
+
   function exportReport() {
     const csv = [
       "Metric,Value",
-      ...dynamicMetrics.map(([label, value]) => `${label},${value}`),
+      ...dynamicMetrics.map(([label, value]) => `"${label}","${value}"`),
     ].join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const link = document.createElement("a");
@@ -286,7 +270,7 @@ export function AnalyticsPage() {
           <LegendDot color="bg-emerald-500" label="Completed rides" />
         </div>
         <div className="mt-5 flex h-58 items-end gap-2 border-b border-dashed border-border px-1 sm:gap-4">
-          {months.map(([month, request, completed]) => (
+          {monthlyBars.map(([month, request, completed]) => (
             <div
               className="flex h-full min-w-0 flex-1 flex-col justify-end"
               key={month}
@@ -319,7 +303,7 @@ export function AnalyticsPage() {
             <LegendDot color="bg-blue-600" label="Monthly revenue" />
             <LegendDot color="bg-orange-500" label="Outstanding" />
           </div>
-          <RevenueChart />
+          <RevenueChart data={analyticsData?.revenueOverview} />
         </article>
         <article className={cardClass}>
           <CardHeading
@@ -330,8 +314,7 @@ export function AnalyticsPage() {
             <div
               className="grid size-38 place-items-center rounded-full"
               style={{
-                background:
-                  "conic-gradient(#22c55e 0 84%, #f97316 84% 95%, #ef4444 95% 98%, #94a3b8 98%)",
+                background: `conic-gradient(#22c55e 0 ${completionRate}%, #f97316 ${completionRate}% ${Number(completionRate) + Number(pendingRate)}%, #ef4444 ${Number(completionRate) + Number(pendingRate)}% ${Number(completionRate) + Number(pendingRate) + Number(cancellationRate)}%, #94a3b8 ${Number(completionRate) + Number(pendingRate) + Number(cancellationRate)}% 100%)`,
               }}
             >
               <div className="size-23 rounded-full bg-card" />
@@ -340,11 +323,23 @@ export function AnalyticsPage() {
               <StatusStat
                 color="bg-emerald-500"
                 label="Completed"
-                value="1,050"
+                value={completedTripsVal.toLocaleString()}
               />
-              <StatusStat color="bg-orange-500" label="Pending" value="138" />
-              <StatusStat color="bg-red-500" label="Cancelled" value="60" />
-              <StatusStat color="bg-slate-400" label="Rejected" value="32" />
+              <StatusStat
+                color="bg-orange-500"
+                label="Pending"
+                value={pendingTripsVal.toLocaleString()}
+              />
+              <StatusStat
+                color="bg-red-500"
+                label="Cancelled"
+                value={cancelledTripsVal.toLocaleString()}
+              />
+              <StatusStat
+                color="bg-slate-400"
+                label="Rejected"
+                value={rejectedTripsVal.toLocaleString()}
+              />
             </div>
           </div>
         </article>
@@ -352,10 +347,10 @@ export function AnalyticsPage() {
 
       <section className="grid gap-5 xl:grid-cols-2">
         <DataCard title="Top drivers">
-          <DriverTable />
+          <DriverTable data={topDriversData} />
         </DataCard>
         <DataCard title="Recent ride requests">
-          <RideTable />
+          <RideTable data={recentRidesData} />
         </DataCard>
       </section>
 
@@ -367,26 +362,26 @@ export function AnalyticsPage() {
         <div className="mt-5 grid gap-x-10 gap-y-5 md:grid-cols-2">
           <Progress
             label="Completed rate"
-            value="84.1%"
-            width="84.1%"
+            value={`${completionRate}%`}
+            width={`${completionRate}%`}
             color="bg-emerald-500"
           />
           <Progress
             label="Pending rate"
-            value="11.1%"
-            width="11.1%"
+            value={`${pendingRate}%`}
+            width={`${pendingRate}%`}
             color="bg-orange-500"
           />
           <Progress
             label="Cancelled rate"
-            value="4.8%"
-            width="4.8%"
+            value={`${cancellationRate}%`}
+            width={`${cancellationRate}%`}
             color="bg-red-500"
           />
           <Progress
             label="Rejected rate"
-            value="2.6%"
-            width="2.6%"
+            value={`${rejectedRate}%`}
+            width={`${rejectedRate}%`}
             color="bg-slate-400"
           />
         </div>
@@ -399,12 +394,12 @@ export function AnalyticsPage() {
         />
         <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
           {[
-            ["Today's revenue", "$2,840", "text-emerald-600"],
-            ["Weekly revenue", "$18,620", "text-blue-600"],
-            ["Monthly revenue", "$52,480", "text-blue-600"],
-            ["Yearly revenue", "$584,200", "text-blue-600"],
-            ["Outstanding balance", "$8,750", "text-orange-500"],
-            ["Avg ride price", "$42.05", "text-foreground"],
+            ["Today's revenue", rev ? `$${rev.todayRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$2,840", "text-emerald-600"],
+            ["Weekly revenue", rev ? `$${rev.weeklyRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$18,620", "text-blue-600"],
+            ["Monthly revenue", rev ? `$${rev.monthlyRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$52,480", "text-blue-600"],
+            ["Yearly revenue", rev ? `$${rev.yearlyRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$584,200", "text-blue-600"],
+            ["Outstanding balance", rev ? `$${rev.outstandingBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$8,750", "text-orange-500"],
+            ["Avg ride price", rev ? `$${rev.avgRidePrice.toFixed(2)}` : "$42.05", "text-foreground"],
           ].map(([label, value, color]) => (
             <div
               className="rounded-xl border border-border bg-muted/25 p-4"
@@ -477,7 +472,7 @@ function DataCard({
   );
 }
 
-function DriverTable() {
+function DriverTable({ data }: { data: ReadonlyArray<readonly [string, string, string, string, string, string]> }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-130 text-left text-[11px]">
@@ -491,7 +486,7 @@ function DriverTable() {
           </tr>
         </thead>
         <tbody>
-          {drivers.map(([initials, name, trips, rating, revenue, status]) => (
+          {data.map(([initials, name, trips, rating, revenue, status]) => (
             <tr className="border-t border-border" key={name}>
               <td className="px-5 py-3">
                 <span className="flex items-center gap-2 font-semibold">
@@ -519,7 +514,7 @@ function DriverTable() {
     </div>
   );
 }
-function RideTable() {
+function RideTable({ data }: { data: ReadonlyArray<readonly [string, string, string, string, string]> }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-135 text-left text-[11px]">
@@ -533,7 +528,7 @@ function RideTable() {
           </tr>
         </thead>
         <tbody>
-          {rides.map(([id, passenger, destination, status, price]) => (
+          {data.map(([id, passenger, destination, status, price]) => (
             <tr className="border-t border-border" key={id}>
               <td className="px-5 py-3 font-bold text-blue-600">{id}</td>
               <td className="font-semibold">{passenger}</td>
@@ -593,7 +588,30 @@ function Progress({
     </div>
   );
 }
-function RevenueChart() {
+
+function RevenueChart({ data }: { data?: Array<{ month: string; monthlyRevenue: number; outstanding: number }> }) {
+  let pathD1 = "M25 155 C85 135 115 105 170 145 S250 60 315 85 S395 135 450 78 S550 65 680 92";
+  let pathD2 = "M25 158 C85 137 115 108 170 147 S250 62 315 87 S395 137 450 80 S550 67 680 94";
+
+  if (data && data.length > 0) {
+    const maxVal = Math.max(1, ...data.map((d) => Math.max(d.monthlyRevenue, d.outstanding)));
+    const startX = 25;
+    const width = 655;
+    const height = 150;
+    const points1 = data.map((d, i) => {
+      const x = startX + (i / (data.length - 1)) * width;
+      const y = 185 - (d.monthlyRevenue / maxVal) * height;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    });
+    const points2 = data.map((d, i) => {
+      const x = startX + (i / (data.length - 1)) * width;
+      const y = 185 - (d.outstanding / maxVal) * height;
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    });
+    pathD1 = `M ${points1.join(" L ")}`;
+    pathD2 = `M ${points2.join(" L ")}`;
+  }
+
   return (
     <svg
       aria-label="Revenue trend chart"
@@ -608,17 +626,21 @@ function RevenueChart() {
         <path d="M25 195H680" />
       </g>
       <path
-        d="M25 155 C85 135 115 105 170 145 S250 60 315 85 S395 135 450 78 S550 65 680 92"
+        d={pathD1}
         fill="none"
         stroke="#2563eb"
         strokeWidth="4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
       <path
-        d="M25 158 C85 137 115 108 170 147 S250 62 315 87 S395 137 450 80 S550 67 680 94"
+        d={pathD2}
         fill="none"
         stroke="#f97316"
         strokeDasharray="6 5"
         strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
       />
     </svg>
   );
