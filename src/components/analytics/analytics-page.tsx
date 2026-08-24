@@ -16,46 +16,23 @@ import {
 import { PageHeader } from "@/components/dashboard/page-header";
 import { getAdminAnalyticsApi } from "@/lib/api";
 
-const defaultMonths = [
-  ["Jan", 56, 55],
-  ["Feb", 64, 63],
-  ["Mar", 72, 71],
-  ["Apr", 61, 60],
-  ["May", 80, 79],
-  ["Jun", 90, 89],
-  ["Jul", 84, 83],
-  ["Aug", 74, 74],
-  ["Sep", 87, 86],
-  ["Oct", 92, 91],
-  ["Nov", 82, 81],
-  ["Dec", 77, 76],
-] as const;
-
-const defaultDrivers = [
-  ["MR", "Marcus Rivera", "142", "4.9", "$6,840", "Active"],
-  ["AT", "Angela Thompson", "128", "4.8", "$6,120", "Active"],
-  ["JO", "James O'Brien", "119", "4.7", "$5,680", "Active"],
-  ["PS", "Priya Sharma", "112", "4.9", "$5,340", "Active"],
-  ["CM", "Carlos Mendez", "98", "4.6", "$4,720", "On Trip"],
-  ["LP", "Linda Park", "87", "4.8", "$4,180", "Off Duty"],
-] as const;
-
-const defaultRides = [
-  ["FT-4821", "Dorothy Hayes", "Hartford Medical Ctr", "Completed", "$28.50"],
-  ["FT-4820", "Robert Kim", "Bridgeport Hospital", "In Progress", "$34.00"],
-  ["FT-4819", "Susan Clark", "Stamford Health Clinic", "Pending", "$41.75"],
-  [
-    "FT-4818",
-    "Thomas Wright",
-    "Yale New Haven Hospital",
-    "Completed",
-    "$52.20",
-  ],
-  ["FT-4817", "Maria Santos", "Norwalk Community Hosp", "Cancelled", "$22.00"],
-  ["FT-4816", "George Adams", "Danbury Hospital", "Completed", "$38.90"],
-] as const;
+const monthNames = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 export function AnalyticsPage() {
+  const [loading, setLoading] = useState(true);
   const [analyticsData, setAnalyticsData] = useState<{
     metrics?: {
       totalTrips: number;
@@ -89,11 +66,18 @@ export function AnalyticsPage() {
     if (typeof window !== "undefined") {
       const token = window.localStorage.getItem("fiki_auth_token");
       if (token) {
-        getAdminAnalyticsApi(token).then((res) => {
-          if (res.success && res.data) {
-            setAnalyticsData(res.data);
-          }
-        });
+        setLoading(true);
+        getAdminAnalyticsApi(token)
+          .then((res) => {
+            if (res.success && res.data) {
+              setAnalyticsData(res.data);
+            }
+          })
+          .finally(() => {
+            setLoading(false);
+          });
+      } else {
+        setLoading(false);
       }
     }
   }, []);
@@ -101,30 +85,30 @@ export function AnalyticsPage() {
   const m = analyticsData?.metrics;
   const rev = analyticsData?.revenueSummary;
 
-  const totalTripsVal = m?.totalTrips ?? 1248;
-  const completedTripsVal = m?.completedTrips ?? 1050;
-  const pendingTripsVal = m?.pendingTrips ?? (m as any)?.pendingRequests ?? 138;
-  const cancelledTripsVal = m?.cancelledTrips ?? 60;
-  const rejectedTripsVal = m?.rejectedTrips ?? 32;
+  const totalTripsVal = m?.totalTrips ?? 0;
+  const completedTripsVal = m?.completedTrips ?? 0;
+  const pendingTripsVal = m?.pendingTrips ?? (m as any)?.pendingRequests ?? 0;
+  const cancelledTripsVal = m?.cancelledTrips ?? 0;
+  const rejectedTripsVal = m?.rejectedTrips ?? 0;
 
-  const completionRate = totalTripsVal > 0 ? ((completedTripsVal / totalTripsVal) * 100).toFixed(1) : "84.0";
-  const cancellationRate = totalTripsVal > 0 ? ((cancelledTripsVal / totalTripsVal) * 100).toFixed(1) : "4.8";
-  const pendingRate = totalTripsVal > 0 ? ((pendingTripsVal / totalTripsVal) * 100).toFixed(1) : "11.1";
-  const rejectedRate = totalTripsVal > 0 ? ((rejectedTripsVal / totalTripsVal) * 100).toFixed(1) : "2.6";
+  const completionRate = totalTripsVal > 0 ? ((completedTripsVal / totalTripsVal) * 100).toFixed(1) : "0.0";
+  const cancellationRate = totalTripsVal > 0 ? ((cancelledTripsVal / totalTripsVal) * 100).toFixed(1) : "0.0";
+  const pendingRate = totalTripsVal > 0 ? ((pendingTripsVal / totalTripsVal) * 100).toFixed(1) : "0.0";
+  const rejectedRate = totalTripsVal > 0 ? ((rejectedTripsVal / totalTripsVal) * 100).toFixed(1) : "0.0";
 
-  const totalRevenueVal = m?.totalRevenue ?? 52480;
-  const outstandingVal = m?.outstandingPayments ?? 8750;
-  const outstandingPct = totalRevenueVal > 0 ? ((outstandingVal / totalRevenueVal) * 100).toFixed(1) : "16.7";
+  const totalRevenueVal = m?.totalRevenue ?? 0;
+  const outstandingVal = m?.outstandingPayments ?? 0;
+  const outstandingPct = totalRevenueVal > 0 ? ((outstandingVal / totalRevenueVal) * 100).toFixed(1) : "0.0";
 
-  const activeDriversVal = m?.activeDrivers ?? 42;
-  const onTripDriversVal = m?.onTripDrivers ?? 6;
-  const totalPassengersVal = m?.totalPassengers ?? 865;
-  const newPassengersVal = m?.newPassengersThisWeek ?? 34;
+  const activeDriversVal = m?.activeDrivers ?? 0;
+  const onTripDriversVal = m?.onTripDrivers ?? 0;
+  const totalPassengersVal = m?.totalPassengers ?? 0;
+  const newPassengersVal = m?.newPassengersThisWeek ?? 0;
 
   const dynamicMetrics = [
     [
       "Total ride requests",
-      m ? totalTripsVal.toLocaleString() : "1,248",
+      totalTripsVal.toLocaleString(),
       "+12% from last month",
       TicketCheck,
       "bg-blue-50 text-blue-600",
@@ -132,7 +116,7 @@ export function AnalyticsPage() {
     ],
     [
       "Completed rides",
-      m ? completedTripsVal.toLocaleString() : "1,050",
+      completedTripsVal.toLocaleString(),
       `${completionRate}% completion rate`,
       UserRoundCheck,
       "bg-emerald-50 text-emerald-600",
@@ -140,7 +124,7 @@ export function AnalyticsPage() {
     ],
     [
       "Pending rides",
-      m ? pendingTripsVal.toLocaleString() : "138",
+      pendingTripsVal.toLocaleString(),
       "Waiting for approval",
       Clock3,
       "bg-amber-50 text-amber-600",
@@ -148,7 +132,7 @@ export function AnalyticsPage() {
     ],
     [
       "Cancelled rides",
-      m ? cancelledTripsVal.toLocaleString() : "60",
+      cancelledTripsVal.toLocaleString(),
       `${cancellationRate}% cancellation rate`,
       XCircle,
       "bg-red-50 text-red-500",
@@ -156,7 +140,7 @@ export function AnalyticsPage() {
     ],
     [
       "Total revenue",
-      m ? `$${totalRevenueVal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$52,480",
+      `$${totalRevenueVal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       "+8.3% from last month",
       CircleDollarSign,
       "bg-emerald-50 text-emerald-600",
@@ -164,7 +148,7 @@ export function AnalyticsPage() {
     ],
     [
       "Outstanding payments",
-      m ? `$${outstandingVal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$8,750",
+      `$${outstandingVal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
       `${outstandingPct}% of total revenue`,
       CircleDollarSign,
       "bg-amber-50 text-amber-600",
@@ -172,7 +156,7 @@ export function AnalyticsPage() {
     ],
     [
       "Active drivers",
-      m ? String(activeDriversVal) : "42",
+      String(activeDriversVal),
       `${onTripDriversVal} currently on a trip`,
       UserRoundCheck,
       "bg-blue-50 text-blue-600",
@@ -180,7 +164,7 @@ export function AnalyticsPage() {
     ],
     [
       "Total passengers",
-      m ? totalPassengersVal.toLocaleString() : "865",
+      totalPassengersVal.toLocaleString(),
       `+${newPassengersVal} new this week`,
       UsersRound,
       "bg-violet-50 text-violet-600",
@@ -188,27 +172,26 @@ export function AnalyticsPage() {
     ],
   ] as const;
 
-
   // Monthly performance chart bars calculation
   const liveMonthlyPerf = analyticsData?.monthlyRidePerformance || [];
-  const maxPerfVal = Math.max(1, ...liveMonthlyPerf.map(i => Math.max(i.requested, i.completed)));
+  const maxPerfVal = Math.max(1, ...liveMonthlyPerf.map((i) => Math.max(i.requested, i.completed)));
   const monthlyBars = liveMonthlyPerf.length > 0
-    ? liveMonthlyPerf.map(i => [
+    ? liveMonthlyPerf.map((i) => [
         i.month,
-        Math.min(100, Math.max(6, Math.round((i.requested / maxPerfVal) * 100))),
-        Math.min(100, Math.max(6, Math.round((i.completed / maxPerfVal) * 100))),
+        Math.min(100, Math.max(0, Math.round((i.requested / maxPerfVal) * 100))),
+        Math.min(100, Math.max(0, Math.round((i.completed / maxPerfVal) * 100))),
       ] as const)
-    : defaultMonths;
+    : monthNames.map((m) => [m, 0, 0] as const);
 
   // Driver Table Data
-  const topDriversData = analyticsData?.topDrivers && analyticsData.topDrivers.length > 0
-    ? analyticsData.topDrivers.map(d => [d.initials, d.name, String(d.trips), d.rating, d.revenue, d.status] as const)
-    : defaultDrivers;
+  const topDriversData = (analyticsData?.topDrivers || []).map(
+    (d) => [d.initials, d.name, String(d.trips), d.rating, d.revenue, d.status] as const,
+  );
 
   // Ride Table Data
-  const recentRidesData = analyticsData?.recentRideRequests && analyticsData.recentRideRequests.length > 0
-    ? analyticsData.recentRideRequests.map(r => [r.id, r.passenger, r.destination, r.status, r.price] as const)
-    : defaultRides;
+  const recentRidesData = (analyticsData?.recentRideRequests || []).map(
+    (r) => [r.id, r.passenger, r.destination, r.status, r.price] as const,
+  );
 
   function exportReport() {
     const csv = [
@@ -221,6 +204,10 @@ export function AnalyticsPage() {
     link.download = "fiki-analytics.csv";
     link.click();
     URL.revokeObjectURL(url);
+  }
+
+  if (loading) {
+    return <AnalyticsSkeleton />;
   }
 
   return (
@@ -400,12 +387,12 @@ export function AnalyticsPage() {
         />
         <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
           {[
-            ["Today's revenue", rev ? `$${rev.todayRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$2,840", "text-emerald-600"],
-            ["Weekly revenue", rev ? `$${rev.weeklyRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$18,620", "text-blue-600"],
-            ["Monthly revenue", rev ? `$${rev.monthlyRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$52,480", "text-blue-600"],
-            ["Yearly revenue", rev ? `$${rev.yearlyRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$584,200", "text-blue-600"],
-            ["Outstanding balance", rev ? `$${rev.outstandingBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$8,750", "text-orange-500"],
-            ["Avg ride price", rev ? `$${rev.avgRidePrice.toFixed(2)}` : "$42.05", "text-foreground"],
+            ["Today's revenue", rev ? `$${rev.todayRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$0.00", "text-emerald-600"],
+            ["Weekly revenue", rev ? `$${rev.weeklyRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$0.00", "text-blue-600"],
+            ["Monthly revenue", rev ? `$${rev.monthlyRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$0.00", "text-blue-600"],
+            ["Yearly revenue", rev ? `$${rev.yearlyRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$0.00", "text-blue-600"],
+            ["Outstanding balance", rev ? `$${rev.outstandingBalance.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$0.00", "text-orange-500"],
+            ["Avg ride price", rev ? `$${rev.avgRidePrice.toFixed(2)}` : "$0.00", "text-foreground"],
           ].map(([label, value, color]) => (
             <div
               className="rounded-xl border border-border bg-muted/25 p-4"
@@ -417,6 +404,121 @@ export function AnalyticsPage() {
           ))}
         </div>
       </section>
+    </div>
+  );
+}
+
+function AnalyticsSkeleton() {
+  return (
+    <div className="space-y-5 pb-10">
+      <div className="flex items-center justify-between">
+        <div className="space-y-2">
+          <div className="h-7 w-36 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800" />
+          <div className="h-4 w-64 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800" />
+        </div>
+        <div className="h-10 w-32 animate-pulse rounded-lg bg-slate-200 dark:bg-slate-800" />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div key={i} className="rounded-xl border border-border bg-card p-5 shadow-sm space-y-3">
+            <div className="flex justify-between items-center">
+              <div className="size-10 animate-pulse rounded-xl bg-slate-200 dark:bg-slate-800" />
+              <div className="size-4 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+            </div>
+            <div className="h-3 w-24 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+            <div className="h-7 w-20 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+            <div className="h-3 w-32 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+          </div>
+        ))}
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-sm">
+        <div className="space-y-2">
+          <div className="h-5 w-48 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+          <div className="h-3 w-64 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+        </div>
+        <div className="flex h-56 items-end gap-3 border-b border-dashed border-border pt-6 pb-2">
+          {Array.from({ length: 12 }).map((_, i) => (
+            <div key={i} className="flex flex-1 flex-col items-center justify-end gap-2 h-full">
+              <div className="w-full flex justify-center gap-1 items-end h-full">
+                <div
+                  className="w-3 rounded-t animate-pulse bg-slate-200 dark:bg-slate-800"
+                  style={{ height: `${30 + (i % 5) * 12}%` }}
+                />
+                <div
+                  className="w-3 rounded-t animate-pulse bg-slate-300 dark:bg-slate-700"
+                  style={{ height: `${25 + (i % 4) * 15}%` }}
+                />
+              </div>
+              <div className="h-3 w-6 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-[1.5fr_1fr]">
+        <div className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-sm">
+          <div className="space-y-2">
+            <div className="h-5 w-40 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+            <div className="h-3 w-56 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+          </div>
+          <div className="h-48 w-full animate-pulse rounded-xl bg-slate-200 dark:bg-slate-800" />
+        </div>
+        <div className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-sm">
+          <div className="space-y-2">
+            <div className="h-5 w-44 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+            <div className="h-3 w-40 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+          </div>
+          <div className="flex flex-col items-center justify-center space-y-4 py-4">
+            <div className="size-36 animate-pulse rounded-full border-8 border-slate-200 dark:border-slate-800" />
+            <div className="grid w-full grid-cols-2 gap-3">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="h-8 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid gap-5 xl:grid-cols-2">
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm p-5 space-y-3">
+          <div className="h-5 w-32 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-10 animate-pulse rounded bg-slate-100 dark:bg-slate-800/50" />
+          ))}
+        </div>
+        <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm p-5 space-y-3">
+          <div className="h-5 w-40 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+          {Array.from({ length: 5 }).map((_, i) => (
+            <div key={i} className="h-10 animate-pulse rounded bg-slate-100 dark:bg-slate-800/50" />
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-sm">
+        <div className="h-5 w-44 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+        <div className="grid gap-5 md:grid-cols-2">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="space-y-2">
+              <div className="flex justify-between">
+                <div className="h-3 w-24 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+                <div className="h-3 w-10 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+              </div>
+              <div className="h-2 w-full animate-pulse rounded-full bg-slate-200 dark:bg-slate-800" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-5 space-y-4 shadow-sm">
+        <div className="h-5 w-40 animate-pulse rounded bg-slate-200 dark:bg-slate-800" />
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div key={i} className="h-16 animate-pulse rounded-xl bg-slate-100 dark:bg-slate-800/50" />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -479,6 +581,14 @@ function DataCard({
 }
 
 function DriverTable({ data }: { data: ReadonlyArray<readonly [string, string, string, string, string, string]> }) {
+  if (data.length === 0) {
+    return (
+      <div className="p-6 text-center text-xs text-muted-foreground">
+        No drivers found
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-130 text-left text-[11px]">
@@ -521,6 +631,14 @@ function DriverTable({ data }: { data: ReadonlyArray<readonly [string, string, s
   );
 }
 function RideTable({ data }: { data: ReadonlyArray<readonly [string, string, string, string, string]> }) {
+  if (data.length === 0) {
+    return (
+      <div className="p-6 text-center text-xs text-muted-foreground">
+        No recent ride requests found
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-135 text-left text-[11px]">
@@ -596,8 +714,8 @@ function Progress({
 }
 
 function RevenueChart({ data }: { data?: Array<{ month: string; monthlyRevenue: number; outstanding: number }> }) {
-  let pathD1 = "M25 155 C85 135 115 105 170 145 S250 60 315 85 S395 135 450 78 S550 65 680 92";
-  let pathD2 = "M25 158 C85 137 115 108 170 147 S250 62 315 87 S395 137 450 80 S550 67 680 94";
+  let pathD1 = "M25 185 L680 185";
+  let pathD2 = "M25 185 L680 185";
 
   if (data && data.length > 0) {
     const maxVal = Math.max(1, ...data.map((d) => Math.max(d.monthlyRevenue, d.outstanding)));
