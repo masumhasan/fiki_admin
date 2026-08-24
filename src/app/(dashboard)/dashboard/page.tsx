@@ -350,7 +350,8 @@ export default function DashboardPage() {
             ) : recentRideRequests.length === 0 ? (
               <p className="text-xs text-[#8b95a7] py-4 text-center border rounded-xl">No recent ride requests.</p>
             ) : (
-              recentRideRequests.map((item: any, idx: number) => {
+              recentRideRequests.slice(0, 4).map((item: any, idx: number) => {
+
                 const isArr = Array.isArray(item);
                 const ini = isArr ? item[0] : (item.initials || item.passenger?.substring(0, 2)?.toUpperCase() || "PA");
                 const name = isArr ? item[1] : (item.passenger || "Passenger");
