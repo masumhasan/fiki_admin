@@ -189,9 +189,18 @@ export function AnalyticsPage() {
   );
 
   // Ride Table Data
-  const recentRidesData = (analyticsData?.recentRideRequests || []).map(
-    (r) => [r.id, r.passenger, r.destination, r.status, r.price] as const,
-  );
+  const recentRidesData = (analyticsData?.recentRideRequests || []).map((r: any) => {
+    if (Array.isArray(r)) {
+      const rideId = r[6] || r[0];
+      const passenger = r[1];
+      const dest = r[2];
+      const status = r[3];
+      const price = r[4];
+      return [rideId, passenger, dest, status, price] as const;
+    }
+    return [r.id || "FT-0", r.passenger || "Passenger", r.destination || "Destination", r.status || "Pending", r.price || "$0.00"] as const;
+  });
+
 
   function exportReport() {
     const csv = [
@@ -602,8 +611,8 @@ function DriverTable({ data }: { data: ReadonlyArray<readonly [string, string, s
           </tr>
         </thead>
         <tbody>
-          {data.map(([initials, name, trips, rating, revenue, status]) => (
-            <tr className="border-t border-border" key={name}>
+          {data.map(([initials, name, trips, rating, revenue, status], idx) => (
+            <tr className="border-t border-border" key={`${name}-${idx}`}>
               <td className="px-5 py-3">
                 <span className="flex items-center gap-2 font-semibold">
                   <i className="grid size-7 place-items-center rounded-full bg-blue-600 text-[9px] not-italic text-white">
@@ -652,8 +661,8 @@ function RideTable({ data }: { data: ReadonlyArray<readonly [string, string, str
           </tr>
         </thead>
         <tbody>
-          {data.map(([id, passenger, destination, status, price]) => (
-            <tr className="border-t border-border" key={id}>
+          {data.map(([id, passenger, destination, status, price], idx) => (
+            <tr className="border-t border-border" key={`${id}-${idx}`}>
               <td className="px-5 py-3 font-bold text-blue-600">{id}</td>
               <td className="font-semibold">{passenger}</td>
               <td className="max-w-35 truncate text-muted-foreground">
@@ -670,6 +679,7 @@ function RideTable({ data }: { data: ReadonlyArray<readonly [string, string, str
     </div>
   );
 }
+
 function Badge({ status }: { status: string }) {
   const tone =
     status === "Completed" || status === "Active"
