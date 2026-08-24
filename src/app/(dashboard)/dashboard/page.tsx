@@ -350,22 +350,34 @@ export default function DashboardPage() {
             ) : recentRideRequests.length === 0 ? (
               <p className="text-xs text-[#8b95a7] py-4 text-center border rounded-xl">No recent ride requests.</p>
             ) : (
-              recentRideRequests.map(([ini, name, route, status, date, color, tripId]: string[]) => (
-                <div
-                  className="flex items-center gap-3 rounded-xl border p-3"
-                  key={tripId || name}
-                >
-                  <Avatar initials={ini} color={color} />
-                  <div className="min-w-0 flex-1">
-                    <p className="text-sm font-bold text-[#293246]">{name}</p>
-                    <p className="truncate text-xs text-[#8993a5]">{route}</p>
+              recentRideRequests.map((item: any, idx: number) => {
+                const isArr = Array.isArray(item);
+                const ini = isArr ? item[0] : (item.initials || item.passenger?.substring(0, 2)?.toUpperCase() || "PA");
+                const name = isArr ? item[1] : (item.passenger || "Passenger");
+                const route = isArr ? item[2] : (item.destination || "Destination");
+                const status = isArr ? item[3] : (item.status || "Pending");
+                const date = isArr ? item[4] : (item.date || item.price || "Recently");
+                const color = isArr ? item[5] : (item.color || "#2563eb");
+                const tripId = isArr ? item[6] : (item.id || item.rawId || `TRP-${idx}`);
+
+                return (
+                  <div
+                    className="flex items-center gap-3 rounded-xl border p-3"
+                    key={tripId || name || idx}
+                  >
+                    <Avatar initials={ini} color={color} />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-bold text-[#293246]">{name}</p>
+                      <p className="truncate text-xs text-[#8993a5]">{route}</p>
+                    </div>
+                    <div className="text-right">
+                      <Badge status={status} />
+                      <p className="mt-1 text-[11px] text-[#9aa3b2]">{date}</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <Badge status={status} />
-                    <p className="mt-1 text-[11px] text-[#9aa3b2]">{date}</p>
-                  </div>
-                </div>
-              ))
+                );
+              })
+
             )}
           </div>
         </article>
