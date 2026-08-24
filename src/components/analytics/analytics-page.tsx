@@ -101,25 +101,30 @@ export function AnalyticsPage() {
   const m = analyticsData?.metrics;
   const rev = analyticsData?.revenueSummary;
 
-  const totalTripsVal = m ? m.totalTrips : 1248;
-  const completedTripsVal = m ? m.completedTrips : 1050;
-  const pendingTripsVal = m ? m.pendingTrips : 138;
-  const cancelledTripsVal = m ? m.cancelledTrips : 60;
-  const rejectedTripsVal = m ? m.rejectedTrips : 32;
+  const totalTripsVal = m?.totalTrips ?? 1248;
+  const completedTripsVal = m?.completedTrips ?? 1050;
+  const pendingTripsVal = m?.pendingTrips ?? (m as any)?.pendingRequests ?? 138;
+  const cancelledTripsVal = m?.cancelledTrips ?? 60;
+  const rejectedTripsVal = m?.rejectedTrips ?? 32;
 
   const completionRate = totalTripsVal > 0 ? ((completedTripsVal / totalTripsVal) * 100).toFixed(1) : "84.0";
   const cancellationRate = totalTripsVal > 0 ? ((cancelledTripsVal / totalTripsVal) * 100).toFixed(1) : "4.8";
   const pendingRate = totalTripsVal > 0 ? ((pendingTripsVal / totalTripsVal) * 100).toFixed(1) : "11.1";
   const rejectedRate = totalTripsVal > 0 ? ((rejectedTripsVal / totalTripsVal) * 100).toFixed(1) : "2.6";
 
-  const totalRevenueVal = m ? m.totalRevenue : 52480;
-  const outstandingVal = m ? m.outstandingPayments : 8750;
+  const totalRevenueVal = m?.totalRevenue ?? 52480;
+  const outstandingVal = m?.outstandingPayments ?? 8750;
   const outstandingPct = totalRevenueVal > 0 ? ((outstandingVal / totalRevenueVal) * 100).toFixed(1) : "16.7";
+
+  const activeDriversVal = m?.activeDrivers ?? 42;
+  const onTripDriversVal = m?.onTripDrivers ?? 6;
+  const totalPassengersVal = m?.totalPassengers ?? 865;
+  const newPassengersVal = m?.newPassengersThisWeek ?? 34;
 
   const dynamicMetrics = [
     [
       "Total ride requests",
-      m ? m.totalTrips.toLocaleString() : "1,248",
+      m ? totalTripsVal.toLocaleString() : "1,248",
       "+12% from last month",
       TicketCheck,
       "bg-blue-50 text-blue-600",
@@ -127,7 +132,7 @@ export function AnalyticsPage() {
     ],
     [
       "Completed rides",
-      m ? m.completedTrips.toLocaleString() : "1,050",
+      m ? completedTripsVal.toLocaleString() : "1,050",
       `${completionRate}% completion rate`,
       UserRoundCheck,
       "bg-emerald-50 text-emerald-600",
@@ -135,7 +140,7 @@ export function AnalyticsPage() {
     ],
     [
       "Pending rides",
-      m ? m.pendingTrips.toLocaleString() : "138",
+      m ? pendingTripsVal.toLocaleString() : "138",
       "Waiting for approval",
       Clock3,
       "bg-amber-50 text-amber-600",
@@ -143,7 +148,7 @@ export function AnalyticsPage() {
     ],
     [
       "Cancelled rides",
-      m ? m.cancelledTrips.toLocaleString() : "60",
+      m ? cancelledTripsVal.toLocaleString() : "60",
       `${cancellationRate}% cancellation rate`,
       XCircle,
       "bg-red-50 text-red-500",
@@ -151,7 +156,7 @@ export function AnalyticsPage() {
     ],
     [
       "Total revenue",
-      m ? `$${m.totalRevenue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$52,480",
+      m ? `$${totalRevenueVal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$52,480",
       "+8.3% from last month",
       CircleDollarSign,
       "bg-emerald-50 text-emerald-600",
@@ -159,7 +164,7 @@ export function AnalyticsPage() {
     ],
     [
       "Outstanding payments",
-      m ? `$${m.outstandingPayments.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$8,750",
+      m ? `$${outstandingVal.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "$8,750",
       `${outstandingPct}% of total revenue`,
       CircleDollarSign,
       "bg-amber-50 text-amber-600",
@@ -167,21 +172,22 @@ export function AnalyticsPage() {
     ],
     [
       "Active drivers",
-      m ? String(m.activeDrivers) : "42",
-      `${m ? m.onTripDrivers : 6} currently on a trip`,
+      m ? String(activeDriversVal) : "42",
+      `${onTripDriversVal} currently on a trip`,
       UserRoundCheck,
       "bg-blue-50 text-blue-600",
       null,
     ],
     [
       "Total passengers",
-      m ? m.totalPassengers.toLocaleString() : "865",
-      `+${m ? m.newPassengersThisWeek : 34} new this week`,
+      m ? totalPassengersVal.toLocaleString() : "865",
+      `+${newPassengersVal} new this week`,
       UsersRound,
       "bg-violet-50 text-violet-600",
       true,
     ],
   ] as const;
+
 
   // Monthly performance chart bars calculation
   const liveMonthlyPerf = analyticsData?.monthlyRidePerformance || [];
