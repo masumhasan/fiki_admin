@@ -15,6 +15,7 @@ import {
   X,
   PhoneCall,
   PlusCircle,
+  DollarSign,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -34,6 +35,7 @@ const navigation = [
   { label: "Vehicle Report", href: "/vehicle-reports", icon: ClipboardList },
   { label: "Vehicles", href: "/vehicles", icon: CarFront },
   { label: "Dispatch Management", href: "/dispatch-management", icon: PhoneCall },
+  { label: "Earning Management", href: "/earning-management", icon: DollarSign },
 ];
 
 export function DashboardShell({ children }: { children: ReactNode }) {
