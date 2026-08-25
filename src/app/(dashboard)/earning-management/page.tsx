@@ -26,6 +26,7 @@ interface DriverEarningItem {
   licensePlate: string;
   hourlyRate: number;
   approvedHours: number;
+  tripBonusRate: number;
   completedTrips: number;
   tripBonus: number;
   regularWages: number;
@@ -51,6 +52,7 @@ export default function EarningManagementPage() {
   const [selectedDriver, setSelectedDriver] = useState<DriverEarningItem | null>(null);
   const [editRate, setEditRate] = useState("");
   const [editHours, setEditHours] = useState("");
+  const [editBonusRate, setEditBonusRate] = useState("");
   const [saving, setSaving] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
@@ -85,6 +87,7 @@ export default function EarningManagementPage() {
     setSelectedDriver(driver);
     setEditRate(String(driver.hourlyRate));
     setEditHours(String(driver.approvedHours));
+    setEditBonusRate(String(driver.tripBonusRate ?? 3));
   };
 
   const handleSaveEarnings = async () => {
@@ -94,9 +97,10 @@ export default function EarningManagementPage() {
 
     const rateNum = parseFloat(editRate);
     const hoursNum = parseFloat(editHours);
+    const bonusRateNum = parseFloat(editBonusRate);
 
-    if (isNaN(rateNum) || rateNum < 0 || isNaN(hoursNum) || hoursNum < 0) {
-      alert("Please enter valid numeric values for Hourly Rate and Approved Hours.");
+    if (isNaN(rateNum) || rateNum < 0 || isNaN(hoursNum) || hoursNum < 0 || isNaN(bonusRateNum) || bonusRateNum < 0) {
+      alert("Please enter valid numeric values for Hourly Rate, Approved Hours, and Trip Bonus Rate.");
       return;
     }
 
@@ -111,12 +115,13 @@ export default function EarningManagementPage() {
         body: JSON.stringify({
           hourlyRate: rateNum,
           approvedHours: hoursNum,
+          tripBonusRate: bonusRateNum,
         }),
       });
 
       const json = await res.json();
       if (json.success) {
-        setToastMessage(`Updated earnings settings for ${selectedDriver.name}`);
+        setToastMessage(`Updated earnings parameters for ${selectedDriver.name}`);
         setSelectedDriver(null);
         fetchEarningsData();
         setTimeout(() => setToastMessage(null), 3000);
@@ -174,7 +179,7 @@ export default function EarningManagementPage() {
       </div>
 
       {/* Summary Stat Cards */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <div className="rounded-2xl border border-border/80 bg-white p-5 shadow-[0_4px_20px_rgba(8,37,82,0.04)]">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-[#64748b]">Total Estimated Payroll</span>
@@ -213,19 +218,6 @@ export default function EarningManagementPage() {
           </p>
           <p className="mt-1 text-[11px] text-[#94a3b8]">14-day pay period allocation</p>
         </div>
-
-        <div className="rounded-2xl border border-border/80 bg-white p-5 shadow-[0_4px_20px_rgba(8,37,82,0.04)]">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-semibold text-[#64748b]">Trip Bonus Rate</span>
-            <span className="grid size-9 place-items-center rounded-xl bg-amber-50 text-amber-600">
-              <TrendingUp className="size-4" />
-            </span>
-          </div>
-          <p className="mt-3 text-2xl font-bold tracking-tight text-[#0f172a]">
-            $3.00 / trip
-          </p>
-          <p className="mt-1 text-[11px] text-[#94a3b8]">Per completed ride bonus</p>
-        </div>
       </div>
 
       {/* Main Content Table Container */}
@@ -242,7 +234,7 @@ export default function EarningManagementPage() {
             />
           </div>
           <div className="text-xs text-muted-foreground font-semibold">
-            Formula: <span className="text-foreground">(Hourly Rate × Approved Hours) + (Trips × $3)</span>
+            Formula: <span className="text-foreground">(Hourly Rate × Approved Hours) + (Trips × Trip Bonus Rate)</span>
           </div>
         </div>
 
@@ -306,9 +298,9 @@ export default function EarningManagementPage() {
                       </span>
                     </td>
                     <td className="px-5 py-4 font-bold text-emerald-600">
-                      ${driver.tripBonus.toFixed(2)}
+                      ${(driver.completedTrips * (driver.tripBonusRate ?? 3)).toFixed(2)}
                       <span className="block text-[10px] font-normal text-muted-foreground">
-                        {driver.completedTrips} × $3.00
+                        {driver.completedTrips} × ${(driver.tripBonusRate ?? 3).toFixed(2)}
                       </span>
                     </td>
                     <td className="px-5 py-4 font-bold text-slate-800">
@@ -391,6 +383,21 @@ export default function EarningManagementPage() {
                 />
               </div>
 
+              <div>
+                <label className="block text-xs font-bold text-slate-700">
+                  Trip Bonus Rate ($ / trip)
+                </label>
+                <input
+                  type="number"
+                  step="0.5"
+                  min="0"
+                  value={editBonusRate}
+                  onChange={(e) => setEditBonusRate(e.target.value)}
+                  className="mt-1 w-full rounded-xl border border-slate-300 p-2.5 text-sm font-semibold text-slate-900 focus:border-blue-600 focus:outline-none"
+                  placeholder="e.g. 3.00"
+                />
+              </div>
+
               {/* Calculated Preview Box */}
               <div className="rounded-xl border border-blue-100 bg-blue-50/70 p-4 space-y-2 text-xs">
                 <div className="flex justify-between font-medium text-slate-600">
@@ -400,15 +407,15 @@ export default function EarningManagementPage() {
                   </span>
                 </div>
                 <div className="flex justify-between font-medium text-slate-600">
-                  <span>Trip Bonus ({selectedDriver.completedTrips} trips × $3):</span>
+                  <span>Trip Bonus ({selectedDriver.completedTrips} trips × ${(parseFloat(editBonusRate) || 0).toFixed(2)}):</span>
                   <span className="font-bold text-slate-900">
-                    ${selectedDriver.tripBonus.toFixed(2)}
+                    ${(selectedDriver.completedTrips * (parseFloat(editBonusRate) || 0)).toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between border-t border-blue-200/80 pt-2 text-sm font-extrabold text-blue-700">
                   <span>New Gross Salary:</span>
                   <span>
-                    ${(((parseFloat(editRate) || 0) * (parseFloat(editHours) || 0)) + selectedDriver.tripBonus).toFixed(2)}
+                    ${(((parseFloat(editRate) || 0) * (parseFloat(editHours) || 0)) + (selectedDriver.completedTrips * (parseFloat(editBonusRate) || 0))).toFixed(2)}
                   </span>
                 </div>
               </div>

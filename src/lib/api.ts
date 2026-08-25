@@ -436,3 +436,23 @@ export async function getScheduleOverviewApi(token: string, weekStart?: string) 
     return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to fetch schedule overview" } };
   }
 }
+
+export async function updateDriverEarningsApi(
+  token: string,
+  driverId: string,
+  data: { hourlyRate?: number; approvedHours?: number; tripBonusRate?: number; payrollStatus?: string }
+) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/earnings/${driverId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to update driver earnings" } };
+  }
+}
