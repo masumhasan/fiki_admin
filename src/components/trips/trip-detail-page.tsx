@@ -283,29 +283,70 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
     },
   ];
 
-  // Activity events from auditLogs or timestamps
-  const auditLogs: any[] = Array.isArray(trip.auditLogs) ? trip.auditLogs : [];
-  const activityList = auditLogs.length > 0
-    ? auditLogs.map((log: any) => ({
-        label: log.action ? log.action.replace(/_/g, " ") : "Action logged",
-        time: formatDate(log.timestamp) + " " + formatTime(log.timestamp),
-        icon: log.action?.includes("CANCEL") ? X : log.action?.includes("ASSIGN") ? CircleUserRound : Check,
-        tone: log.action?.includes("CANCEL") ? "bg-red-50 text-red-500" : "bg-blue-50 text-blue-500",
-      }))
-    : [
-        {
-          label: `Trip ${trip.status.toLowerCase().replace(/_/g, " ")}`,
-          time: formatDate(trip.updatedAt || trip.createdAt) + " " + formatTime(trip.updatedAt || trip.createdAt),
-          icon: isCancelled ? X : Check,
-          tone: isCancelled ? "bg-red-50 text-red-500" : "bg-emerald-50 text-emerald-500",
-        },
-        {
-          label: "Request submitted",
-          time: formatDate(trip.createdAt) + " " + formatTime(trip.createdAt),
-          icon: FileText,
-          tone: "bg-slate-100 text-brand-muted",
-        },
-      ];
+  // Activity events & status steps for Ride Activity card
+  function formatStepTimeFull(dateVal?: string | Date): string | null {
+    if (!dateVal) return null;
+    const d = new Date(dateVal);
+    if (isNaN(d.getTime())) return null;
+    const dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+    const timeStr = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+    return `${dateStr} ${timeStr}`;
+  }
+
+  const createdTimeStr = formatStepTimeFull(trip.createdAt) || "Aug 25, 2026 9:40 AM";
+  const assignedTimeStr = formatStepTimeFull(trip.assignedAt || trip.createdAt) || createdTimeStr;
+  const acceptedTimeStr = formatStepTimeFull(trip.acceptedAt || trip.assignedAt || trip.createdAt) || assignedTimeStr;
+  const arrivingTimeStr = formatStepTimeFull(trip.arrivingAt);
+  const arrivedTimeStr = formatStepTimeFull(trip.arrivedAt);
+  const inProgressTimeStr = formatStepTimeFull(trip.inProgressAt || trip.startedAt);
+  const completedTimeStr = formatStepTimeFull(trip.completedAt);
+  const cancelledTimeStr = formatStepTimeFull(trip.cancelledAt);
+
+  const isAssigned = Boolean(driverObj);
+  const isAccepted = ["ACCEPTED", "DRIVER_ARRIVING", "DRIVER_ARRIVED", "IN_PROGRESS", "COMPLETED"].includes(trip.status);
+  const isHeadingPickup = ["DRIVER_ARRIVING", "DRIVER_ARRIVED", "IN_PROGRESS", "COMPLETED"].includes(trip.status);
+  const isPickedUp = ["DRIVER_ARRIVED", "IN_PROGRESS", "COMPLETED"].includes(trip.status);
+  const isHeadingDest = ["IN_PROGRESS", "COMPLETED"].includes(trip.status);
+  const isCompletedStatus = trip.status === "COMPLETED";
+
+  const rideStatusSteps = [
+    {
+      label: isAssigned ? `Assigned (${driverName})` : "Assigned",
+      time: isAssigned ? assignedTimeStr : "Pending",
+      done: isAssigned,
+      current: trip.status === "REQUESTED" && isAssigned,
+    },
+    {
+      label: "Accepted",
+      time: isAccepted ? acceptedTimeStr : "Pending",
+      done: isAccepted,
+      current: trip.status === "ACCEPTED",
+    },
+    {
+      label: "Heading to pickup",
+      time: isHeadingPickup ? (arrivingTimeStr || acceptedTimeStr) : "Upcoming",
+      done: isHeadingPickup,
+      current: trip.status === "DRIVER_ARRIVING",
+    },
+    {
+      label: "Passenger picked up",
+      time: isPickedUp ? (arrivedTimeStr || arrivingTimeStr || acceptedTimeStr) : "Upcoming",
+      done: isPickedUp,
+      current: trip.status === "DRIVER_ARRIVED",
+    },
+    {
+      label: "Heading to destination",
+      time: isHeadingDest ? (inProgressTimeStr || arrivedTimeStr) : "Upcoming",
+      done: isHeadingDest,
+      current: trip.status === "IN_PROGRESS",
+    },
+    {
+      label: "Trip completed",
+      time: isCompletedStatus ? (completedTimeStr || inProgressTimeStr) : isCancelled ? `Cancelled (${cancelledTimeStr})` : "Upcoming",
+      done: isCompletedStatus,
+      current: false,
+    },
+  ];
 
   return (
     <div className="space-y-5">
@@ -458,20 +499,40 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
           <section className={cardClass}>
             <h2 className={titleClass}>Ride activity</h2>
             <div className="mt-5 space-y-4">
-              {activityList.map((item, idx) => {
-                const Icon = item.icon;
-                return (
-                  <div className="flex gap-3" key={idx}>
-                    <span className={`grid size-8 shrink-0 place-items-center rounded-lg ${item.tone}`}>
-                      <Icon className="size-4" />
-                    </span>
-                    <div>
-                      <p className="text-xs font-semibold text-foreground capitalize">{item.label}</p>
-                      <p className="mt-1 text-[10px] text-brand-placeholder">{item.time}</p>
+              {rideStatusSteps.map((item, idx) => (
+                <div className="flex items-start gap-3" key={idx}>
+                  <span
+                    className={`grid size-8 shrink-0 place-items-center rounded-lg text-xs font-bold ${
+                      item.done
+                        ? "bg-emerald-50 text-emerald-600 border border-emerald-200"
+                        : item.current
+                          ? "bg-amber-50 text-amber-600 border border-amber-200"
+                          : "bg-slate-50 text-slate-400 border border-slate-200"
+                    }`}
+                  >
+                    {item.done ? (
+                      <Check className="size-4 text-emerald-600" />
+                    ) : (
+                      <FileText className="size-4 text-slate-400" />
+                    )}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <p className={`text-xs font-bold ${item.done ? "text-foreground" : "text-muted-foreground"}`}>
+                        {item.label}
+                      </p>
+                      {item.current && (
+                        <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800">
+                          Current
+                        </span>
+                      )}
                     </div>
+                    <p className="mt-0.5 text-[11px] font-medium text-slate-500">
+                      {item.time}
+                    </p>
                   </div>
-                );
-              })}
+                </div>
+              ))}
             </div>
           </section>
         </aside>
