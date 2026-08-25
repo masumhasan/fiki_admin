@@ -129,14 +129,12 @@ export default function ManualRideRequestsPage() {
     destinationAddress: "",
     pickupDate: "",
     pickupTime: "",
-    appointmentTime: "",
     fare: "",
 
     recurringStartDate: "",
     recurringEndDate: "",
     recurringDays: [] as string[],
     recurringPickupTime: "",
-    recurringAppointmentTime: "",
 
     returnPickupAddress: "",
     returnDestinationAddress: "",
@@ -474,15 +472,6 @@ export default function ManualRideRequestsPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-semibold text-[#172033]">Appointment Time (Optional)</label>
-              <input
-                type="time"
-                className="w-full rounded-xl border border-[#e1e5ea] px-4 py-2.5 text-sm"
-                value={formData.appointmentTime}
-                onChange={(e) => handleInputChange("appointmentTime", e.target.value)}
-              />
-            </div>
-            <div>
               <label className="mb-1 block text-xs font-semibold text-[#172033]">Final Fixed Fare ($) *</label>
               <input
                 type="number"
@@ -546,15 +535,6 @@ export default function ManualRideRequestsPage() {
                       className="w-full rounded-xl border border-[#e1e5ea] px-4 py-2.5 text-sm"
                       value={formData.recurringPickupTime}
                       onChange={(e) => handleInputChange("recurringPickupTime", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold text-[#172033]">Recurring Appointment Time</label>
-                    <input
-                      type="time"
-                      className="w-full rounded-xl border border-[#e1e5ea] px-4 py-2.5 text-sm"
-                      value={formData.recurringAppointmentTime}
-                      onChange={(e) => handleInputChange("recurringAppointmentTime", e.target.value)}
                     />
                   </div>
                 </div>
