@@ -422,3 +422,17 @@ export async function updateDispatchNumberApi(token: string, dispatchNumber: str
     return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to update dispatch number" } };
   }
 }
+
+export async function getScheduleOverviewApi(token: string, weekStart?: string) {
+  try {
+    const url = weekStart
+      ? `${API_BASE_URL}/admin/schedule-overview?weekStart=${weekStart}`
+      : `${API_BASE_URL}/admin/schedule-overview`;
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to fetch schedule overview" } };
+  }
+}

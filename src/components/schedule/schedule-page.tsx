@@ -24,6 +24,7 @@ import {
   getAdminDriversApi,
   deleteOneTimeChangeApi,
   updateOneTimeChangeApi,
+  getScheduleOverviewApi,
 } from "@/lib/api";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -550,8 +551,73 @@ export function SchedulePage() {
     setEditChangeModalOpen(true);
   };
 
+  const getMondayOfDate = (d: Date) => {
+    const dt = new Date(d);
+    const day = dt.getDay();
+    const diff = (day + 6) % 7;
+    dt.setDate(dt.getDate() - diff);
+    dt.setHours(0, 0, 0, 0);
+    return dt;
+  };
+
+  const formatDateYYYYMMDD = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+  };
+
+  const [currentWeekMonday, setCurrentWeekMonday] = useState<Date>(() => getMondayOfDate(new Date()));
+  const [scheduleData, setScheduleData] = useState<any>(null);
+  const [loadingSchedule, setLoadingSchedule] = useState(false);
+
+  const fetchScheduleOverview = async (mondayDate: Date) => {
+    if (typeof window === "undefined") return;
+    const token = window.localStorage.getItem("fiki_auth_token");
+    if (!token) return;
+
+    setLoadingSchedule(true);
+    const dateStr = formatDateYYYYMMDD(mondayDate);
+    const res = await getScheduleOverviewApi(token, dateStr);
+    if (res.success && res.data) {
+      setScheduleData(res.data);
+    }
+    setLoadingSchedule(false);
+  };
+
+  useEffect(() => {
+    fetchScheduleOverview(currentWeekMonday);
+  }, [currentWeekMonday]);
+
+  const handlePrevWeek = () => {
+    const prev = new Date(currentWeekMonday);
+    prev.setDate(prev.getDate() - 7);
+    setCurrentWeekMonday(prev);
+  };
+
+  const handleNextWeek = () => {
+    const next = new Date(currentWeekMonday);
+    next.setDate(next.getDate() + 7);
+    setCurrentWeekMonday(next);
+  };
+
+  const handleToday = () => {
+    const tod = getMondayOfDate(new Date());
+    setCurrentWeekMonday(tod);
+  };
+
   const activeDriverList = liveDrivers || [];
-  const selected = activeDriverList.find((d) => d.id === selectedId) || activeDriverList[0] || null;
+  const displayDrivers = scheduleData?.drivers || activeDriverList;
+  const displayDays = scheduleData?.weekDays || days.map(([day, date]) => ({ day, date }));
+  const weekRangeLabel = scheduleData?.weekRangeLabel || "Jul 14 – Jul 20, 2026";
+  const metrics = scheduleData?.metrics || {
+    scheduledToday: activeDriverList.length,
+    workingNow: activeDriverList.length,
+    offToday: 0,
+    scheduleIssues: 0,
+  };
+
+  const selected = displayDrivers.find((d: any) => d.id === selectedId) || displayDrivers[0] || null;
   const selectedSchedule = selected
     ? (selected as any).weeklySchedule || getScheduleFromShifts((selected as any).shifts)
     : [];
@@ -584,25 +650,25 @@ export function SchedulePage() {
           <Metric
             icon={CalendarDays}
             label="Drivers scheduled today"
-            value={String(activeDriverList.length)}
+            value={String(metrics.scheduledToday)}
             tone="bg-blue-50 text-blue-600"
           />
           <Metric
             icon={UsersRound}
             label="Drivers working now"
-            value={String(activeDriverList.length)}
+            value={String(metrics.workingNow)}
             tone="bg-emerald-50 text-emerald-600"
           />
           <Metric
             icon={Clock3}
             label="Drivers off today"
-            value="0"
+            value={String(metrics.offToday)}
             tone="bg-violet-50 text-violet-600"
           />
           <Metric
             icon={AlertTriangle}
             label="Schedule issues"
-            value="0"
+            value={String(metrics.scheduleIssues)}
             tone="bg-amber-50 text-amber-600"
           />
         </section>
@@ -613,16 +679,17 @@ export function SchedulePage() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <h2 className="text-lg font-bold">Weekly schedule overview</h2>
                 <div className="flex flex-wrap items-center justify-end gap-2">
-                  <button className={iconButton} type="button">
+                  <button className={iconButton} type="button" onClick={handlePrevWeek} title="Previous Week">
                     <ChevronLeft className="size-4" />
                   </button>
-                  <span className="text-xs font-semibold">Jul 14 – Jul 20, 2026</span>
-                  <button className={iconButton} type="button">
+                  <span className="text-xs font-bold text-[#173d76] min-w-36 text-center">{weekRangeLabel}</span>
+                  <button className={iconButton} type="button" onClick={handleNextWeek} title="Next Week">
                     <ChevronRight className="size-4" />
                   </button>
                   <button
-                    className="rounded-lg border border-border px-3 py-2 text-xs font-bold"
+                    className="rounded-lg border border-border px-3 py-2 text-xs font-bold hover:bg-muted transition"
                     type="button"
+                    onClick={handleToday}
                   >
                     Today
                   </button>
@@ -642,18 +709,18 @@ export function SchedulePage() {
               <div className="min-w-230">
                 <div className="grid grid-cols-[180px_repeat(7,1fr)_90px] items-center border-b border-border bg-muted/30 px-5 py-3 text-center text-xs font-bold uppercase text-muted-foreground">
                   <span className="text-left">Driver</span>
-                  {days.map(([day, date]) => (
-                    <span key={day}>
-                      {day}
-                      <small className="mt-1 block font-normal normal-case text-brand-soft">{date}</small>
+                  {displayDays.map((wd: any) => (
+                    <span key={wd.day || wd[0]}>
+                      {wd.day || wd[0]}
+                      <small className="mt-1 block font-normal normal-case text-brand-soft">{wd.date || wd[1]}</small>
                     </span>
                   ))}
                   <span>Total</span>
                 </div>
-                {activeDriverList.length === 0 && (
+                {loadingSchedule && displayDrivers.length === 0 && (
                   <div className="py-10 text-center text-sm text-muted-foreground">Loading schedules...</div>
                 )}
-                {activeDriverList.map((driver) => (
+                {displayDrivers.map((driver: any) => (
                   <div
                     className={`grid grid-cols-[180px_repeat(7,1fr)_90px] items-center gap-2 border-b border-border px-5 py-3 last:border-0 ${selected?.id === driver.id ? "bg-blue-50/30" : ""}`}
                     key={driver.id}
@@ -668,20 +735,21 @@ export function SchedulePage() {
                       </span>
                       <span>
                         <strong className="block text-xs">{driver.name}</strong>
-                        <small className="text-[10px] text-muted-foreground">{driver.id}</small>
+                        <small className="text-[10px] text-muted-foreground">{driver.id.slice(-8).toUpperCase()}</small>
                       </span>
                     </button>
-                    {driver.shifts.map((shift: string, index: number) => (
-                      <ShiftCell key={days[index][0]} shift={shift} />
+                    {driver.shifts.map((shiftItem: any, index: number) => (
+                      <ShiftCell key={displayDays[index]?.day || index} shift={shiftItem} />
                     ))}
                     <strong className="text-center text-xs">{driver.total}</strong>
                   </div>
                 ))}
-                <div className="flex flex-wrap gap-5 px-6 py-4 text-[10px] text-muted-foreground">
-                  <Legend tone="bg-emerald-100 border-emerald-300" label="Scheduled" />
-                  <Legend tone="bg-blue-100 border-blue-300" label="One-time change" />
-                  <Legend tone="bg-slate-100 border-slate-200" label="Day off" />
-                  <Legend tone="bg-amber-100 border-amber-300" label="Schedule issue" />
+                <div className="flex flex-wrap gap-5 px-6 py-4 text-[10px] text-muted-foreground font-medium">
+                  <Legend tone="bg-amber-100 border-amber-300 text-amber-800" label="Scheduled" />
+                  <Legend tone="bg-slate-100 border-slate-200 text-slate-500" label="Day off" />
+                  <Legend tone="bg-emerald-100 border-emerald-300 text-emerald-800" label="Present" />
+                  <Legend tone="bg-orange-100 border-orange-300 text-orange-800" label="Late" />
+                  <Legend tone="bg-rose-100 border-rose-300 text-rose-800" label="Absent" />
                 </div>
               </div>
             </div>
@@ -867,29 +935,46 @@ function Metric({
   );
 }
 
-function ShiftCell({ shift }: { shift: string }) {
-  if (shift === "off")
+function ShiftCell({ shift }: { shift: any }) {
+  if (shift === "off" || shift?.status === "DAY_OFF") {
     return (
-      <div className="grid h-20 place-items-center rounded-xl border border-border bg-muted/60 text-center text-[10px] text-brand-soft">
+      <div className="grid h-20 place-items-center rounded-xl border border-slate-200 bg-slate-100 p-2 text-center text-[10px] text-slate-500">
         <span>
           <Moon className="mx-auto mb-1 size-4" />
           Day off
         </span>
       </div>
     );
-  const [start, end, type] = shift.split("|");
-  const tone =
-    type === "change"
-      ? "border-blue-300 bg-blue-100 text-blue-700"
-      : type === "issue"
-        ? "border-amber-300 bg-amber-100 text-amber-700"
-        : "border-emerald-300 bg-emerald-100 text-emerald-700";
+  }
+
+  if (typeof shift === "string") {
+    const [start, end] = shift.split("|");
+    return (
+      <div className="h-20 flex flex-col justify-between rounded-xl border border-amber-300 bg-amber-100 p-2 text-[10px] text-amber-800">
+        <div className="flex items-center justify-between">
+          <strong className="truncate font-bold">{start}</strong>
+          <span className="rounded-full px-1.5 py-0.5 text-[9px] font-extrabold uppercase bg-white/70">Scheduled</span>
+        </div>
+        <span className="block font-medium">{end}</span>
+        <b className="block text-[10px]">8h 00m</b>
+      </div>
+    );
+  }
+
+  const status = shift?.status || "SCHEDULED";
+  const label = shift?.label || "Scheduled";
+  const toneClass = shift?.toneClass || "bg-amber-100 border-amber-300 text-amber-800";
+
   return (
-    <div className={`h-20 rounded-xl border p-2 text-[10px] leading-5 ${tone}`}>
-      {type === "issue" && <AlertTriangle className="mr-1 inline size-3" />}
-      <strong>{start}</strong>
-      <span className="block">{end}</span>
-      <b>8h 00m</b>
+    <div className={`h-20 flex flex-col justify-between rounded-xl border p-2 text-[10px] leading-tight ${toneClass}`}>
+      <div className="flex items-center justify-between">
+        <strong className="truncate font-bold">{shift?.startTime || "8:00 AM"}</strong>
+        <span className="rounded-full px-1 py-0.5 text-[8.5px] font-extrabold uppercase bg-white/70 shadow-2xs">
+          {label}
+        </span>
+      </div>
+      <span className="block font-medium">{shift?.endTime || "4:00 PM"}</span>
+      <b className="block text-[10px] opacity-90">{shift?.workDuration || "8h 00m"}</b>
     </div>
   );
 }
