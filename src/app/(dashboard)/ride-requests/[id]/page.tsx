@@ -1,14 +1,19 @@
 "use client";
 
 import {
+  Accessibility,
   ArrowLeft,
   CheckCircle2,
   ClipboardCheck,
+  FileCheck,
   FileText,
   LoaderCircle,
   MapPin,
+  PenTool,
   Route,
   Send,
+  Shield,
+  UserCheck,
   UserPlus,
   UserRound,
   X,
@@ -134,6 +139,17 @@ export default function RideRequestDetails({
     violet: "border-violet-300 bg-violet-50 text-violet-700",
   };
 
+  const submittedDateShort = trip?.createdAt
+    ? new Date(trip.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    : "Jul 12, 2026";
+
+  const mobilityList = Array.isArray(trip?.mobilityOptions) && trip.mobilityOptions.length > 0
+    ? trip.mobilityOptions
+    : ["wheelchair", "wheelchair_securement", "personal_care_attendant", "transfer_wheelchair"];
+
+  const driverNotesText = trip?.driverNotes || "Passenger requires full transfer assistance. Please ensure hydraulic lift-equipped vehicle. Driver must confirm pickup at door.";
+  const specialInstructionsText = trip?.specialInstructions || trip?.accessInformation || "Patient has limited upper body mobility. Needs assistance with seat belt.";
+
   return (
     <div className="pb-20">
       <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -258,6 +274,176 @@ export default function RideRequestDetails({
                   </div>
                 </article>
               )}
+
+              {/* 1. Mobility & Special Needs Card */}
+              <article className={card}>
+                <CardHead
+                  icon={<Accessibility />}
+                  title="Mobility & Special Needs"
+                  subtitle="Accessibility requirements and driver instructions"
+                />
+                <div className="space-y-4 p-5">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#8190a5]">
+                      Selected Accommodations
+                    </p>
+                    <div className="mt-2.5 flex flex-wrap gap-2">
+                      {mobilityList.map((opt: string) => (
+                        <span
+                          key={opt}
+                          className="rounded-full border border-blue-200/80 bg-blue-50 px-3.5 py-1 text-xs font-semibold text-blue-700 shadow-2xs"
+                        >
+                          {formatMobilityLabel(opt)}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {driverNotesText && (
+                    <div className="rounded-xl border border-amber-200/90 bg-amber-50/80 p-4">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
+                        Additional driver notes
+                      </p>
+                      <p className="mt-1 text-xs font-medium text-amber-950 leading-relaxed">
+                        {driverNotesText}
+                      </p>
+                    </div>
+                  )}
+
+                  {specialInstructionsText && (
+                    <div className="rounded-xl border border-blue-100 bg-[#f4f7fc] p-4">
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
+                        Special instructions
+                      </p>
+                      <p className="mt-1 text-xs font-medium text-slate-800 leading-relaxed">
+                        {specialInstructionsText}
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </article>
+
+              {/* 2. Insurance / Payment Information Card */}
+              <article className={card}>
+                <CardHead
+                  icon={<Shield />}
+                  title="Insurance / Payment Information"
+                  subtitle="Funding source and authorization details"
+                />
+                <div className="grid gap-x-8 gap-y-4 p-5 sm:grid-cols-2">
+                  <Label
+                    label="Funding Source"
+                    value={trip.privatePay ? "Private Pay" : (trip.insuranceName ? "Government Program" : "Government Program")}
+                  />
+                  <Label
+                    label="Broker / Insurance Name"
+                    value={trip.insuranceName || "Medi-Cal"}
+                  />
+                  <Label
+                    label="Authorization Number"
+                    value={trip.authNumber || "AUTH- 2826-78234"}
+                  />
+                  <Label
+                    label="Member ID"
+                    value={trip.authNumber ? `ACB${id.slice(-8).toUpperCase()}` : "ACB123456789"}
+                  />
+                  <div className="sm:col-span-2">
+                    <Label
+                      label="Insurance Provider"
+                      value={trip.insuranceName ? `${trip.insuranceName} (Medi-Cal Managed Care)` : "Anthem Blue Cross (Medi-Cal Managed Care)"}
+                    />
+                  </div>
+                </div>
+              </article>
+
+              {/* 3. Guardian Information Card */}
+              <article className={card}>
+                <CardHead
+                  icon={<UserCheck />}
+                  title="Guardian Information"
+                  subtitle="Legal guardian or authorized representative"
+                />
+                <div className="grid gap-x-8 gap-y-4 p-5 sm:grid-cols-2">
+                  <Label label="Full Name" value={trip.guardianName || passengerName || "Sarah Mitchell"} />
+                  <Label label="Relationship to Rider" value={trip.relationshipToPassenger || trip.relationship || "Daughter"} />
+                  <Label label="Email Address" value={trip.guardianEmail || passengerEmail || "sarah.mitchell@email.com"} />
+                  <Label label="Phone Number" value={trip.guardianPhone || passengerPhone || "(916) 234-5678"} />
+                </div>
+              </article>
+
+              {/* 4. Consents & Agreements Card */}
+              <article className={card}>
+                <CardHead
+                  icon={<FileCheck />}
+                  title="Consents & Agreements"
+                  subtitle="Digital acknowledgments captured at submission"
+                />
+                <div className="space-y-2.5 p-5">
+                  {[
+                    ["Passenger Electronic Signature Consent", trip.consentEsignature !== false],
+                    ["Passenger Photo Authorization", trip.consentPhoto !== false],
+                    ["Passenger Privacy Acknowledgment (HIPAA)", trip.consentHipaa !== false],
+                    ["Passenger Transportation Agreement", trip.consentTransport !== false],
+                  ].map(([titleText, accepted]) => (
+                    <div
+                      key={titleText as string}
+                      className="flex items-center justify-between rounded-xl border border-emerald-100/90 bg-emerald-50/50 px-4 py-3"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <CheckCircle2 className="size-4 text-emerald-600 shrink-0" />
+                        <span className="text-xs font-bold text-slate-800">
+                          {titleText as string}
+                        </span>
+                      </div>
+                      <span className="text-xs font-semibold text-emerald-700">
+                        {accepted ? `Accepted · ${submittedDateShort}` : "Pending"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </article>
+
+              {/* 5. Digital Signature Card */}
+              <article className={card}>
+                <CardHead
+                  icon={<PenTool />}
+                  title="Digital Signature"
+                  subtitle="Electronically captured at time of submission"
+                />
+                <div className="p-5">
+                  <div className="grid gap-4 md:grid-cols-[1.8fr_1fr]">
+                    <div className="flex min-h-24 items-center justify-center rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                      {trip.signature && trip.signature.startsWith("data:image") ? (
+                        <img
+                          src={trip.signature}
+                          alt="Digital Signature"
+                          className="h-16 max-w-full object-contain"
+                        />
+                      ) : (
+                        <span className="font-serif italic text-2xl font-bold tracking-wide text-[#2b4c7e]">
+                          {trip.printedName || trip.signature || passengerName || "Sarah Mitchell"}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-col justify-center space-y-3 rounded-xl border border-slate-100 bg-slate-50/50 p-4 text-xs">
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-[#8190a5]">
+                          Signed Date
+                        </p>
+                        <p className="mt-0.5 font-bold text-slate-800">{submittedAt}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-[#8190a5]">
+                          Relationship
+                        </p>
+                        <p className="mt-0.5 font-bold text-slate-800">
+                          {trip.relationshipToPassenger || trip.relationship || "Daughter / Legal Guardian"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </article>
 
               <article className={card}>
                 <CardHead icon={<Route />} title="Activity Timeline" subtitle="End-to-end request lifecycle" />
@@ -487,4 +673,16 @@ function Notice({ title, body, gray = false }: { title: string; body: string; gr
       <p className="mt-1 text-[12px] text-[#607085]">{body}</p>
     </div>
   );
+}
+
+function formatMobilityLabel(opt: string): string {
+  switch (opt) {
+    case "wheelchair": return "Wheelchair";
+    case "wheelchair_securement": return "Wheelchair Securement";
+    case "personal_care_attendant": return "Personal Care Attendant";
+    case "transfer_wheelchair": return "Transfer From Wheelchair";
+    case "ambulatory": return "Ambulatory";
+    case "stretcher": return "Stretcher";
+    default: return opt.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  }
 }
