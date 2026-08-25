@@ -203,10 +203,6 @@ export default function ManualRideRequestsPage() {
       !formData.fullName ||
       !formData.dateOfBirth ||
       !formData.phoneNumber ||
-      !formData.streetAddress ||
-      !formData.city ||
-      !formData.state ||
-      !formData.zipCode ||
       !formData.emergencyContactName ||
       !formData.emergencyContactPhone ||
       !formData.relationship ||
@@ -348,48 +344,6 @@ export default function ManualRideRequestsPage() {
                 value={formData.email}
                 onChange={(e) => handleInputChange("email", e.target.value)}
               />
-            </div>
-            <div className="sm:col-span-2">
-              <label className="mb-1 block text-xs font-semibold text-[#172033]">Street Address *</label>
-              <input
-                type="text"
-                className="w-full rounded-xl border border-[#e1e5ea] px-4 py-2.5 text-sm"
-                value={formData.streetAddress}
-                onChange={(e) => handleInputChange("streetAddress", e.target.value)}
-                required
-              />
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-semibold text-[#172033]">City *</label>
-              <input
-                type="text"
-                className="w-full rounded-xl border border-[#e1e5ea] px-4 py-2.5 text-sm"
-                value={formData.city}
-                onChange={(e) => handleInputChange("city", e.target.value)}
-                required
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-[#172033]">State *</label>
-                <input
-                  type="text"
-                  className="w-full rounded-xl border border-[#e1e5ea] px-4 py-2.5 text-sm"
-                  value={formData.state}
-                  onChange={(e) => handleInputChange("state", e.target.value)}
-                  required
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-[#172033]">Zip Code *</label>
-                <input
-                  type="text"
-                  className="w-full rounded-xl border border-[#e1e5ea] px-4 py-2.5 text-sm"
-                  value={formData.zipCode}
-                  onChange={(e) => handleInputChange("zipCode", e.target.value)}
-                  required
-                />
-              </div>
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-[#172033]">Emergency Contact Name *</label>
@@ -838,17 +792,7 @@ export default function ManualRideRequestsPage() {
                 onChange={(val) => handleInputChange("signature", val)}
               />
             </div>
-            <div className="md:col-span-2 grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-[#172033]">Date *</label>
-                <input
-                  type="date"
-                  className="w-full rounded-xl border border-[#e1e5ea] px-4 py-2.5 text-sm"
-                  value={formData.signatureDate}
-                  onChange={(e) => handleInputChange("signatureDate", e.target.value)}
-                  required
-                />
-              </div>
+            <div className="md:col-span-2 space-y-4">
               <div>
                 <label className="mb-1 block text-xs font-semibold text-[#172033]">Printed Name *</label>
                 <input
@@ -859,7 +803,7 @@ export default function ManualRideRequestsPage() {
                   required
                 />
               </div>
-              <div className="sm:col-span-2">
+              <div>
                 <label className="mb-1 block text-xs font-semibold text-[#172033]">Relationship to Passenger</label>
                 <input
                   type="text"
