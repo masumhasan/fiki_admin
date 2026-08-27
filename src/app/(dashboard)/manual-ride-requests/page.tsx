@@ -127,6 +127,8 @@ export default function ManualRideRequestsPage() {
     schedule: "one-time",
     pickupAddress: "",
     destinationAddress: "",
+    startDate: "",
+    endDate: "",
     pickupDate: "",
     pickupTime: "",
     fare: "",
@@ -196,6 +198,9 @@ export default function ManualRideRequestsPage() {
     setErrorMsg("");
     setSuccessMsg("");
 
+    const sDate = formData.startDate || formData.pickupDate || formData.recurringStartDate;
+    const eDate = formData.endDate || formData.returnDate || formData.recurringEndDate;
+
     // Simple validation
     if (
       !formData.fullName ||
@@ -206,7 +211,7 @@ export default function ManualRideRequestsPage() {
       !formData.relationship ||
       !formData.pickupAddress ||
       !formData.destinationAddress ||
-      !formData.pickupDate ||
+      !sDate ||
       !formData.pickupTime ||
       !formData.fare ||
       !formData.printedName ||
@@ -224,10 +229,18 @@ export default function ManualRideRequestsPage() {
 
       if (token) {
         try {
-          console.log("Submitting form data payload:", JSON.stringify({
+          const payload = {
             ...formData,
+            startDate: sDate,
+            endDate: eDate,
+            pickupDate: sDate,
+            returnDate: eDate,
+            recurringStartDate: sDate,
+            recurringEndDate: eDate,
             fare: Number(formData.fare),
-          }, null, 2));
+          };
+
+          console.log("Submitting form data payload:", JSON.stringify(payload, null, 2));
 
           const res = await fetch(`${API_URL}/admin/trips`, {
             method: "POST",
@@ -235,10 +248,7 @@ export default function ManualRideRequestsPage() {
               "Content-Type": "application/json",
               Authorization: `Bearer ${token}`,
             },
-            body: JSON.stringify({
-              ...formData,
-              fare: Number(formData.fare),
-            }),
+            body: JSON.stringify(payload),
           });
 
           const result = await res.json();
@@ -452,15 +462,33 @@ export default function ManualRideRequestsPage() {
             </div>
 
             <div>
-              <label className="mb-1 block text-xs font-semibold text-[#172033]">Pickup Date *</label>
+              <label className="mb-1 block text-xs font-semibold text-[#172033]">Start Date *</label>
               <input
                 type="date"
                 className="w-full rounded-xl border border-[#e1e5ea] px-4 py-2.5 text-sm"
-                value={formData.pickupDate}
-                onChange={(e) => handleInputChange("pickupDate", e.target.value)}
+                value={formData.startDate || formData.pickupDate}
+                onChange={(e) => {
+                  handleInputChange("startDate", e.target.value);
+                  handleInputChange("pickupDate", e.target.value);
+                }}
                 required
               />
             </div>
+            {(formData.tripType === "round-trip" || formData.schedule === "recurring") && (
+              <div>
+                <label className="mb-1 block text-xs font-semibold text-[#172033]">End Date *</label>
+                <input
+                  type="date"
+                  className="w-full rounded-xl border border-[#e1e5ea] px-4 py-2.5 text-sm"
+                  value={formData.endDate || formData.returnDate}
+                  onChange={(e) => {
+                    handleInputChange("endDate", e.target.value);
+                    handleInputChange("returnDate", e.target.value);
+                  }}
+                  required
+                />
+              </div>
+            )}
             <div>
               <label className="mb-1 block text-xs font-semibold text-[#172033]">Pickup Time *</label>
               <input
@@ -488,54 +516,25 @@ export default function ManualRideRequestsPage() {
             {/* Recurring Details */}
             {formData.schedule === "recurring" && (
               <div className="sm:col-span-2 border-t border-[#f1f3f7] pt-4 mt-2 space-y-4">
-                <h4 className="text-xs font-bold uppercase text-[#52647e] tracking-wide">Recurring Setup</h4>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold text-[#172033]">Start Date</label>
-                    <input
-                      type="date"
-                      className="w-full rounded-xl border border-[#e1e5ea] px-4 py-2.5 text-sm"
-                      value={formData.recurringStartDate}
-                      onChange={(e) => handleInputChange("recurringStartDate", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold text-[#172033]">End Date</label>
-                    <input
-                      type="date"
-                      className="w-full rounded-xl border border-[#e1e5ea] px-4 py-2.5 text-sm"
-                      value={formData.recurringEndDate}
-                      onChange={(e) => handleInputChange("recurringEndDate", e.target.value)}
-                    />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className="mb-1.5 block text-xs font-semibold text-[#172033]">Days of the Week</label>
-                    <div className="flex flex-wrap gap-2">
-                      {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day) => {
-                        const checked = formData.recurringDays.includes(day);
-                        return (
-                          <button
-                            key={day}
-                            type="button"
-                            onClick={() => toggleRecurringDay(day)}
-                            className={`rounded-full border px-3 py-1 text-xs font-semibold cursor-pointer transition-colors ${
-                              checked ? "bg-[#173d76] border-[#173d76] text-white" : "border-[#e1e5ea] text-[#52647e] hover:bg-slate-50"
-                            }`}
-                          >
-                            {day}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold text-[#172033]">Recurring Pickup Time</label>
-                    <input
-                      type="time"
-                      className="w-full rounded-xl border border-[#e1e5ea] px-4 py-2.5 text-sm"
-                      value={formData.recurringPickupTime}
-                      onChange={(e) => handleInputChange("recurringPickupTime", e.target.value)}
-                    />
+                <h4 className="text-xs font-bold uppercase text-[#52647e] tracking-wide">Recurring Days</h4>
+                <div className="sm:col-span-2">
+                  <label className="mb-1.5 block text-xs font-semibold text-[#172033]">Days of the Week</label>
+                  <div className="flex flex-wrap gap-2">
+                    {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day) => {
+                      const checked = formData.recurringDays.includes(day);
+                      return (
+                        <button
+                          key={day}
+                          type="button"
+                          onClick={() => toggleRecurringDay(day)}
+                          className={`rounded-full border px-3 py-1 text-xs font-semibold cursor-pointer transition-colors ${
+                            checked ? "bg-[#173d76] border-[#173d76] text-white" : "border-[#e1e5ea] text-[#52647e] hover:bg-slate-50"
+                          }`}
+                        >
+                          {day}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -565,16 +564,7 @@ export default function ManualRideRequestsPage() {
                     />
                   </div>
                   <div>
-                    <label className="mb-1 block text-xs font-semibold text-[#172033]">Return Date</label>
-                    <input
-                      type="date"
-                      className="w-full rounded-xl border border-[#e1e5ea] px-4 py-2.5 text-sm"
-                      value={formData.returnDate}
-                      onChange={(e) => handleInputChange("returnDate", e.target.value)}
-                    />
-                  </div>
-                  <div>
-                    <label className="mb-1 block text-xs font-semibold text-[#172033]">Return Pickup Time</label>
+                    <label className="mb-1 block text-xs font-semibold text-[#172033]">Return Pickup Time *</label>
                     <input
                       type="time"
                       className="w-full rounded-xl border border-[#e1e5ea] px-4 py-2.5 text-sm"
