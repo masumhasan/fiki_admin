@@ -139,6 +139,24 @@ export default function RideRequestDetails({
     ? `$${trip.fare.toFixed(2)}`
     : "Not Decided";
 
+  const tripType = trip?.tripType || (trip?.schedule === "recurring" ? "recurring" : trip?.returnDate || trip?.returnPickupTime ? "round-trip" : "one-way");
+  const isRoundTrip = tripType === "round-trip" || tripType === "round_trip" || trip?.isRoundTrip === true;
+  const isRecurring = trip?.schedule === "recurring" || tripType === "recurring" || (Array.isArray(trip?.recurringDays) && trip.recurringDays.length > 0);
+
+  const startDateRaw = trip?.startDate || trip?.pickupDate || trip?.recurringStartDate;
+  const startDateStr = startDateRaw
+    ? new Date(startDateRaw).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    : scheduledAt;
+
+  const endDateRaw = trip?.endDate || trip?.returnDate || trip?.recurringEndDate;
+  const endDateStr = endDateRaw
+    ? new Date(endDateRaw).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    : "—";
+
+  const pickupTimeStr = trip?.pickupTime || (trip?.scheduledTime ? new Date(trip.scheduledTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—");
+  const returnPickupTimeStr = trip?.returnPickupTime || "—";
+  const recurringDaysList: string[] = Array.isArray(trip?.recurringDays) ? trip.recurringDays : [];
+
   const colorMap: Record<string, string> = {
     amber: "border-amber-300 bg-amber-50 text-amber-600",
     blue: "border-blue-300 bg-blue-50 text-blue-600",
@@ -255,17 +273,83 @@ export default function RideRequestDetails({
 
               <article className={card}>
                 <CardHead icon={<Send />} title="Trip Information" subtitle="Schedule, route and destination details" />
-                <div className="grid gap-4 p-4 md:grid-cols-2">
-                  <Label value={pickup} label="Pickup address" />
-                  <Label value={dropoff} label="Destination address" />
-                  <Label value={scheduledAt} label="Scheduled time" />
-                  <Label value={trip.driverId?.name || "Not assigned"} label="Assigned driver" />
-                </div>
-                <div className="border-t p-4">
-                  <div className="mt-2 grid gap-3 md:grid-cols-2">
-                    <MapBox label="Pickup address" address={pickup} />
-                    <MapBox label="Destination address" address={dropoff} />
+                <div className="space-y-6 p-5">
+                  {/* Badges / Header Indicator */}
+                  <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 pb-4">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5] mr-2">
+                      Trip Type:
+                    </span>
+                    <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
+                      {isRecurring ? "Recurring Trip" : isRoundTrip ? "Round Trip" : "One-Way Trip"}
+                    </span>
+                    <span className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                      Schedule: {isRecurring ? "Recurring" : "One-Time"}
+                    </span>
                   </div>
+
+                  {/* Dates & Times Grid */}
+                  <div>
+                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5] mb-3">
+                      Schedule & Date Details
+                    </h4>
+                    <div className="grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+                      <Label label="Start Date" value={startDateStr} />
+                      {(isRoundTrip || isRecurring || endDateStr !== "—") && (
+                        <Label label="End Date" value={endDateStr} />
+                      )}
+                      <Label label="Pickup Time" value={pickupTimeStr} />
+                      {isRoundTrip && (
+                        <Label label="Return Pickup Time" value={returnPickupTimeStr} />
+                      )}
+                      {isRecurring && (
+                        <div className="sm:col-span-2">
+                          <p className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">
+                            Recurring Days
+                          </p>
+                          <div className="mt-1.5 flex flex-wrap gap-1.5">
+                            {recurringDaysList.length > 0 ? (
+                              recurringDaysList.map((day: string) => (
+                                <span key={day} className="rounded-md bg-blue-100/70 border border-blue-200 px-2.5 py-0.5 text-xs font-semibold text-blue-800">
+                                  {day}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      <Label label="Assigned Driver" value={trip.driverId?.name || "Not assigned"} />
+                    </div>
+                  </div>
+
+                  {/* Outbound Route Details */}
+                  <div className="border-t border-slate-100 pt-4">
+                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5] mb-3">
+                      {isRoundTrip ? "Outbound Route Details" : "Route Details"}
+                    </h4>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <Label label="Pickup Address" value={pickup} />
+                      <Label label="Destination Address" value={dropoff} />
+                    </div>
+                    <div className="mt-3 grid gap-3 md:grid-cols-2">
+                      <MapBox label="Pickup Address" address={pickup} />
+                      <MapBox label="Destination Address" address={dropoff} />
+                    </div>
+                  </div>
+
+                  {/* Return Route Details (when Round Trip) */}
+                  {isRoundTrip && (
+                    <div className="border-t border-slate-100 pt-4">
+                      <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5] mb-3">
+                        Return Route Details
+                      </h4>
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <Label label="Return Pickup Address" value={trip.returnPickupAddress || dropoff} />
+                        <Label label="Return Destination Address" value={trip.returnDestinationAddress || pickup} />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </article>
 
@@ -485,15 +569,20 @@ export default function RideRequestDetails({
                   {[
                     ["Passenger", passengerName],
                     ["Phone", passengerPhone],
+                    ["Trip Type", isRecurring ? "Recurring" : isRoundTrip ? "Round Trip" : "One-Way"],
+                    ["Start Date", startDateStr],
+                    ...(isRoundTrip || isRecurring ? [["End Date", endDateStr]] : []),
+                    ["Pickup Time", pickupTimeStr],
+                    ...(isRoundTrip ? [["Return Pickup Time", returnPickupTimeStr]] : []),
+                    ...(isRecurring && recurringDaysList.length > 0 ? [["Recurring Days", recurringDaysList.join(", ")]] : []),
                     ["Pickup", pickup],
                     ["Destination", dropoff],
-                    ["Scheduled", scheduledAt],
                     ["Driver", trip.driverId?.name || "Unassigned"],
                     ["Fare", displayFare],
                     ["Quoted Fare", trip.quotedFare ? `$${trip.quotedFare.toFixed(2)}` : "—"],
                     ["Counter Offer", trip.counterOffer ? `$${trip.counterOffer.toFixed(2)}` : "—"],
                   ].map(([a, b]) => (
-                    <Label label={a} value={b} key={a} />
+                    <Label label={a as string} value={b as string} key={a as string} />
                   ))}
                 </div>
                 <div className={`border-t px-4 py-3 text-[11px] font-bold ${colorMap[statusColor] || "text-amber-600"}`}>

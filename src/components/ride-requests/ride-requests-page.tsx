@@ -97,6 +97,18 @@ export function RideRequestsPage() {
           else if (t.status === "REQUESTED")
             statusStr = driverName ? "Approved" : "Need driver";
 
+          const isRecurring = t.schedule === "recurring" || t.tripType === "recurring" || (Array.isArray(t.recurringDays) && t.recurringDays.length > 0);
+          const isRoundTrip = t.tripType === "round-trip" || t.tripType === "round_trip" || t.isRoundTrip === true;
+
+          let recurringText = "";
+          if (isRecurring) {
+            if (Array.isArray(t.recurringDays) && t.recurringDays.length > 0) {
+              recurringText = t.recurringDays.map((d: string) => d.substring(0, 3)).join(", ");
+            } else {
+              recurringText = "Yes";
+            }
+          }
+
           return {
             id: `RR-${t._id.substring(t._id.length - 4).toUpperCase()}`,
             rawId: t._id,
@@ -136,7 +148,8 @@ export function RideRequestsPage() {
                     minute: "2-digit",
                   })
                 : "—",
-            roundTrip: false,
+            recurring: recurringText || undefined,
+            roundTrip: isRoundTrip,
             driver: driverName,
             status: statusStr,
             backendStatus: t.status,
@@ -382,19 +395,21 @@ function RequestRow({ serial, request }: { serial: number; request: RideRequest 
       </td>
       <td className="py-4">
         {request.recurring ? (
-          <span className="inline-flex items-center gap-1 text-blue-500">
-            <Repeat2 className="size-3.5" />
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-200 bg-blue-50 px-2.5 py-0.5 text-[11px] font-semibold text-blue-700">
+            <Repeat2 className="size-3" />
             {request.recurring}
           </span>
         ) : (
-          <span className="text-brand-soft">—</span>
+          <span className="text-muted-foreground/60">—</span>
         )}
       </td>
       <td className="py-4">
         {request.roundTrip ? (
-          <Check className="size-4 text-emerald-500" />
+          <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
+            <Check className="size-3" /> Yes
+          </span>
         ) : (
-          <X className="size-4 text-brand-soft" />
+          <span className="text-muted-foreground/60">—</span>
         )}
       </td>
       <td className="py-4">
