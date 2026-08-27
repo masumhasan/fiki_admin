@@ -131,6 +131,14 @@ export default function RideRequestDetails({
     ? new Date(trip.scheduledTime).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })
     : "—";
 
+  const isFareDecided =
+    ["QUOTE_ACCEPTED", "ACCEPTED", "DRIVER_ARRIVING", "DRIVER_ARRIVED", "IN_PROGRESS", "COMPLETED"].includes(status) ||
+    (typeof trip?.fare === "number" && !["REQUESTED", "QUOTE_SENT", "QUOTE_COUNTERED"].includes(status));
+
+  const displayFare = isFareDecided && typeof trip?.fare === "number"
+    ? `$${trip.fare.toFixed(2)}`
+    : "Not Decided";
+
   const colorMap: Record<string, string> = {
     amber: "border-amber-300 bg-amber-50 text-amber-600",
     blue: "border-blue-300 bg-blue-50 text-blue-600",
@@ -191,7 +199,7 @@ export default function RideRequestDetails({
             <Status label="Request ID" value={id.slice(-8).toUpperCase()} />
             <Status label="Submitted" value={submittedAt} />
             <Status label="Scheduled" value={scheduledAt} />
-            <Status label="Fare" value={trip.fare ? `$${trip.fare.toFixed(2)}` : "—"} />
+            <Status label="Fare" value={displayFare} tone={isFareDecided ? "green" : undefined} />
             <Status label="Quoted Fare" value={trip.quotedFare ? `$${trip.quotedFare.toFixed(2)}` : "—"} tone={trip.quotedFare ? "blue" : undefined} />
           </section>
 
@@ -481,7 +489,7 @@ export default function RideRequestDetails({
                     ["Destination", dropoff],
                     ["Scheduled", scheduledAt],
                     ["Driver", trip.driverId?.name || "Unassigned"],
-                    ["Fare", trip.fare ? `$${trip.fare.toFixed(2)}` : "—"],
+                    ["Fare", displayFare],
                     ["Quoted Fare", trip.quotedFare ? `$${trip.quotedFare.toFixed(2)}` : "—"],
                     ["Counter Offer", trip.counterOffer ? `$${trip.counterOffer.toFixed(2)}` : "—"],
                   ].map(([a, b]) => (
