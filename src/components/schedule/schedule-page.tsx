@@ -65,15 +65,36 @@ function getWorkDaysText(weeklySchedule: any[]) {
   return workingDays.join(", ");
 }
 
-function getScheduleFromShifts(shifts: readonly string[]) {
-  if (!shifts) return [];
+function getScheduleFromShifts(shifts: readonly any[]) {
+  if (!shifts || !Array.isArray(shifts)) return [];
   const days: ("Mon" | "Tue" | "Wed" | "Thu" | "Fri" | "Sat" | "Sun")[] = [
     "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun",
   ];
   return shifts.map((shift, i) => {
-    if (shift === "off") return { day: days[i], working: false };
-    const [start, end] = shift.split("|");
-    return { day: days[i], working: true, startTime: start, endTime: end };
+    const dayName = days[i] || "Mon";
+    if (!shift || shift === "off") return { day: dayName, working: false };
+
+    if (typeof shift === "object" && shift !== null) {
+      const isWorking = shift.working !== false && shift.status !== "off" && shift.status !== "OFF";
+      return {
+        day: dayName,
+        working: isWorking,
+        startTime: shift.startTime || shift.start || "08:00",
+        endTime: shift.endTime || shift.end || "17:00",
+      };
+    }
+
+    if (typeof shift === "string") {
+      if (shift === "off" || shift.toLowerCase() === "off") {
+        return { day: dayName, working: false };
+      }
+      const parts = shift.split("|");
+      if (parts.length >= 2) {
+        return { day: dayName, working: true, startTime: parts[0], endTime: parts[1] };
+      }
+    }
+
+    return { day: dayName, working: false };
   });
 }
 
