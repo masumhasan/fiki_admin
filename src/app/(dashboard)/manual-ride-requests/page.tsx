@@ -608,7 +608,7 @@ export default function ManualRideRequestsPage() {
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-[#172033]">Select all that apply</label>
               <div className="flex flex-wrap gap-2 pt-1">
-                {["ambulatory", "wheelchair", "walker", "cane"].map((option) => {
+                {["ambulatory", "wheelchair", "walker", "cane", "hand-to-hand"].map((option) => {
                   const checked = formData.mobilityOptions.includes(option);
                   return (
                     <button
@@ -619,7 +619,7 @@ export default function ManualRideRequestsPage() {
                         checked ? "bg-[#173d76] border-[#173d76] text-white" : "border-[#e1e5ea] text-[#52647e] hover:bg-slate-50"
                       }`}
                     >
-                      {option}
+                      {option === "hand-to-hand" ? "Hand to Hand" : option}
                     </button>
                   );
                 })}

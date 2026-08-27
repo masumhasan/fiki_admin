@@ -460,6 +460,68 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
             <NoteCard title="Driver notes">{driverNotes}</NoteCard>
             <NoteCard title="Customer notes">{customerNotes}</NoteCard>
           </section>
+
+          {/* Hand to Hand Receiver Signature Card */}
+          {(trip.receiverSignature || (Array.isArray(trip.mobilityOptions) && trip.mobilityOptions.some((o: string) => o.toLowerCase().includes("hand")))) && (
+            <section className={cardClass}>
+              <div className="flex items-center justify-between border-b border-border pb-3.5 mb-4">
+                <div className="flex items-center gap-3">
+                  <span className="grid size-9 place-items-center rounded-xl bg-emerald-50 text-emerald-700 font-bold border border-emerald-200">
+                    <FileCheck2 className="size-5" />
+                  </span>
+                  <div>
+                    <h2 className={titleClass}>Hand to Hand Drop-off Verification</h2>
+                    <p className="text-xs text-muted-foreground">Receiver Digital Signature & Handover Confirmation</p>
+                  </div>
+                </div>
+                {trip.receiverSignature ? (
+                  <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">
+                    Signed & Verified
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">
+                    Signature Required
+                  </span>
+                )}
+              </div>
+
+              <div className="grid gap-5 sm:grid-cols-2">
+                <div className="space-y-3 text-xs">
+                  <div>
+                    <p className="font-medium text-muted-foreground">Receiver Full Name</p>
+                    <p className="mt-0.5 font-bold text-foreground text-sm">{trip.receiverName || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-muted-foreground">Relationship / Role</p>
+                    <p className="mt-0.5 font-bold text-foreground">{trip.receiverRelationship || "Assigned Representative"}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-muted-foreground">Date & Time Signed</p>
+                    <p className="mt-0.5 font-bold text-foreground">
+                      {trip.receiverSignedAt ? formatStepTimeFull(trip.receiverSignedAt) : "Pending Drop-off Signature"}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground mb-1.5">Receiver Digital Signature</p>
+                  {trip.receiverSignature ? (
+                    <div className="rounded-xl border border-border bg-slate-50 p-3 text-center">
+                      <img
+                        src={trip.receiverSignature}
+                        alt="Receiver Signature"
+                        className="mx-auto max-h-24 object-contain"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex h-28 items-center justify-center rounded-xl border border-dashed border-border bg-slate-50 p-4 text-center text-xs text-muted-foreground">
+                      Receiver signature will be captured by driver upon drop-off
+                    </div>
+                  )}
+                </div>
+              </div>
+            </section>
+          )}
         </div>
 
         {/* Sidebar: Timeline & Activity */}
