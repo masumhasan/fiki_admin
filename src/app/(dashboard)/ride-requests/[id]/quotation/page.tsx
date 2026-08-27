@@ -14,8 +14,8 @@ export default function QuotationPage({
   const [base, setBase] = useState(65);
   const [miles, setMiles] = useState(18.5);
   const [rate, setRate] = useState(3.5);
-  const [assist, setAssist] = useState(25);
-  const [discount, setDiscount] = useState(10);
+  const [assist, setAssist] = useState(0);
+  const [discount, setDiscount] = useState(0);
   const [quoteNote, setQuoteNote] = useState("");
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState<{ text: string; ok: boolean } | null>(null);
