@@ -8,14 +8,14 @@ export type MockUser = {
 };
 
 export const defaultMockUser: MockUser = {
-  name: "Admin Karim",
+  name: "Admin",
   email: "admin@fikitransit.com",
-  initials: "AK",
+  initials: "AD",
   role: "Fleet Manager",
 };
 
 export function saveMockSession(email?: string) {
-  const name = email?.split("@")[0]?.replace(/[._-]/g, " ") || "Admin Karim";
+  const name = email?.split("@")[0]?.replace(/[._-]/g, " ") || "Admin";
   const user = {
     ...defaultMockUser,
     email: email || defaultMockUser.email,

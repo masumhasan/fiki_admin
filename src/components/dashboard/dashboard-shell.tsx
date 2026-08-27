@@ -39,7 +39,9 @@ const navigation = [
 ];
 
 export function DashboardShell({ children }: { children: ReactNode }) {
+  const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const pathname = usePathname();
   const currentPage = navigation.find(
     (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
@@ -53,6 +55,15 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const isDriverApplications = pathname === "/drivers/applications";
   const rideRequestId = pathname.split("/")[2];
   const driverApplicationId = pathname.split("/")[3];
+
+  function handleSignOut() {
+    clearMockSession();
+    if (typeof window !== "undefined") {
+      window.localStorage.removeItem("fiki_auth_token");
+      window.localStorage.removeItem("fiki_user");
+    }
+    router.replace("/login");
+  }
 
   return (
     <div className="min-h-dvh bg-[#f5f7fb] text-brand-navy">
@@ -228,23 +239,58 @@ export function DashboardShell({ children }: { children: ReactNode }) {
               <Bell className="size-4.75" />
               <span className="absolute right-2 top-2 size-2 rounded-full border-2 border-white bg-[#f59e0b]" />
             </button>
-            <button
-              className="flex items-center gap-2.5 rounded-xl p-1.5 text-left hover:bg-slate-50"
-              type="button"
-            >
-              <span className="flex size-8 items-center justify-center rounded-full bg-brand-navy text-[10px] font-bold text-white">
-                AK
-              </span>
-              <span className="hidden sm:block">
-                <span className="block text-sm font-bold leading-4">
-                  Admin Karim
+            <div className="relative">
+              <button
+                aria-expanded={userDropdownOpen}
+                aria-haspopup="true"
+                className="flex items-center gap-2.5 rounded-xl p-1.5 text-left transition-colors hover:bg-slate-100/80 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary cursor-pointer"
+                onClick={() => setUserDropdownOpen((prev) => !prev)}
+                type="button"
+              >
+                <span className="flex size-8.5 items-center justify-center rounded-full bg-brand-navy text-[11px] font-bold text-white shadow-sm ring-2 ring-brand-navy/10">
+                  AD
                 </span>
-                <span className="hidden text-[11px] text-brand-muted">
-                  Admin
+                <span className="hidden sm:block">
+                  <span className="block text-sm font-bold leading-4 text-foreground">
+                    Admin
+                  </span>
                 </span>
-              </span>
-              <ChevronDown className="hidden size-4 text-brand-muted sm:block" />
-            </button>
+                <ChevronDown
+                  className={`hidden size-4 text-brand-muted sm:block transition-transform duration-200 ${
+                    userDropdownOpen ? "rotate-180 text-foreground" : ""
+                  }`}
+                />
+              </button>
+
+              {userDropdownOpen && (
+                <>
+                  <div
+                    aria-hidden="true"
+                    className="fixed inset-0 z-40"
+                    onClick={() => setUserDropdownOpen(false)}
+                  />
+                  <div className="absolute right-0 top-full mt-2 z-50 w-52 overflow-hidden rounded-2xl border border-border bg-card p-1.5 shadow-[0_12px_32px_rgba(15,35,65,0.12)] backdrop-blur-md animate-in fade-in zoom-in-95 duration-150">
+                    <div className="border-b border-border/80 px-3 py-2.5">
+                      <p className="text-xs font-bold text-foreground">Admin Portal</p>
+                      <p className="text-[11px] text-muted-foreground truncate">admin@fikitransit.com</p>
+                    </div>
+                    <div className="pt-1">
+                      <button
+                        className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-xs font-bold text-red-600 transition-colors hover:bg-red-50 dark:hover:bg-red-950/30 cursor-pointer"
+                        onClick={() => {
+                          setUserDropdownOpen(false);
+                          handleSignOut();
+                        }}
+                        type="button"
+                      >
+                        <LogOut className="size-4" />
+                        Sign out
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
         </header>
         <main className=" w-full p-4 sm:p-6 lg:p-6">{children}</main>
@@ -311,24 +357,6 @@ function Sidebar({
           })}
         </div>
       </nav>
-      <div className="border-t border-primary-foreground/10 p-4">
-        <div className="mb-4 flex items-center gap-3 px-1">
-          <span className="grid size-8 place-items-center rounded-full bg-white/10 text-[10px] font-bold">
-            AK
-          </span>
-          <div>
-            <p className="text-xs font-bold">Admin Karim</p>
-            <p className="text-[10px] text-white/50">Fleet Manager</p>
-          </div>
-        </div>
-        <button
-          className="flex h-11 items-center gap-3 rounded-xl px-3.5 text-sm font-medium text-red-300 transition hover:bg-destructive/14"
-          onClick={signOut}
-          type="button"
-        >
-          <LogOut className="size-4.5" /> Sign out
-        </button>
-      </div>
     </>
   );
 }
