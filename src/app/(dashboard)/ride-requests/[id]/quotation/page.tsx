@@ -83,7 +83,6 @@ export default function QuotationPage({
                 <Field label="Base Fare" value={base} setValue={setBase} prefix="$" />
                 <Field label="Distance" value={miles} setValue={setMiles} suffix="miles" />
                 <Field label="Rate per mile" value={rate} setValue={setRate} suffix="/ mi" />
-                <Field label="Waiting Charge" value={64.75} readOnly prefix="$" />
                 <Field label="Extra Services" value={assist} setValue={setAssist} prefix="$" />
                 <Field label="Discount" value={discount} setValue={setDiscount} prefix="$" />
                 <Field label="Tax (%)" value={tax} readOnly suffix="%" />
