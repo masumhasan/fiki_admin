@@ -638,10 +638,22 @@ export function SchedulePage() {
     scheduleIssues: 0,
   };
 
-  const selected = displayDrivers.find((d: any) => d.id === selectedId) || displayDrivers[0] || null;
+  const selected = displayDrivers.find((d: any) => d.id === selectedId || d.mongoId === selectedId || d._id === selectedId) || displayDrivers[0] || null;
   const selectedSchedule = selected
     ? (selected as any).weeklySchedule || getScheduleFromShifts((selected as any).shifts)
     : [];
+
+  const firstWorkingShift = selectedSchedule.find((item: any) => item.working);
+  const startTimeVal = firstWorkingShift ? (firstWorkingShift.startTime || "8:00 AM") : "8:00 AM";
+  const endTimeVal = firstWorkingShift ? (firstWorkingShift.endTime || "4:00 PM") : "4:00 PM";
+  const dailyHoursVal = firstWorkingShift
+    ? calculateHours(firstWorkingShift.startTime || "08:00", firstWorkingShift.endTime || "17:00").text
+    : "8h 00m";
+  const effectiveDateVal = selected?.effectiveDate
+    ? (new Date(selected.effectiveDate).toString() !== "Invalid Date"
+        ? new Date(selected.effectiveDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+        : selected.effectiveDate)
+    : "Jun 30, 2026";
 
   // Show latest 5 one-time changes on the schedule page
   const previewChanges = allOneTimeChanges.slice(0, 5);
@@ -781,16 +793,18 @@ export function SchedulePage() {
               <div className="relative">
                 <select
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                  value={selected?.id || ""}
+                  value={selected?.id || selected?.mongoId || ""}
                   onChange={(e) => setSelectedId(e.target.value)}
                 >
-                  {activeDriverList.map((d) => (
-                    <option key={d.id} value={d.id}>{d.name} ({d.id})</option>
+                  {displayDrivers.map((d: any) => (
+                    <option key={d.id || d.mongoId || d._id} value={d.id || d.mongoId || d._id}>
+                      {d.name} ({d.id ? (d.id.length > 12 ? d.id.slice(-8).toUpperCase() : d.id) : "DRIVER"})
+                    </option>
                   ))}
                 </select>
                 {selected ? (
                   <div className="flex items-center gap-3 rounded-xl border border-border p-3 bg-card relative z-0">
-                    <span className={`grid size-9 place-items-center rounded-full text-xs font-bold text-white ${selected.tone}`}>
+                    <span className={`grid size-9 place-items-center rounded-full text-xs font-bold text-white ${selected.tone || "bg-primary"}`}>
                       {selected.initials}
                     </span>
                     <div className="min-w-0 flex-1">
@@ -813,18 +827,10 @@ export function SchedulePage() {
               <div className="mt-3 divide-y divide-border">
                 {[
                   ["Work days", getWorkDaysText(selectedSchedule)],
-                  ["Start time", selectedSchedule.find((item: any) => item.working)?.startTime || "8:00 AM"],
-                  ["End time", selectedSchedule.find((item: any) => item.working)?.endTime || "4:00 PM"],
-                  [
-                    "Daily hours",
-                    selectedSchedule.find((item: any) => item.working)
-                      ? calculateHours(
-                          selectedSchedule.find((item: any) => item.working).startTime,
-                          selectedSchedule.find((item: any) => item.working).endTime
-                        ).text
-                      : "-",
-                  ],
-                  ["Effective date", "Jun 30, 2026"],
+                  ["Start time", startTimeVal],
+                  ["End time", endTimeVal],
+                  ["Daily hours", dailyHoursVal],
+                  ["Effective date", effectiveDateVal],
                 ].map(([label, value]) => (
                   <div className="flex justify-between py-3 text-xs" key={label}>
                     <span className="text-muted-foreground">{label}</span>
@@ -838,8 +844,6 @@ export function SchedulePage() {
               <div className="mt-4 space-y-2">
                 <Action icon={Pencil} label="Edit schedule" onClick={() => setEditModalOpen(true)} />
                 <Action icon={Plus} label="Add one-time change" onClick={() => setOneTimeModalOpen(true)} />
-                <Action icon={Moon} label="Add day off" />
-                <Action danger icon={Trash2} label="Remove schedule" />
               </div>
             </article>
           </aside>
