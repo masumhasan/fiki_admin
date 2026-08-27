@@ -45,6 +45,69 @@ const documents = [
   ["Supporting documents", "Pending"],
 ] as const;
 
+function DriverApplicationSkeleton() {
+  return (
+    <div className="pb-20 space-y-6 animate-pulse">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <div className="h-8 w-64 rounded-xl bg-muted" />
+            <div className="h-6 w-24 rounded-full bg-muted" />
+          </div>
+          <div className="h-3 w-32 rounded bg-muted" />
+        </div>
+        <div className="h-9 w-40 rounded-lg bg-muted" />
+      </div>
+
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_310px]">
+        <div className="space-y-4">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-sm">
+              <div className="h-5 w-48 rounded bg-muted" />
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-2">
+                {[1, 2, 3, 4, 5, 6].map((j) => (
+                  <div key={j} className="space-y-1.5">
+                    <div className="h-3 w-20 rounded bg-muted" />
+                    <div className="h-4 w-32 rounded bg-muted" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div className="space-y-5">
+          <div className="rounded-2xl border border-border bg-card p-5 space-y-4 text-center">
+            <div className="size-20 rounded-full bg-muted mx-auto" />
+            <div className="h-5 w-32 rounded bg-muted mx-auto" />
+            <div className="h-3 w-24 rounded bg-muted mx-auto" />
+            <div className="space-y-3 pt-4 border-t border-border">
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className="flex justify-between items-center">
+                  <div className="h-3 w-16 rounded bg-muted" />
+                  <div className="h-4 w-28 rounded bg-muted" />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
+            <div className="h-5 w-36 rounded bg-muted" />
+            <div className="space-y-3">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <div className="size-4 rounded-full bg-muted" />
+                  <div className="h-4 w-32 rounded bg-muted" />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function DriverApplicationPage({
   applicationId,
 }: {
@@ -56,6 +119,7 @@ export function DriverApplicationPage({
   const [modalOpen, setModalOpen] = useState(false);
   const [vehicles, setVehicles] = useState<any[]>([]);
   const [liveApp, setLiveApp] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [scheduleModalOpen, setScheduleModalOpen] = useState(false);
   const [approvedDriverId, setApprovedDriverId] = useState("");
   const [approvedDriverName, setApprovedDriverName] = useState("");
@@ -69,14 +133,19 @@ export function DriverApplicationPage({
             setVehicles(res.data);
           }
         });
-        getDriverApplicationByIdApi(token, applicationId).then((res) => {
-          if (res.success && res.data) {
-            setLiveApp(res.data);
-            if (res.data.status === "APPROVED") setDecision("Approved");
-            else if (res.data.status === "REJECTED") setDecision("Rejected");
-            else setDecision("Pending review");
-          }
-        });
+        getDriverApplicationByIdApi(token, applicationId)
+          .then((res) => {
+            if (res.success && res.data) {
+              setLiveApp(res.data);
+              if (res.data.status === "APPROVED") setDecision("Approved");
+              else if (res.data.status === "REJECTED") setDecision("Rejected");
+              else setDecision("Pending review");
+            }
+            setLoading(false);
+          })
+          .catch(() => setLoading(false));
+      } else {
+        setLoading(false);
       }
     }
   }, [applicationId]);
@@ -105,9 +174,15 @@ export function DriverApplicationPage({
     }
   };
 
-  const fullName = liveApp?.fullName || "Marcus Johnson";
-  const initials = fullName.split(" ").map((n: string) => n[0]).join("").toUpperCase().substring(0, 2) || "MJ";
-  const cityState = `${liveApp?.city || "Miami"}, ${liveApp?.state || "FL"}`;
+  if (loading) {
+    return <DriverApplicationSkeleton />;
+  }
+
+  const fullName = liveApp?.fullName || "—";
+  const initials = liveApp?.fullName
+    ? liveApp.fullName.split(" ").map((n: string) => n[0]).join("").toUpperCase().substring(0, 2)
+    : "—";
+  const cityState = [liveApp?.city, liveApp?.state].filter(Boolean).join(", ") || "—";
 
   return (
     <div className="pb-20">
@@ -147,8 +222,8 @@ export function DriverApplicationPage({
               <InfoGrid
                 items={[
                   ["Full name", fullName],
-                  ["Email address", liveApp?.email || "N/A"],
-                  ["Phone number", liveApp?.phone || "N/A"],
+                  ["Email address", liveApp?.email || "—"],
+                  ["Phone number", liveApp?.phone || "—"],
                   ["Street address", liveApp?.streetAddress ? `${liveApp.streetAddress}${liveApp.streetAddress2 ? `, ${liveApp.streetAddress2}` : ""}` : "—"],
                   ["City", liveApp?.city || "—"],
                   ["State", liveApp?.state || "—"],
@@ -166,7 +241,7 @@ export function DriverApplicationPage({
             <InfoGrid
               items={[
                 ["Position applying for", liveApp?.position || (liveApp?.positionType ? `Driver (${liveApp.positionType.charAt(0) + liveApp.positionType.slice(1).toLowerCase()})` : "Driver")],
-                ["Employment status", liveApp?.employmentStatus || "Full time"],
+                ["Employment status", liveApp?.employmentStatus || "—"],
                 ["Desired salary", liveApp?.desiredSalary || "—"],
                 ["Available start date", liveApp?.availableStartDate || (liveApp?.submittedDate ? new Date(liveApp.submittedDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "—")],
                 ["How did you hear about us", liveApp?.howDidYouHear || "—"],
@@ -176,8 +251,8 @@ export function DriverApplicationPage({
           <ReviewSection icon={ShieldCheck} title="Eligibility">
             <InfoGrid
               items={[
-                ["Authorized to work in US", liveApp?.authorizedInUS === "no" ? "✗ No" : liveApp?.authorizedInUS === "yes" ? "✓ Yes" : "✓ Yes"],
-                ["Felony conviction", liveApp?.felonyConviction === "yes" ? "Yes" : "✓ No"],
+                ["Authorized to work in US", liveApp?.authorizedInUS === "no" ? "✗ No" : liveApp?.authorizedInUS === "yes" ? "✓ Yes" : "—"],
+                ["Felony conviction", liveApp?.felonyConviction === "yes" ? "Yes" : liveApp?.felonyConviction === "no" ? "✓ No" : "—"],
                 ["Felony explanation", liveApp?.felonyExplanation || "N/A — No felony conviction"],
               ]}
             />
@@ -234,8 +309,8 @@ export function DriverApplicationPage({
                 ["Driver license number", liveApp?.licenseNumber || "—"],
                 ["Social security number", liveApp?.socialSecurityNumber ? `•••-••-${liveApp.socialSecurityNumber.slice(-4)}` : "—"],
                 ["Date of birth", liveApp?.dateOfBirth || (liveApp?.dobMonth ? `${liveApp.dobMonth}/${liveApp.dobDay}/${liveApp.dobYear}` : "—")],
-                ["Years of driving experience", "7 years"],
-                ["Driver category", liveApp?.driverCategory || "CDL-A (Class A)"],
+                ["Years of driving experience", liveApp?.drivingExperience ? `${liveApp.drivingExperience} years` : "—"],
+                ["Driver category", liveApp?.driverCategory || "—"],
                 ["License expiration date", liveApp?.licenseExpirationDate ? new Date(liveApp.licenseExpirationDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "—"],
               ]}
             />
@@ -270,7 +345,7 @@ export function DriverApplicationPage({
             <InfoGrid
               items={[
                 ["Signed by", fullName],
-                ["Signed date", liveApp?.submittedDate ? new Date(liveApp.submittedDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "December 28, 2025"],
+                ["Signed date", liveApp?.submittedDate ? new Date(liveApp.submittedDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "—"],
                 ["Verification status", "✓ Verified"],
               ]}
             />
@@ -329,22 +404,22 @@ export function DriverApplicationPage({
               <SummaryLine
                 icon={CalendarDays}
                 label="Experience"
-                value="7 years"
+                value={liveApp?.drivingExperience ? `${liveApp.drivingExperience} years` : "—"}
               />
               <SummaryLine
                 icon={IdCard}
                 label="License"
-                value={liveApp?.licenseNumber || "CDL-A · F3847291"}
+                value={liveApp?.licenseNumber || "—"}
               />
               <SummaryLine
                 icon={CalendarDays}
                 label="Application date"
-                value={liveApp?.submittedDate ? new Date(liveApp.submittedDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Dec 28, 2025"}
+                value={liveApp?.submittedDate ? new Date(liveApp.submittedDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
               />
               <SummaryLine
                 icon={CalendarDays}
                 label="Available start"
-                value={liveApp?.availableStartDate || "Jan 15, 2026"}
+                value={liveApp?.availableStartDate || "—"}
               />
             </dl>
             <div className="mt-5">
