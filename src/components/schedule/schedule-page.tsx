@@ -875,8 +875,8 @@ export function SchedulePage() {
           onSaveSuccess={() => { setEditChangeModalOpen(false); setEditingChange(null); loadDrivers(); }}
         />
 
-        {/* ── Upcoming one-time changes + Schedule issues ── */}
-        <section className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+        {/* ── Upcoming one-time changes ── */}
+        <section className="mt-5">
           <article className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
             <div className="flex items-start justify-between p-5">
               <div>
@@ -896,33 +896,6 @@ export function SchedulePage() {
               onEdit={handleEditChange}
               onDelete={handleDeleteChange}
             />
-          </article>
-
-          <article className="overflow-hidden rounded-2xl border border-border bg-card shadow-card">
-            <div className="flex items-center justify-between border-b border-border p-5">
-              <div>
-                <h2 className="text-base font-bold">Schedule issues</h2>
-                <p className="mt-1 text-[11px] text-muted-foreground">Requires your attention</p>
-              </div>
-              <span className="rounded-full bg-amber-50 px-3 py-1 text-[10px] font-bold text-amber-700">2 active</span>
-            </div>
-            {[
-              ["Carlos Mendez", "Shift overlap detected on Wednesday — conflicts with vehicle maintenance window."],
-              ["Sarah Williams", "Missing attendance confirmation for Thursday's scheduled shift."],
-            ].map(([name, note]) => (
-              <div className="flex gap-3 border-b border-border p-5 last:border-0" key={name}>
-                <span className="grid size-9 shrink-0 place-items-center rounded-full bg-amber-50 text-amber-600">
-                  <AlertTriangle className="size-4" />
-                </span>
-                <div>
-                  <strong className="text-xs">{name}</strong>
-                  <p className="mt-1 text-[11px] leading-5 text-muted-foreground">{note}</p>
-                  <button className="mt-2 text-[11px] font-bold text-blue-600" type="button">
-                    View attendance →
-                  </button>
-                </div>
-              </div>
-            ))}
           </article>
         </section>
       </div>
