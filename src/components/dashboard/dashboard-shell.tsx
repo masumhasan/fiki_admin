@@ -2,7 +2,6 @@
 
 import {
   BarChart3,
-  Bell,
   CalendarDays,
   CarFront,
   ChevronDown,
@@ -231,14 +230,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             </nav>
           )}
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
-            <button
-              aria-label="Notifications"
-              className="relative flex size-10 items-center justify-center rounded-xl border border-brand-border bg-white text-brand-muted transition hover:bg-slate-50 hover:text-brand-navy"
-              type="button"
-            >
-              <Bell className="size-4.75" />
-              <span className="absolute right-2 top-2 size-2 rounded-full border-2 border-white bg-[#f59e0b]" />
-            </button>
+
             <div className="relative">
               <button
                 aria-expanded={userDropdownOpen}
