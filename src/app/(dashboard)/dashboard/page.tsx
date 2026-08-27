@@ -266,7 +266,7 @@ export default function DashboardPage() {
                       No trips found.
                     </td>
                   </tr>
-                ) : activeTripsList.map(
+                ) : activeTripsList.slice(0, 5).map(
                   (
                     [
                       id,
@@ -309,12 +309,12 @@ export default function DashboardPage() {
               </tbody>
             </table>
           </div>
-          <button
-            type="button"
-            className="mt-4 flex items-center gap-1 text-xs font-bold text-[#16345e]"
+          <Link
+            href="/trips"
+            className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-[#16345e] hover:underline"
           >
             View all trips <ArrowRight className="size-3.5" />
-          </button>
+          </Link>
         </article>
         <ActivityFeed items={activityFeedList} isLoading={stats === null} />
       </section>
