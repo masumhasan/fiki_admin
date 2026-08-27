@@ -2,6 +2,7 @@
 
 import {
   Activity,
+  AlertTriangle,
   CarFront,
   ChevronLeft,
   ChevronRight,
@@ -13,6 +14,7 @@ import {
   Search,
   Trash2,
   Users,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, useEffect } from "react";
@@ -111,14 +113,32 @@ export function DriversPage() {
     fetchDrivers();
   }, []);
 
-  const handleDeleteDriver = async (id: string) => {
-    if (typeof window === "undefined") return;
+  const [driverToDelete, setDriverToDelete] = useState<Driver | null>(null);
+  const [deleteConfirmInput, setDeleteConfirmInput] = useState("");
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState("");
+
+  const handleOpenDeleteModal = (driver: Driver) => {
+    setDriverToDelete(driver);
+    setDeleteConfirmInput("");
+    setDeleteError("");
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!driverToDelete || deleteConfirmInput.trim() !== "DELETE") return;
+    setDeleting(true);
+    setDeleteError("");
     const token = window.localStorage.getItem("fiki_auth_token");
-    if (!token || !id) return;
-    const res = await deleteDriverApi(token, id);
+    if (!token) return;
+    const res = await deleteDriverApi(token, driverToDelete.mongoId);
     if (res.success) {
+      setDriverToDelete(null);
+      setDeleteConfirmInput("");
       await fetchDrivers();
+    } else {
+      setDeleteError(res.error?.message || "Failed to delete driver.");
     }
+    setDeleting(false);
   };
 
   const filteredDrivers = useMemo(
@@ -211,9 +231,88 @@ export function DriversPage() {
       ) : (
         <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
           {filteredDrivers.map((driver) => (
-            <DriverCard driver={driver} key={driver.mongoId} onDelete={handleDeleteDriver} />
+            <DriverCard driver={driver} key={driver.mongoId} onDelete={() => handleOpenDeleteModal(driver)} />
           ))}
         </section>
+      )}
+
+      {/* Delete Driver Confirmation Modal */}
+      {driverToDelete && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-2xl border border-border bg-card p-6 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-border pb-4">
+              <div className="flex items-center gap-2 text-destructive">
+                <Trash2 className="size-5" />
+                <h3 className="text-base font-bold text-foreground">Delete Driver</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setDriverToDelete(null)}
+                className="grid size-8 place-items-center rounded-full bg-muted text-muted-foreground hover:bg-muted/80"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <div className="py-4 space-y-4">
+              <p className="text-xs leading-5 text-muted-foreground">
+                Are you sure you want to delete <strong className="text-foreground">{driverToDelete.name}</strong> ({driverToDelete.id})? This action cannot be undone and will permanently remove their driver record.
+              </p>
+
+              <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3.5 text-xs text-destructive">
+                <div className="flex items-center gap-2 font-bold mb-1">
+                  <AlertTriangle className="size-4 shrink-0" />
+                  <span>Confirmation Required</span>
+                </div>
+                <p className="leading-5">
+                  To confirm deletion, please type <strong className="underline">DELETE</strong> in the field below.
+                </p>
+              </div>
+
+              {deleteError && (
+                <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-3 text-xs font-semibold text-destructive">
+                  {deleteError}
+                </div>
+              )}
+
+              <div>
+                <label className="mb-1.5 block text-xs font-bold text-foreground">Type "DELETE" to confirm</label>
+                <input
+                  type="text"
+                  placeholder="DELETE"
+                  value={deleteConfirmInput}
+                  onChange={(e) => setDeleteConfirmInput(e.target.value)}
+                  className="h-10 w-full rounded-xl border border-border bg-background px-3 text-xs font-semibold uppercase tracking-wider outline-none focus:border-destructive focus:ring-2 focus:ring-destructive/10"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 border-t border-border pt-4">
+              <button
+                type="button"
+                onClick={() => setDriverToDelete(null)}
+                className="rounded-xl border border-border px-4 py-2 text-xs font-bold text-muted-foreground hover:bg-muted"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={deleteConfirmInput.trim() !== "DELETE" || deleting}
+                onClick={handleConfirmDelete}
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-xl bg-destructive px-5 text-xs font-bold text-destructive-foreground transition hover:bg-destructive/90 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+              >
+                {deleting ? (
+                  <>
+                    <Loader2 className="size-3.5 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  "Confirm Delete"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
