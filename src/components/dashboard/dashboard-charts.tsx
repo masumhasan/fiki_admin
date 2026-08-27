@@ -101,10 +101,10 @@ export function WeeklyTripChart({ className, data = [] }: ChartProps & { data?: 
 }
 
 export function DriverPerformanceChart({ className, data = [] }: ChartProps & { data?: { name: string; trips: number }[] }) {
-  const driverNames = data.length > 0 ? data.map(d => d.name) : ["Marcus W.", "Aisha P.", "Robert T.", "Linda C.", "James M."];
-  const tripCounts = data.length > 0 ? data.map(d => d.trips) : [24, 21, 18, 22, 19];
+  const driverNames = data.map(d => d.name);
+  const tripCounts = data.map(d => d.trips);
   
-  const maxTrips = Math.max(...tripCounts, 30);
+  const maxTrips = tripCounts.length > 0 ? Math.max(...tripCounts, 10) : 10;
   const yAxisMax = Math.ceil(maxTrips / 10) * 10;
 
   const ref = useChart({
