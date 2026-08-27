@@ -605,7 +605,6 @@ function DriverTable({ data }: { data: ReadonlyArray<readonly [string, string, s
           <tr>
             <th className="px-5 py-3">Driver</th>
             <th>Trips</th>
-            <th>Rating</th>
             <th>Revenue</th>
             <th>Status</th>
           </tr>
@@ -622,12 +621,6 @@ function DriverTable({ data }: { data: ReadonlyArray<readonly [string, string, s
                 </span>
               </td>
               <td className="font-semibold">{trips}</td>
-              <td>
-                <span className="flex items-center gap-1">
-                  <Star className="size-3 fill-secondary text-secondary" />
-                  {rating}
-                </span>
-              </td>
               <td className="font-semibold text-emerald-600">{revenue}</td>
               <td>
                 <Badge status={status} />
