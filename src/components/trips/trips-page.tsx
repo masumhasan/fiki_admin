@@ -13,6 +13,7 @@ import Link from "next/link";
 import { useMemo, useState, useEffect } from "react";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { getAdminTripsApi } from "@/lib/api";
+import { cn } from "@/lib/utils";
 
 type TripStatus = "Onboard" | "Completed" | "Scheduled" | "Need driver" | "Cancelled";
 
@@ -153,8 +154,20 @@ export function TripsPage() {
     });
   }, [trips, query, status]);
 
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [query, status, pageSize]);
+
   const pageSizeNum = Number(pageSize);
-  const visibleTrips = filtered.slice(0, pageSizeNum);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSizeNum));
+  const startIndex = (currentPage - 1) * pageSizeNum;
+  const endIndex = Math.min(startIndex + pageSizeNum, filtered.length);
+  const visibleTrips = useMemo(
+    () => filtered.slice(startIndex, startIndex + pageSizeNum),
+    [filtered, startIndex, pageSizeNum],
+  );
 
   function exportTrips() {
     const rows = [
@@ -314,23 +327,49 @@ export function TripsPage() {
             </label>
             <p className="text-xs text-muted-foreground">
               Showing{" "}
-              <strong className="text-foreground">{visibleTrips.length}</strong> of{" "}
-              {filtered.length} trips
+              <strong className="text-foreground">
+                {filtered.length === 0 ? 0 : startIndex + 1}
+              </strong>{" "}
+              to <strong className="text-foreground">{endIndex}</strong> of{" "}
+              <strong className="text-foreground">{filtered.length}</strong> trips
             </p>
           </div>
           <nav aria-label="Pagination" className="flex items-center gap-1.5">
-            <PageButton label="Previous page">
-              <ChevronLeft />
-            </PageButton>
             <button
-              className="grid size-9 place-items-center rounded-lg bg-primary text-xs font-bold text-primary-foreground"
+              aria-label="Previous page"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              className="grid size-9 place-items-center rounded-lg border border-border text-muted-foreground transition hover:bg-muted hover:text-primary disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-muted-foreground [&_svg]:size-4 cursor-pointer"
               type="button"
             >
-              1
+              <ChevronLeft />
             </button>
-            <PageButton label="Next page">
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
+              <button
+                key={pageNum}
+                onClick={() => setCurrentPage(pageNum)}
+                className={cn(
+                  "grid size-9 place-items-center rounded-lg text-xs font-bold transition-colors cursor-pointer",
+                  pageNum === currentPage
+                    ? "bg-primary text-primary-foreground"
+                    : "border border-border text-foreground hover:bg-muted"
+                )}
+                type="button"
+              >
+                {pageNum}
+              </button>
+            ))}
+
+            <button
+              aria-label="Next page"
+              disabled={currentPage === totalPages || filtered.length === 0}
+              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              className="grid size-9 place-items-center rounded-lg border border-border text-muted-foreground transition hover:bg-muted hover:text-primary disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-muted-foreground [&_svg]:size-4 cursor-pointer"
+              type="button"
+            >
               <ChevronRight />
-            </PageButton>
+            </button>
           </nav>
         </footer>
       </section>
