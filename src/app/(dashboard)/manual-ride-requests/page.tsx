@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { useRouter } from "next/navigation";
+import { API_BASE_URL } from "@/lib/api";
 
 // Simple HTML5 Canvas Signature Pad
 function SignaturePad({ value, onChange }: { value?: string; onChange?: (val: string) => void }) {
@@ -225,7 +226,7 @@ export default function ManualRideRequestsPage() {
 
     if (typeof window !== "undefined") {
       const token = window.localStorage.getItem("fiki_auth_token");
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api/v1";
+      const API_URL = API_BASE_URL;
 
       if (token) {
         try {
