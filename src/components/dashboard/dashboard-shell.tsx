@@ -31,7 +31,7 @@ const navigation = [
   { label: "Drivers", href: "/drivers", icon: UsersRound },
   { label: "Schedule", href: "/schedule", icon: CalendarDays },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
-  { label: "Vehicle Report", href: "/vehicle-reports", icon: ClipboardList },
+  { label: "Shift Reports", href: "/vehicle-reports", icon: ClipboardList },
   { label: "Vehicles", href: "/vehicles", icon: CarFront },
   { label: "Dispatch Management", href: "/dispatch-management", icon: PhoneCall },
   { label: "Earning Management", href: "/earning-management", icon: DollarSign },

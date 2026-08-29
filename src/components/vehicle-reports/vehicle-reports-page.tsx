@@ -46,33 +46,28 @@ export function VehicleReportsPage() {
       .then((res) => {
         if (res.success && res.data && Array.isArray(res.data)) {
           const mapped: Report[] = res.data.map((r: any) => {
-            const driverName = r.inspectorName || "Admin Inspector";
-            const nameParts = driverName.split(" ");
+            const driverName = r.driverName || r.inspectorName || "Driver";
+            const nameParts = driverName.split(" ").filter(Boolean);
             const initials =
               nameParts.length >= 2
                 ? `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase()
                 : driverName.substring(0, 2).toUpperCase();
 
             return {
-              id: `VR-${r.vehicleId || r._id}`,
+              id: r.shiftId || `VR-S-${(r._id || r.id || "").substring(0, 4).toUpperCase()}`,
+              rawId: r.id || r._id,
               driver: driverName,
               initials,
               avatar: "bg-primary",
-              vehicle: [r.make, r.vehicleModel].filter(Boolean).join(" ") || "—",
-              plate: r.licensePlate || "—",
-              date: r.createdAt
-                ? new Date(r.createdAt).toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                  })
-                : "—",
-              shift: r.shift || "—",
-              distance: r.fuelLevelPercentage != null ? `${r.fuelLevelPercentage}% fuel` : "—",
+              vehicle: r.vehicleName || [r.make, r.vehicleModel].filter(Boolean).join(" ") || "—",
+              plate: r.vehicleNumber || r.licensePlate || "—",
+              date: r.shiftDateText || (r.createdAt ? new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"),
+              shift: r.shiftTimeText || r.shift || "—",
+              distance: r.estimatedMiles != null ? `${r.estimatedMiles} mi` : (r.fuelLevelPercentage != null ? `${r.fuelLevelPercentage}% fuel` : "—"),
               status:
-                r.inspectionStatus === "PASS"
+                r.status === "Completed" || r.inspectionStatus === "PASS"
                   ? "Completed"
-                  : r.inspectionStatus === "IN_PROGRESS"
+                  : r.status === "In progress" || r.inspectionStatus === "IN_PROGRESS"
                     ? "In progress"
                     : "Missing report",
             };
@@ -101,7 +96,7 @@ export function VehicleReportsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Vehicle reports"
+        title="Shift reports"
         description="Review driver-submitted shift and vehicle inspection reports."
       />
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
@@ -151,15 +146,32 @@ export function VehicleReportsPage() {
       </section>
 
       {loading ? (
-        <div className="flex min-h-48 items-center justify-center">
-          <Loader2 className="size-8 animate-spin text-primary/50" />
-        </div>
+        <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="rounded-2xl border border-border bg-card p-6 shadow-[0_6px_22px_rgba(8,37,82,0.06)] animate-pulse space-y-4">
+              <div className="flex items-start justify-between">
+                <div className="size-14 rounded-full bg-muted" />
+                <div className="h-5 w-20 rounded-full bg-muted" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-5 w-36 rounded bg-muted" />
+                <div className="h-3 w-20 rounded bg-muted" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="h-8 rounded bg-muted/60" />
+                <div className="h-8 rounded bg-muted/60" />
+                <div className="h-8 rounded bg-muted/60" />
+                <div className="h-8 rounded bg-muted/60" />
+              </div>
+            </div>
+          ))}
+        </section>
       ) : filtered.length === 0 ? (
         <div className="flex min-h-64 flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 text-center">
           <CarFront className="size-10 text-muted-foreground/40" />
           <p className="text-sm font-semibold text-muted-foreground">
             {reports.length === 0
-              ? "No vehicle reports submitted yet"
+              ? "No shift reports submitted yet"
               : "No reports match your search"}
           </p>
           {reports.length === 0 && (
@@ -230,7 +242,7 @@ function ReportCard({ report }: { report: Report }) {
         </span>
         <Link
           className="flex h-10 items-center gap-2 rounded-lg border border-border px-4 text-xs font-bold text-primary hover:bg-muted"
-          href={`/vehicle-reports/${report.id}`}
+          href={`/vehicle-reports/${(report as any).rawId || report.id}`}
         >
           <Eye className="size-4" />
           View report

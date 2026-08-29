@@ -147,12 +147,34 @@ export async function getAdminAnalyticsApi(token: string) {
 
 export async function getVehicleReportsApi(token: string) {
   try {
-    const res = await fetch(`${API_BASE_URL}/admin/vehicle-reports`, {
+    const res = await fetch(`${API_BASE_URL}/admin/shift-reports`, {
       headers: { Authorization: `Bearer ${token}` },
     });
     return await res.json();
   } catch (error) {
     return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to fetch vehicle reports" } };
+  }
+}
+
+export async function getShiftReportsApi(token: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/shift-reports`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to fetch shift reports" } };
+  }
+}
+
+export async function getShiftReportByIdApi(token: string, reportId: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/shift-reports/${reportId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to fetch shift report details" } };
   }
 }
 
