@@ -428,45 +428,6 @@ export default function DashboardPage() {
           )}
         </article>
       </section>
-
-      <section className={`${card} p-6`}>
-        <div className="flex justify-between">
-          <div>
-            <h2 className="text-lg font-bold text-[#172033]">
-              Upcoming Schedule
-            </h2>
-            <p className="text-xs text-[#8b95a7]">Next 3 days</p>
-          </div>
-          <button
-            type="button"
-            className="flex items-center gap-1 text-xs font-bold"
-          >
-            View schedule <ArrowRight className="size-3.5" />
-          </button>
-        </div>
-        <div className="mt-5 grid gap-4 md:grid-cols-3">
-          <ScheduleDay
-            title="Today"
-            date="Jul 15"
-            rows={[
-              ["Sarah Johnson", "9:00 AM", "#22c55e"],
-              ["James Chen", "7:30 AM", "#3b82f6"],
-              ["Maria Rodriguez", "11:00 AM", "#3b82f6"],
-              ["Emma Thompson", "5:30 AM", "#ef4444"],
-            ]}
-          />
-          <ScheduleDay
-            title="Tomorrow"
-            date="Jul 16"
-            rows={[["Robert Park", "10:00 AM", "#3b82f6"]]}
-          />
-          <ScheduleDay
-            title="Thu Jul 17"
-            date="Jul 17"
-            rows={[["Maria Rodriguez", "11:00 AM", "#ef4444"]]}
-          />
-        </div>
-      </section>
     </div>
   );
 }
@@ -598,35 +559,5 @@ function ActivityFeed({ items = [], isLoading = false }: { items?: { title: stri
         )}
       </div>
     </article>
-  );
-}
-function ScheduleDay({
-  title,
-  date,
-  rows,
-}: {
-  title: string;
-  date: string;
-  rows: string[][];
-}) {
-  return (
-    <div className="min-h-40 rounded-xl border bg-[#fafbfc] p-4">
-      <div className="flex justify-between text-xs">
-        <strong>{title}</strong>
-        <span className="text-[#8993a5]">{date}</span>
-      </div>
-      <div className="mt-4 space-y-3">
-        {rows.map(([name, time, color]) => (
-          <div className="flex items-center text-xs" key={name}>
-            <i
-              className="mr-2 size-1.5 rounded-full"
-              style={{ backgroundColor: color }}
-            />
-            <span>{name}</span>
-            <span className="ml-auto text-[#9aa4b4]">{time}</span>
-          </div>
-        ))}
-      </div>
-    </div>
   );
 }
