@@ -298,18 +298,7 @@ export function DriverApplicationPage({
                       ? "✓ Yes"
                       : "—",
                 ],
-                [
-                  "Felony conviction",
-                  liveApp?.felonyConviction === "yes"
-                    ? "Yes"
-                    : liveApp?.felonyConviction === "no"
-                      ? "✓ No"
-                      : "—",
-                ],
-                [
-                  "Felony explanation",
-                  liveApp?.felonyExplanation || "N/A — No felony conviction",
-                ],
+                ["Felony Declare", liveApp?.felonyExplanation || "—"],
               ]}
             />
           </ReviewSection>
