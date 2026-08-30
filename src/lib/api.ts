@@ -478,3 +478,29 @@ export async function updateDriverEarningsApi(
     return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to update driver earnings" } };
   }
 }
+
+export async function updateDriverProfileApi(
+  token: string,
+  driverId: string,
+  profileData: {
+    name?: string;
+    phone?: string;
+    email?: string;
+    licenseNumber?: string;
+    licenseExpirationDate?: string;
+  }
+) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/drivers/${driverId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(profileData),
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to update driver profile" } };
+  }
+}
