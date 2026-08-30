@@ -73,7 +73,10 @@ function getStatusBadge(status: string) {
     case "QUOTE_SENT":
       return { label: "Quote Sent", class: "bg-amber-50 text-amber-700" };
     case "QUOTE_ACCEPTED":
-      return { label: "Quote Accepted", class: "bg-emerald-50 text-emerald-700" };
+      return {
+        label: "Quote Accepted",
+        class: "bg-emerald-50 text-emerald-700",
+      };
     case "QUOTE_COUNTERED":
       return { label: "Counter Offer", class: "bg-purple-50 text-purple-700" };
     case "REQUESTED":
@@ -190,7 +193,9 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
     return (
       <div className="flex h-96 flex-col items-center justify-center gap-3">
         <Loader2 className="size-8 animate-spin text-primary" />
-        <p className="text-sm font-semibold text-muted-foreground">Loading trip details...</p>
+        <p className="text-sm font-semibold text-muted-foreground">
+          Loading trip details...
+        </p>
       </div>
     );
   }
@@ -199,12 +204,16 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
     return (
       <div className="mx-auto max-w-lg rounded-2xl border border-red-200 bg-red-50/50 p-8 text-center">
         <AlertTriangle className="mx-auto size-10 text-red-500" />
-        <h2 className="mt-3 text-lg font-bold text-foreground">Trip Not Found</h2>
-        <p className="mt-1 text-xs text-muted-foreground">{errorText || "Could not retrieve details for this trip."}</p>
+        <h2 className="mt-3 text-lg font-bold text-foreground">
+          Trip Not Found
+        </h2>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {errorText || "Could not retrieve details for this trip."}
+        </p>
         <div className="mt-6 flex justify-center gap-3">
           <Link
             className="flex h-9 items-center gap-2 rounded-lg border border-border bg-card px-4 text-xs font-semibold text-foreground transition hover:bg-muted"
-            href="/trips"
+            href="/ride-requests?tab=trips"
           >
             <ArrowLeft className="size-4" /> Back to trips
           </Link>
@@ -230,22 +239,39 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
   const driverPhone = driverObj?.phone || "—";
   const driverInitials = driverObj ? getInitials(driverName) : "—";
   const driverProfile = trip.driverProfile;
-  const driverRating = driverProfile?.rating ? String(driverProfile.rating) : "5.0";
+  const driverRating = driverProfile?.rating
+    ? String(driverProfile.rating)
+    : "5.0";
   const driverAvailability = driverProfile?.availabilityStatus || "Active";
 
   const vehicleObj = driverProfile?.vehicle;
   const vehicleName = vehicleObj
-    ? [vehicleObj.make, vehicleObj.model].filter(Boolean).join(" ") || "Assigned Vehicle"
+    ? [vehicleObj.make, vehicleObj.model].filter(Boolean).join(" ") ||
+      "Assigned Vehicle"
     : "No Vehicle Assigned";
   const vehiclePlate = vehicleObj?.licensePlate || "—";
 
-  const pickupAddress = trip.pickupLocation?.address || trip.streetAddress || "—";
-  const dropoffAddress = trip.dropoffLocation?.address || trip.returnDestinationAddress || "—";
-  const pickupTimeStr = [trip.pickupTime, trip.pickupDate ? formatDate(trip.pickupDate) : formatDate(trip.createdAt)].filter(Boolean).join(" · ");
-  const dropoffMeta = trip.appointmentTime ? `Appointment: ${trip.appointmentTime}` : `Scheduled: ${formatDate(trip.scheduledTime || trip.createdAt)}`;
+  const pickupAddress =
+    trip.pickupLocation?.address || trip.streetAddress || "—";
+  const dropoffAddress =
+    trip.dropoffLocation?.address || trip.returnDestinationAddress || "—";
+  const pickupTimeStr = [
+    trip.pickupTime,
+    trip.pickupDate ? formatDate(trip.pickupDate) : formatDate(trip.createdAt),
+  ]
+    .filter(Boolean)
+    .join(" · ");
+  const dropoffMeta = trip.appointmentTime
+    ? `Appointment: ${trip.appointmentTime}`
+    : `Scheduled: ${formatDate(trip.scheduledTime || trip.createdAt)}`;
 
-  const driverNotes = trip.driverNotes || "Passenger requires standard transit assistance. Vehicle is clean and prepped.";
-  const customerNotes = trip.specialInstructions || trip.accessInformation || "Standard pick-up request. Please call driver on arrival.";
+  const driverNotes =
+    trip.driverNotes ||
+    "Passenger requires standard transit assistance. Vehicle is clean and prepped.";
+  const customerNotes =
+    trip.specialInstructions ||
+    trip.accessInformation ||
+    "Standard pick-up request. Please call driver on arrival.";
 
   const statusBadge = getStatusBadge(trip.status);
   const isCancelled = trip.status === "CANCELLED";
@@ -259,12 +285,16 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
       done: true,
     },
     {
-      label: trip.quotedFare ? `Quote accepted ($${trip.quotedFare})` : "Ride confirmed",
+      label: trip.quotedFare
+        ? `Quote accepted ($${trip.quotedFare})`
+        : "Ride confirmed",
       time: formatTime(trip.quotedAt || trip.createdAt),
       done: trip.status !== "REQUESTED",
     },
     {
-      label: driverObj ? `Driver assigned (${driverName})` : "Driver assignment pending",
+      label: driverObj
+        ? `Driver assigned (${driverName})`
+        : "Driver assignment pending",
       time: driverObj ? formatTime(trip.updatedAt) : "—",
       done: Boolean(driverObj),
     },
@@ -288,24 +318,52 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
     if (!dateVal) return null;
     const d = new Date(dateVal);
     if (isNaN(d.getTime())) return null;
-    const dateStr = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
-    const timeStr = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+    const dateStr = d.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "UTC",
+    });
+    const timeStr = d.toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
     return `${dateStr} ${timeStr}`;
   }
 
-  const createdTimeStr = formatStepTimeFull(trip.createdAt) || "Aug 25, 2026 9:40 AM";
-  const assignedTimeStr = formatStepTimeFull(trip.assignedAt || trip.createdAt) || createdTimeStr;
-  const acceptedTimeStr = formatStepTimeFull(trip.acceptedAt || trip.assignedAt || trip.createdAt) || assignedTimeStr;
+  const createdTimeStr =
+    formatStepTimeFull(trip.createdAt) || "Aug 25, 2026 9:40 AM";
+  const assignedTimeStr =
+    formatStepTimeFull(trip.assignedAt || trip.createdAt) || createdTimeStr;
+  const acceptedTimeStr =
+    formatStepTimeFull(trip.acceptedAt || trip.assignedAt || trip.createdAt) ||
+    assignedTimeStr;
   const arrivingTimeStr = formatStepTimeFull(trip.arrivingAt);
   const arrivedTimeStr = formatStepTimeFull(trip.arrivedAt);
-  const inProgressTimeStr = formatStepTimeFull(trip.inProgressAt || trip.startedAt);
+  const inProgressTimeStr = formatStepTimeFull(
+    trip.inProgressAt || trip.startedAt,
+  );
   const completedTimeStr = formatStepTimeFull(trip.completedAt);
   const cancelledTimeStr = formatStepTimeFull(trip.cancelledAt);
 
   const isAssigned = Boolean(driverObj);
-  const isAccepted = ["ACCEPTED", "DRIVER_ARRIVING", "DRIVER_ARRIVED", "IN_PROGRESS", "COMPLETED"].includes(trip.status);
-  const isHeadingPickup = ["DRIVER_ARRIVING", "DRIVER_ARRIVED", "IN_PROGRESS", "COMPLETED"].includes(trip.status);
-  const isPickedUp = ["DRIVER_ARRIVED", "IN_PROGRESS", "COMPLETED"].includes(trip.status);
+  const isAccepted = [
+    "ACCEPTED",
+    "DRIVER_ARRIVING",
+    "DRIVER_ARRIVED",
+    "IN_PROGRESS",
+    "COMPLETED",
+  ].includes(trip.status);
+  const isHeadingPickup = [
+    "DRIVER_ARRIVING",
+    "DRIVER_ARRIVED",
+    "IN_PROGRESS",
+    "COMPLETED",
+  ].includes(trip.status);
+  const isPickedUp = ["DRIVER_ARRIVED", "IN_PROGRESS", "COMPLETED"].includes(
+    trip.status,
+  );
   const isHeadingDest = ["IN_PROGRESS", "COMPLETED"].includes(trip.status);
   const isCompletedStatus = trip.status === "COMPLETED";
 
@@ -324,25 +382,31 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
     },
     {
       label: "Heading to pickup",
-      time: isHeadingPickup ? (arrivingTimeStr || acceptedTimeStr) : "Upcoming",
+      time: isHeadingPickup ? arrivingTimeStr || acceptedTimeStr : "Upcoming",
       done: isHeadingPickup,
       current: trip.status === "DRIVER_ARRIVING",
     },
     {
       label: "Passenger picked up",
-      time: isPickedUp ? (arrivedTimeStr || arrivingTimeStr || acceptedTimeStr) : "Upcoming",
+      time: isPickedUp
+        ? arrivedTimeStr || arrivingTimeStr || acceptedTimeStr
+        : "Upcoming",
       done: isPickedUp,
       current: trip.status === "DRIVER_ARRIVED",
     },
     {
       label: "Heading to destination",
-      time: isHeadingDest ? (inProgressTimeStr || arrivedTimeStr) : "Upcoming",
+      time: isHeadingDest ? inProgressTimeStr || arrivedTimeStr : "Upcoming",
       done: isHeadingDest,
       current: trip.status === "IN_PROGRESS",
     },
     {
       label: "Trip completed",
-      time: isCompletedStatus ? (completedTimeStr || inProgressTimeStr) : isCancelled ? `Cancelled (${cancelledTimeStr})` : "Upcoming",
+      time: isCompletedStatus
+        ? completedTimeStr || inProgressTimeStr
+        : isCancelled
+          ? `Cancelled (${cancelledTimeStr})`
+          : "Upcoming",
       done: isCompletedStatus,
       current: false,
     },
@@ -354,12 +418,16 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <Link
           className="flex h-9 w-fit items-center gap-2 rounded-lg border border-[#dce4ed] bg-white px-3 text-xs font-semibold text-[#52647e] transition hover:border-[#173d76]/30 hover:bg-[#f3f6fa] hover:text-[#173d76]"
-          href="/trips"
+          href="/ride-requests?tab=trips"
         >
           <ArrowLeft className="size-4" /> Back to trips
         </Link>
         <div className="grid grid-cols-2 gap-2 sm:flex">
-          <ToolbarButton icon={Printer} label="Print" onClick={() => window.print()} />
+          <ToolbarButton
+            icon={Printer}
+            label="Print"
+            onClick={() => window.print()}
+          />
           <ToolbarButton icon={Download} label="Export" onClick={exportTrip} />
           <ToolbarButton
             icon={UserRoundCog}
@@ -372,7 +440,11 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
             onClick={handleCancelTrip}
             type="button"
           >
-            {cancelling ? <Loader2 className="size-4 animate-spin" /> : <X className="size-4" />}
+            {cancelling ? (
+              <Loader2 className="size-4 animate-spin" />
+            ) : (
+              <X className="size-4" />
+            )}
             {isCancelled ? "Ride cancelled" : "Cancel ride"}
           </button>
         </div>
@@ -384,7 +456,9 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
           <h1 className="text-2xl font-bold tracking-[-0.035em] text-foreground sm:text-[28px]">
             Trip {trip._id || tripId}
           </h1>
-          <span className={`rounded-full px-3 py-1 text-[11px] font-bold ${statusBadge.class}`}>
+          <span
+            className={`rounded-full px-3 py-1 text-[11px] font-bold ${statusBadge.class}`}
+          >
             {statusBadge.label}
           </span>
           {trip.fare || trip.quotedFare ? (
@@ -401,17 +475,27 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
       {/* 3 Overview Cards */}
       <section className="grid gap-4 md:grid-cols-3">
         {/* Passenger Card */}
-        <PersonCard avatar={passengerInitials} label="Passenger" name={passengerName}>
+        <PersonCard
+          avatar={passengerInitials}
+          label="Passenger"
+          name={passengerName}
+        >
           <p>{passengerPhone}</p>
           <p>{passengerEmail}</p>
         </PersonCard>
 
         {/* Driver Card */}
-        <PersonCard avatar={driverInitials} dark label="Driver" name={driverName}>
+        <PersonCard
+          avatar={driverInitials}
+          dark
+          label="Driver"
+          name={driverName}
+        >
           <p>{driverPhone}</p>
           {driverObj && (
             <p className="flex items-center gap-1 font-bold text-foreground">
-              <Star className="size-3.5 fill-secondary text-secondary" /> {driverRating}
+              <Star className="size-3.5 fill-secondary text-secondary" />{" "}
+              {driverRating}
               <span className="ml-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-700 capitalize">
                 {driverAvailability.toLowerCase()}
               </span>
@@ -428,7 +512,9 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
             </span>
             <div>
               <h2 className="font-bold text-foreground">{vehicleName}</h2>
-              <p className="mt-1 text-xs text-muted-foreground">{vehiclePlate}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {vehiclePlate}
+              </p>
             </div>
           </div>
         </article>
@@ -462,7 +548,11 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
           </section>
 
           {/* Hand to Hand Receiver Signature Card */}
-          {(trip.receiverSignature || (Array.isArray(trip.mobilityOptions) && trip.mobilityOptions.some((o: string) => o.toLowerCase().includes("hand")))) && (
+          {(trip.receiverSignature ||
+            (Array.isArray(trip.mobilityOptions) &&
+              trip.mobilityOptions.some((o: string) =>
+                o.toLowerCase().includes("hand"),
+              ))) && (
             <section className={cardClass}>
               <div className="flex items-center justify-between border-b border-border pb-3.5 mb-4">
                 <div className="flex items-center gap-3">
@@ -470,8 +560,12 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
                     <FileCheck2 className="size-5" />
                   </span>
                   <div>
-                    <h2 className={titleClass}>Hand to Hand Drop-off Verification</h2>
-                    <p className="text-xs text-muted-foreground">Receiver Digital Signature & Handover Confirmation</p>
+                    <h2 className={titleClass}>
+                      Hand to Hand Drop-off Verification
+                    </h2>
+                    <p className="text-xs text-muted-foreground">
+                      Receiver Digital Signature & Handover Confirmation
+                    </p>
                   </div>
                 </div>
                 {trip.receiverSignature ? (
@@ -488,23 +582,37 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
               <div className="grid gap-5 sm:grid-cols-2">
                 <div className="space-y-3 text-xs">
                   <div>
-                    <p className="font-medium text-muted-foreground">Receiver Full Name</p>
-                    <p className="mt-0.5 font-bold text-foreground text-sm">{trip.receiverName || "—"}</p>
+                    <p className="font-medium text-muted-foreground">
+                      Receiver Full Name
+                    </p>
+                    <p className="mt-0.5 font-bold text-foreground text-sm">
+                      {trip.receiverName || "—"}
+                    </p>
                   </div>
                   <div>
-                    <p className="font-medium text-muted-foreground">Relationship / Role</p>
-                    <p className="mt-0.5 font-bold text-foreground">{trip.receiverRelationship || "Assigned Representative"}</p>
-                  </div>
-                  <div>
-                    <p className="font-medium text-muted-foreground">Date & Time Signed</p>
+                    <p className="font-medium text-muted-foreground">
+                      Relationship / Role
+                    </p>
                     <p className="mt-0.5 font-bold text-foreground">
-                      {trip.receiverSignedAt ? formatStepTimeFull(trip.receiverSignedAt) : "Pending Drop-off Signature"}
+                      {trip.receiverRelationship || "Assigned Representative"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-muted-foreground">
+                      Date & Time Signed
+                    </p>
+                    <p className="mt-0.5 font-bold text-foreground">
+                      {trip.receiverSignedAt
+                        ? formatStepTimeFull(trip.receiverSignedAt)
+                        : "Pending Drop-off Signature"}
                     </p>
                   </div>
                 </div>
 
                 <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-1.5">Receiver Digital Signature</p>
+                  <p className="text-xs font-medium text-muted-foreground mb-1.5">
+                    Receiver Digital Signature
+                  </p>
                   {trip.receiverSignature ? (
                     <div className="rounded-xl border border-border bg-slate-50 p-3 text-center">
                       <img
@@ -515,7 +623,8 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
                     </div>
                   ) : (
                     <div className="flex h-28 items-center justify-center rounded-xl border border-dashed border-border bg-slate-50 p-4 text-center text-xs text-muted-foreground">
-                      Receiver signature will be captured by driver upon drop-off
+                      Receiver signature will be captured by driver upon
+                      drop-off
                     </div>
                   )}
                 </div>
@@ -531,7 +640,10 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
             <h2 className={titleClass}>Trip timeline</h2>
             <ol className="mt-5">
               {timelineSteps.map((item, index) => (
-                <li className="relative flex gap-3 pb-5 last:pb-0" key={item.label}>
+                <li
+                  className="relative flex gap-3 pb-5 last:pb-0"
+                  key={item.label}
+                >
                   {index < timelineSteps.length - 1 ? (
                     <span
                       className={`absolute left-[13px] top-7 h-full w-px ${item.done ? "bg-primary" : "bg-border"}`}
@@ -547,10 +659,14 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
                     {item.done ? <Check className="size-3.5" /> : null}
                   </span>
                   <div>
-                    <p className={`text-xs font-semibold ${item.done ? "text-foreground" : "text-brand-soft"}`}>
+                    <p
+                      className={`text-xs font-semibold ${item.done ? "text-foreground" : "text-brand-soft"}`}
+                    >
                       {item.label}
                     </p>
-                    <p className="mt-1 text-[11px] text-brand-placeholder">{item.time}</p>
+                    <p className="mt-1 text-[11px] text-brand-placeholder">
+                      {item.time}
+                    </p>
                   </div>
                 </li>
               ))}
@@ -580,7 +696,9 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
                   </span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-2">
-                      <p className={`text-xs font-bold ${item.done ? "text-foreground" : "text-muted-foreground"}`}>
+                      <p
+                        className={`text-xs font-bold ${item.done ? "text-foreground" : "text-muted-foreground"}`}
+                      >
                         {item.label}
                       </p>
                       {item.current && (
@@ -605,7 +723,9 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md rounded-[28px] border border-border bg-card p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-border pb-4">
-              <h3 className="text-base font-bold text-foreground">Reassign Driver</h3>
+              <h3 className="text-base font-bold text-foreground">
+                Reassign Driver
+              </h3>
               <button
                 onClick={() => setReassignModalOpen(false)}
                 className="grid size-8 place-items-center rounded-full bg-muted text-muted-foreground hover:bg-muted/80"
@@ -614,9 +734,13 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
               </button>
             </div>
             <div className="py-5 space-y-3">
-              <label className="text-xs font-bold text-foreground">Select Approved Driver</label>
+              <label className="text-xs font-bold text-foreground">
+                Select Approved Driver
+              </label>
               {approvedDrivers.length === 0 ? (
-                <p className="text-xs text-muted-foreground">Loading approved drivers...</p>
+                <p className="text-xs text-muted-foreground">
+                  Loading approved drivers...
+                </p>
               ) : (
                 <select
                   value={selectedDriverId}
@@ -653,8 +777,10 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
   );
 }
 
-const cardClass = "rounded-xl border border-[#e1e6ee] bg-card p-5 shadow-[0_4px_14px_rgba(15,37,74,.04)] sm:p-5";
-const eyebrowClass = "text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground";
+const cardClass =
+  "rounded-xl border border-[#e1e6ee] bg-card p-5 shadow-[0_4px_14px_rgba(15,37,74,.04)] sm:p-5";
+const eyebrowClass =
+  "text-[10px] font-bold uppercase tracking-[0.14em] text-muted-foreground";
 const titleClass = "text-base font-bold tracking-[-0.02em] text-foreground";
 
 function PersonCard({
@@ -681,7 +807,9 @@ function PersonCard({
         </span>
         <div>
           <h2 className="font-bold text-foreground">{name}</h2>
-          <div className="mt-1 space-y-1 text-xs text-muted-foreground">{children}</div>
+          <div className="mt-1 space-y-1 text-xs text-muted-foreground">
+            {children}
+          </div>
         </div>
       </div>
     </article>

@@ -15,7 +15,12 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { getAdminTripsApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-type TripStatus = "Onboard" | "Completed" | "Scheduled" | "Need driver" | "Cancelled";
+type TripStatus =
+  | "Onboard"
+  | "Completed"
+  | "Scheduled"
+  | "Need driver"
+  | "Cancelled";
 
 type Trip = {
   id: string;
@@ -40,9 +45,10 @@ const filters = [
   "Cancelled",
 ] as const;
 
-export function TripsPage() {
+export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState<(typeof filters)[number]>("All statuses");
+  const [status, setStatus] =
+    useState<(typeof filters)[number]>("All statuses");
   const [pageSize, setPageSize] = useState("10");
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
@@ -147,9 +153,13 @@ export function TripsPage() {
       const matchesStatus = status === "All statuses" || trip.status === status;
       const matchesQuery =
         !normalized ||
-        [trip.id, trip.passenger, trip.driver ?? "", trip.pickup, trip.destination].some(
-          (value) => value.toLowerCase().includes(normalized),
-        );
+        [
+          trip.id,
+          trip.passenger,
+          trip.driver ?? "",
+          trip.pickup,
+          trip.destination,
+        ].some((value) => value.toLowerCase().includes(normalized));
       return matchesStatus && matchesQuery;
     });
   }, [trips, query, status]);
@@ -171,7 +181,16 @@ export function TripsPage() {
 
   function exportTrips() {
     const rows = [
-      ["Trip ID", "Passenger", "Driver", "Pickup", "Destination", "Status", "Time", "Date"],
+      [
+        "Trip ID",
+        "Passenger",
+        "Driver",
+        "Pickup",
+        "Destination",
+        "Status",
+        "Time",
+        "Date",
+      ],
       ...filtered.map((trip) => [
         trip.id,
         trip.passenger,
@@ -184,7 +203,9 @@ export function TripsPage() {
       ]),
     ];
     const csv = rows
-      .map((row) => row.map((v) => `"${String(v).replaceAll('"', '""')}"`).join(","))
+      .map((row) =>
+        row.map((v) => `"${String(v).replaceAll('"', '""')}"`).join(","),
+      )
       .join("\n");
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const link = document.createElement("a");
@@ -196,10 +217,23 @@ export function TripsPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        title="Trips"
-        description="Monitor active trips, schedules, driver assignments and ride outcomes."
-        action={
+      {!hideHeader ? (
+        <PageHeader
+          title="Trips"
+          description="Monitor active trips, schedules, driver assignments and ride outcomes."
+          action={
+            <button
+              className="h-9 rounded-lg bg-primary px-4 text-xs font-bold text-primary-foreground"
+              onClick={exportTrips}
+              type="button"
+            >
+              <Download className="mr-1.5 inline size-3.5" />
+              Export trips
+            </button>
+          }
+        />
+      ) : (
+        <div className="flex justify-end">
           <button
             className="h-9 rounded-lg bg-primary px-4 text-xs font-bold text-primary-foreground"
             onClick={exportTrips}
@@ -208,16 +242,23 @@ export function TripsPage() {
             <Download className="mr-1.5 inline size-3.5" />
             Export trips
           </button>
-        }
-      />
-      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4" aria-label="Trip summary">
+        </div>
+      )}
+      <section
+        className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4"
+        aria-label="Trip summary"
+      >
         {summary.map((item) => (
           <article
             className="rounded-xl border border-[#e1e6ee] bg-card p-4 shadow-[0_4px_14px_rgba(15,37,74,.04)] sm:p-5"
             key={item.label}
           >
-            <p className="text-xs font-semibold text-muted-foreground sm:text-sm">{item.label}</p>
-            <p className={`mt-2 text-3xl font-bold leading-none tracking-[-0.04em] sm:text-4xl ${item.tone}`}>
+            <p className="text-xs font-semibold text-muted-foreground sm:text-sm">
+              {item.label}
+            </p>
+            <p
+              className={`mt-2 text-3xl font-bold leading-none tracking-[-0.04em] sm:text-4xl ${item.tone}`}
+            >
               {loading ? (
                 <span className="inline-block h-9 w-8 animate-pulse rounded bg-muted" />
               ) : (
@@ -299,7 +340,9 @@ export function TripsPage() {
               <div className="px-5 py-16 text-center">
                 <Search className="mx-auto size-8 text-brand-soft" />
                 <p className="mt-3 text-sm font-semibold text-foreground">
-                  {trips.length === 0 ? "No trips recorded yet" : "No trips match your search"}
+                  {trips.length === 0
+                    ? "No trips recorded yet"
+                    : "No trips match your search"}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {trips.length === 0
@@ -331,7 +374,8 @@ export function TripsPage() {
                 {filtered.length === 0 ? 0 : startIndex + 1}
               </strong>{" "}
               to <strong className="text-foreground">{endIndex}</strong> of{" "}
-              <strong className="text-foreground">{filtered.length}</strong> trips
+              <strong className="text-foreground">{filtered.length}</strong>{" "}
+              trips
             </p>
           </div>
           <nav aria-label="Pagination" className="flex items-center gap-1.5">
@@ -345,26 +389,30 @@ export function TripsPage() {
               <ChevronLeft />
             </button>
 
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-              <button
-                key={pageNum}
-                onClick={() => setCurrentPage(pageNum)}
-                className={cn(
-                  "grid size-9 place-items-center rounded-lg text-xs font-bold transition-colors cursor-pointer",
-                  pageNum === currentPage
-                    ? "bg-primary text-primary-foreground"
-                    : "border border-border text-foreground hover:bg-muted"
-                )}
-                type="button"
-              >
-                {pageNum}
-              </button>
-            ))}
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(
+              (pageNum) => (
+                <button
+                  key={pageNum}
+                  onClick={() => setCurrentPage(pageNum)}
+                  className={cn(
+                    "grid size-9 place-items-center rounded-lg text-xs font-bold transition-colors cursor-pointer",
+                    pageNum === currentPage
+                      ? "bg-primary text-primary-foreground"
+                      : "border border-border text-foreground hover:bg-muted",
+                  )}
+                  type="button"
+                >
+                  {pageNum}
+                </button>
+              ),
+            )}
 
             <button
               aria-label="Next page"
               disabled={currentPage === totalPages || filtered.length === 0}
-              onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(totalPages, prev + 1))
+              }
               className="grid size-9 place-items-center rounded-lg border border-border text-muted-foreground transition hover:bg-muted hover:text-primary disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-muted-foreground [&_svg]:size-4 cursor-pointer"
               type="button"
             >
@@ -390,7 +438,10 @@ function TripRow({ trip }: { trip: Trip }) {
       <td className="truncate pr-3 text-muted-foreground" title={trip.pickup}>
         {trip.pickup}
       </td>
-      <td className="truncate pr-3 text-muted-foreground" title={trip.destination}>
+      <td
+        className="truncate pr-3 text-muted-foreground"
+        title={trip.destination}
+      >
         {trip.destination}
       </td>
       <td>
@@ -452,7 +503,9 @@ function Passenger({ trip }: { trip: Trip }) {
       >
         {trip.initials}
       </span>
-      <span className="truncate text-[13px] font-semibold text-foreground">{trip.passenger}</span>
+      <span className="truncate text-[13px] font-semibold text-foreground">
+        {trip.passenger}
+      </span>
     </div>
   );
 }
@@ -483,7 +536,13 @@ function Info({ label, value }: { label: string; value: string }) {
   );
 }
 
-function PageButton({ children, label }: { children: React.ReactNode; label: string }) {
+function PageButton({
+  children,
+  label,
+}: {
+  children: React.ReactNode;
+  label: string;
+}) {
   return (
     <button
       aria-label={label}

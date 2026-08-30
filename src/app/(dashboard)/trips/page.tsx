@@ -1,5 +1,5 @@
-import { TripsPage } from "@/components/trips/trips-page";
+import { redirect } from "next/navigation";
 
 export default function Page() {
-  return <TripsPage />;
+  redirect("/ride-requests?tab=trips");
 }

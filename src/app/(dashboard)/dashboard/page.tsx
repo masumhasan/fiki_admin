@@ -20,10 +20,7 @@ import {
 const card =
   "rounded-[18px] border border-[#e1e5ea] bg-white shadow-[0_9px_24px_rgba(15,35,65,0.07)]";
 
-
-
 const trips: any[] = [];
-
 
 export default function DashboardPage() {
   const [liveTrips, setLiveTrips] = useState<any[] | null>(null);
@@ -40,7 +37,13 @@ export default function DashboardPage() {
             const mapped = res.data.trips.map((t: any) => {
               const passengerName = t.passengerId?.name || "Passenger";
               const driverName = t.driverId?.name || "Unassigned";
-              const ini = passengerName.split(" ").map((n: string) => n[0]).join("").toUpperCase().substring(0, 2) || "PA";
+              const ini =
+                passengerName
+                  .split(" ")
+                  .map((n: string) => n[0])
+                  .join("")
+                  .toUpperCase()
+                  .substring(0, 2) || "PA";
 
               let statusStr = "Scheduled";
               if (t.status === "COMPLETED") statusStr = "Completed";
@@ -55,7 +58,12 @@ export default function DashboardPage() {
                 t.pickupLocation?.address || "Pickup Address",
                 t.dropoffLocation?.address || "Dropoff Address",
                 statusStr,
-                t.createdAt ? new Date(t.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "Now",
+                t.createdAt
+                  ? new Date(t.createdAt).toLocaleTimeString([], {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })
+                  : "Now",
                 "#2563eb",
               ];
             });
@@ -64,7 +72,7 @@ export default function DashboardPage() {
             }
           }
         });
-        
+
         getAdminAnalyticsApi(token).then((res) => {
           if (res.success && res.data) {
             setStats(res.data);
@@ -75,23 +83,36 @@ export default function DashboardPage() {
   }, []);
 
   const activeTripsList = liveTrips || [];
-  const metrics = stats?.metrics || { todayTrips: 0, pendingRequests: 0, activeDrivers: 0, completedTrips: 0 };
+  const metrics = stats?.metrics || {
+    todayTrips: 0,
+    pendingRequests: 0,
+    activeDrivers: 0,
+    completedTrips: 0,
+  };
   const weeklyTripVolume = stats?.weeklyTripVolume || [];
   const monthlyTripVolume = stats?.monthlyTripVolume || [];
   const yearlyTripVolume = stats?.yearlyTripVolume || [];
-  const tripVolumeData = tripFilter === "week" ? weeklyTripVolume : tripFilter === "month" ? monthlyTripVolume : yearlyTripVolume;
-  
+  const tripVolumeData =
+    tripFilter === "week"
+      ? weeklyTripVolume
+      : tripFilter === "month"
+        ? monthlyTripVolume
+        : yearlyTripVolume;
+
   const driverStatusList = stats?.driverStatus || [];
   const activityFeedList = stats?.activityFeed || [];
   const recentRideRequests = stats?.recentRideRequests || [];
 
   const driverPerformance = stats?.driverPerformance || {};
   const driverPerfData = driverPerformance[driverPerfFilter] || [];
-  const driverPerfText = 
-    driverPerfFilter === "week" ? "Trips this week" :
-    driverPerfFilter === "fortnight" ? "Trips this fortnight" :
-    driverPerfFilter === "month" ? "Trips this month" :
-    "Trips this year";
+  const driverPerfText =
+    driverPerfFilter === "week"
+      ? "Trips this week"
+      : driverPerfFilter === "fortnight"
+        ? "Trips this fortnight"
+        : driverPerfFilter === "month"
+          ? "Trips this month"
+          : "Trips this year";
 
   return (
     <div className="space-y-5">
@@ -135,7 +156,12 @@ export default function DashboardPage() {
           <div className="flex items-start justify-between gap-4">
             <div>
               <h2 className="text-lg font-bold text-[#172033]">
-                {tripFilter === "week" ? "Weekly" : tripFilter === "month" ? "Monthly" : "Yearly"} Trip Volume
+                {tripFilter === "week"
+                  ? "Weekly"
+                  : tripFilter === "month"
+                    ? "Monthly"
+                    : "Yearly"}{" "}
+                Trip Volume
               </h2>
               <p className="mt-0.5 text-xs text-[#8b95a7]">
                 Jul 9 — Jul 15, 2026
@@ -168,7 +194,10 @@ export default function DashboardPage() {
           {stats === null ? (
             <div className="mt-4 h-48 w-full animate-pulse rounded-lg bg-slate-100" />
           ) : (
-            <WeeklyTripChart className="mt-4 h-48 w-full" data={tripVolumeData} />
+            <WeeklyTripChart
+              className="mt-4 h-48 w-full"
+              data={tripVolumeData}
+            />
           )}
           <div className="mt-2 flex gap-6 text-xs text-[#7c8799]">
             <span className="flex items-center gap-2">
@@ -205,7 +234,9 @@ export default function DashboardPage() {
                     <p className="truncate text-xs font-bold text-[#273044]">
                       {driver.name}
                     </p>
-                    <p className="text-[11px] text-[#8a94a6]">{driver.vehicle}</p>
+                    <p className="text-[11px] text-[#8a94a6]">
+                      {driver.vehicle}
+                    </p>
                   </div>
                   <Badge status={driver.status} />
                 </div>
@@ -254,7 +285,10 @@ export default function DashboardPage() {
               <tbody>
                 {liveTrips === null ? (
                   [...Array(5)].map((_, i) => (
-                    <tr className={`border-b ${i % 2 ? "bg-[#fafafa]" : ""}`} key={i}>
+                    <tr
+                      className={`border-b ${i % 2 ? "bg-[#fafafa]" : ""}`}
+                      key={i}
+                    >
                       <td colSpan={7} className="px-2.5 py-3">
                         <div className="h-5 w-full animate-pulse rounded bg-slate-100" />
                       </td>
@@ -262,55 +296,64 @@ export default function DashboardPage() {
                   ))
                 ) : activeTripsList.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-10 text-center text-sm text-[#687386]">
+                    <td
+                      colSpan={7}
+                      className="py-10 text-center text-sm text-[#687386]"
+                    >
                       No trips found.
                     </td>
                   </tr>
-                ) : activeTripsList.slice(0, 5).map(
-                  (
-                    [
-                      id,
-                      ini,
-                      passenger,
-                      driver,
-                      pickup,
-                      destination,
-                      status,
-                      time,
-                      color,
-                    ],
-                    i,
-                  ) => (
-                    <tr
-                      className={`border-b ${i % 2 ? "bg-[#fafafa]" : ""}`}
-                      key={id}
-                    >
-                      <td className="px-2.5 py-3 font-bold text-[#16345e]">
-                        {id}
-                      </td>
-                      <td className="px-2.5 py-3">
-                        <span className="flex items-center gap-2">
-                          <Avatar small initials={ini} color={color} />
-                          {passenger}
-                        </span>
-                      </td>
-                      <td className="px-2.5 py-3">{driver}</td>
-                      <td className="px-2.5 py-3 text-[#7d8799]">{pickup}</td>
-                      <td className="px-2.5 py-3 text-[#7d8799]">
-                        {destination}
-                      </td>
-                      <td className="px-2.5 py-3">
-                        <Badge status={status} />
-                      </td>
-                      <td className="px-2.5 py-3 text-[#7d8799]">{time}</td>
-                    </tr>
-                  )
+                ) : (
+                  activeTripsList
+                    .slice(0, 5)
+                    .map(
+                      (
+                        [
+                          id,
+                          ini,
+                          passenger,
+                          driver,
+                          pickup,
+                          destination,
+                          status,
+                          time,
+                          color,
+                        ],
+                        i,
+                      ) => (
+                        <tr
+                          className={`border-b ${i % 2 ? "bg-[#fafafa]" : ""}`}
+                          key={id}
+                        >
+                          <td className="px-2.5 py-3 font-bold text-[#16345e]">
+                            {id}
+                          </td>
+                          <td className="px-2.5 py-3">
+                            <span className="flex items-center gap-2">
+                              <Avatar small initials={ini} color={color} />
+                              {passenger}
+                            </span>
+                          </td>
+                          <td className="px-2.5 py-3">{driver}</td>
+                          <td className="px-2.5 py-3 text-[#7d8799]">
+                            {pickup}
+                          </td>
+                          <td className="px-2.5 py-3 text-[#7d8799]">
+                            {destination}
+                          </td>
+                          <td className="px-2.5 py-3">
+                            <Badge status={status} />
+                          </td>
+                          <td className="px-2.5 py-3 text-[#7d8799]">{time}</td>
+                        </tr>
+                      ),
+                    )
                 )}
               </tbody>
             </table>
           </div>
           <Link
-            href="/trips"
+            href="/ride-requests?tab=trips"
             className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-[#16345e] hover:underline"
           >
             View all trips <ArrowRight className="size-3.5" />
@@ -335,7 +378,10 @@ export default function DashboardPage() {
           <div className="mt-5 space-y-2.5">
             {stats === null ? (
               [...Array(4)].map((_, i) => (
-                <div className="flex items-center gap-3 rounded-xl border p-3 animate-pulse" key={i}>
+                <div
+                  className="flex items-center gap-3 rounded-xl border p-3 animate-pulse"
+                  key={i}
+                >
                   <div className="size-8 rounded-full bg-slate-200 shrink-0" />
                   <div className="min-w-0 flex-1 space-y-2">
                     <div className="h-4 w-32 rounded bg-slate-200" />
@@ -348,18 +394,29 @@ export default function DashboardPage() {
                 </div>
               ))
             ) : recentRideRequests.length === 0 ? (
-              <p className="text-xs text-[#8b95a7] py-4 text-center border rounded-xl">No recent ride requests.</p>
+              <p className="text-xs text-[#8b95a7] py-4 text-center border rounded-xl">
+                No recent ride requests.
+              </p>
             ) : (
               recentRideRequests.slice(0, 4).map((item: any, idx: number) => {
-
                 const isArr = Array.isArray(item);
-                const ini = isArr ? item[0] : (item.initials || item.passenger?.substring(0, 2)?.toUpperCase() || "PA");
-                const name = isArr ? item[1] : (item.passenger || "Passenger");
-                const route = isArr ? item[2] : (item.destination || "Destination");
-                const status = isArr ? item[3] : (item.status || "Pending");
-                const date = isArr ? item[4] : (item.date || item.price || "Recently");
-                const color = isArr ? item[5] : (item.color || "#2563eb");
-                const tripId = isArr ? item[6] : (item.id || item.rawId || `TRP-${idx}`);
+                const ini = isArr
+                  ? item[0]
+                  : item.initials ||
+                    item.passenger?.substring(0, 2)?.toUpperCase() ||
+                    "PA";
+                const name = isArr ? item[1] : item.passenger || "Passenger";
+                const route = isArr
+                  ? item[2]
+                  : item.destination || "Destination";
+                const status = isArr ? item[3] : item.status || "Pending";
+                const date = isArr
+                  ? item[4]
+                  : item.date || item.price || "Recently";
+                const color = isArr ? item[5] : item.color || "#2563eb";
+                const tripId = isArr
+                  ? item[6]
+                  : item.id || item.rawId || `TRP-${idx}`;
 
                 return (
                   <div
@@ -378,7 +435,6 @@ export default function DashboardPage() {
                   </div>
                 );
               })
-
             )}
           </div>
         </article>
@@ -424,7 +480,10 @@ export default function DashboardPage() {
           {stats === null ? (
             <div className="mt-5 h-52 w-full animate-pulse rounded-lg bg-slate-100" />
           ) : (
-            <DriverPerformanceChart className="mt-5 h-52 w-full" data={driverPerfData} />
+            <DriverPerformanceChart
+              className="mt-5 h-52 w-full"
+              data={driverPerfData}
+            />
           )}
         </article>
       </section>
@@ -517,7 +576,13 @@ function Badge({ status }: { status: string }) {
     </span>
   );
 }
-function ActivityFeed({ items = [], isLoading = false }: { items?: { title: string; time: string; color: string }[], isLoading?: boolean }) {
+function ActivityFeed({
+  items = [],
+  isLoading = false,
+}: {
+  items?: { title: string; time: string; color: string }[];
+  isLoading?: boolean;
+}) {
   return (
     <article className={`${card} p-5`}>
       <h2 className="text-lg font-bold text-[#172033]">Activity Feed</h2>

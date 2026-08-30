@@ -25,16 +25,22 @@ import { clearMockSession } from "@/lib/mock-auth";
 
 const navigation = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "Ride Requests", href: "/ride-requests", icon: ClipboardList },
-  { label: "Manual Ride Requests", href: "/manual-ride-requests", icon: PlusCircle },
-  { label: "Trips", href: "/trips", icon: Send },
-  { label: "Drivers", href: "/drivers", icon: UsersRound },
+  { label: "Rides", href: "/ride-requests", icon: ClipboardList },
   { label: "Schedule", href: "/schedule", icon: CalendarDays },
-  { label: "Analytics", href: "/analytics", icon: BarChart3 },
+  { label: "Drivers", href: "/drivers", icon: UsersRound },
   { label: "Shift Reports", href: "/vehicle-reports", icon: ClipboardList },
   { label: "Vehicles", href: "/vehicles", icon: CarFront },
-  { label: "Dispatch Management", href: "/dispatch-management", icon: PhoneCall },
-  { label: "Earning Management", href: "/earning-management", icon: DollarSign },
+  {
+    label: "Earning Management",
+    href: "/earning-management",
+    icon: DollarSign,
+  },
+  { label: "Analytics", href: "/analytics", icon: BarChart3 },
+  {
+    label: "Dispatch Management",
+    href: "/dispatch-management",
+    icon: PhoneCall,
+  },
 ];
 
 export function DashboardShell({ children }: { children: ReactNode }) {
@@ -145,7 +151,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                     className="hidden font-medium text-brand-muted transition hover:text-primary sm:block"
                     href="/ride-requests"
                   >
-                    Ride Requests
+                    Rides
                   </Link>
                   <span className="hidden text-brand-soft sm:block">/</span>
                   <Link
@@ -165,7 +171,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                     className="hidden font-medium text-brand-muted transition hover:text-primary sm:block"
                     href="/ride-requests"
                   >
-                    Ride Requests
+                    Rides
                   </Link>
                   <span className="hidden text-brand-soft sm:block">/</span>
                   <span className="truncate font-bold text-primary">
@@ -213,9 +219,11 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                 <>
                   <Link
                     className="hidden font-medium text-brand-muted transition hover:text-primary sm:block"
-                    href={isTripDetail ? "/trips" : "/drivers"}
+                    href={
+                      isTripDetail ? "/ride-requests?tab=trips" : "/drivers"
+                    }
                   >
-                    {isTripDetail ? "Trips" : "Drivers"}
+                    {isTripDetail ? "Rides" : "Drivers"}
                   </Link>
                   <span className="hidden text-brand-soft sm:block">/</span>
                   <span className="truncate font-bold text-primary">
@@ -230,7 +238,6 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             </nav>
           )}
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
-
             <div className="relative">
               <button
                 aria-expanded={userDropdownOpen}
@@ -263,8 +270,12 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                   />
                   <div className="absolute right-0 top-full mt-2 z-50 w-52 overflow-hidden rounded-2xl border border-border bg-card p-1.5 shadow-[0_12px_32px_rgba(15,35,65,0.12)] backdrop-blur-md animate-in fade-in zoom-in-95 duration-150">
                     <div className="border-b border-border/80 px-3 py-2.5">
-                      <p className="text-xs font-bold text-foreground">Admin Portal</p>
-                      <p className="text-[11px] text-muted-foreground truncate">admin@fikitransit.com</p>
+                      <p className="text-xs font-bold text-foreground">
+                        Admin Portal
+                      </p>
+                      <p className="text-[11px] text-muted-foreground truncate">
+                        admin@fikitransit.com
+                      </p>
                     </div>
                     <div className="pt-1">
                       <button

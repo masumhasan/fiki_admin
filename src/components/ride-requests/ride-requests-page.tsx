@@ -14,7 +14,11 @@ import {
 import Link from "next/link";
 import { useMemo, useState, useEffect } from "react";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { getAdminTripsApi, getAdminDriversApi, assignDriverApi } from "@/lib/api";
+import {
+  getAdminTripsApi,
+  getAdminDriversApi,
+  assignDriverApi,
+} from "@/lib/api";
 
 type RequestStatus =
   | "Pending"
@@ -53,7 +57,7 @@ const tabs = [
   "Rejected",
 ] as const;
 
-export function RideRequestsPage() {
+export function RideRequestsPage({ hideHeader }: { hideHeader?: boolean }) {
   const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>("All");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
@@ -76,14 +80,19 @@ export function RideRequestsPage() {
         getAdminDriversApi(token),
       ]);
 
-      if (tripsRes.success && tripsRes.data && Array.isArray(tripsRes.data.trips)) {
+      if (
+        tripsRes.success &&
+        tripsRes.data &&
+        Array.isArray(tripsRes.data.trips)
+      ) {
         const mapped: RideRequest[] = tripsRes.data.trips.map((t: any) => {
           const passengerName = t.passengerId?.name || "Passenger";
           const driverName = t.driverId?.name;
 
           let statusStr: RequestStatus = "Pending";
           if (t.status === "COMPLETED") statusStr = "Completed";
-          else if (t.status === "CANCELLED" || t.status === "QUOTE_DENIED") statusStr = "Rejected";
+          else if (t.status === "CANCELLED" || t.status === "QUOTE_DENIED")
+            statusStr = "Rejected";
           else if (t.status === "QUOTE_SENT") statusStr = "Approved";
           else if (
             t.status === "ACCEPTED" ||
@@ -97,13 +106,21 @@ export function RideRequestsPage() {
           else if (t.status === "REQUESTED")
             statusStr = driverName ? "Approved" : "Need driver";
 
-          const isRecurring = t.schedule === "recurring" || t.tripType === "recurring" || (Array.isArray(t.recurringDays) && t.recurringDays.length > 0);
-          const isRoundTrip = t.tripType === "round-trip" || t.tripType === "round_trip" || t.isRoundTrip === true;
+          const isRecurring =
+            t.schedule === "recurring" ||
+            t.tripType === "recurring" ||
+            (Array.isArray(t.recurringDays) && t.recurringDays.length > 0);
+          const isRoundTrip =
+            t.tripType === "round-trip" ||
+            t.tripType === "round_trip" ||
+            t.isRoundTrip === true;
 
           let recurringText = "";
           if (isRecurring) {
             if (Array.isArray(t.recurringDays) && t.recurringDays.length > 0) {
-              recurringText = t.recurringDays.map((d: string) => d.substring(0, 3)).join(", ");
+              recurringText = t.recurringDays
+                .map((d: string) => d.substring(0, 3))
+                .join(", ");
             } else {
               recurringText = "Yes";
             }
@@ -162,7 +179,11 @@ export function RideRequestsPage() {
         setTrips([]);
       }
 
-      if (driversRes.success && driversRes.data && Array.isArray(driversRes.data.drivers)) {
+      if (
+        driversRes.success &&
+        driversRes.data &&
+        Array.isArray(driversRes.data.drivers)
+      ) {
         setAvailableDrivers(driversRes.data.drivers);
       }
     } catch {
@@ -188,7 +209,10 @@ export function RideRequestsPage() {
     }
   };
 
-  const tripsWithHandler = trips.map((req) => ({ ...req, onAssign: handleAssignDriver }));
+  const tripsWithHandler = trips.map((req) => ({
+    ...req,
+    onAssign: handleAssignDriver,
+  }));
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -196,22 +220,30 @@ export function RideRequestsPage() {
       const matchesTab = activeTab === "All" || request.status === activeTab;
       const matchesQuery =
         !normalized ||
-        [request.id, request.passenger, request.pickup, request.destination].some((value) =>
-          value.toLowerCase().includes(normalized),
-        );
+        [
+          request.id,
+          request.passenger,
+          request.pickup,
+          request.destination,
+        ].some((value) => value.toLowerCase().includes(normalized));
       return matchesTab && matchesQuery;
     });
   }, [tripsWithHandler, activeTab, query]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const visibleRequests = filtered.slice((page - 1) * pageSize, page * pageSize);
+  const visibleRequests = filtered.slice(
+    (page - 1) * pageSize,
+    page * pageSize,
+  );
 
   return (
     <div className="space-y-5">
-      <PageHeader
-        title="Ride Requests"
-        description="Review, approve and manage passenger ride requests."
-      />
+      {!hideHeader && (
+        <PageHeader
+          title="Ride Requests"
+          description="Review, approve and manage passenger ride requests."
+        />
+      )}
 
       <section className="overflow-hidden rounded-2xl border border-border bg-card shadow-[0_6px_22px_rgba(8,37,82,0.06)]">
         <div className="flex flex-col-reverse gap-3 border-b border-border px-5 sm:flex-row sm:items-center sm:justify-between sm:px-7">
@@ -219,7 +251,9 @@ export function RideRequestsPage() {
             <div className="flex flex-wrap gap-1">
               {tabs.map((tab) => {
                 const count =
-                  tab === "All" ? trips.length : trips.filter((r) => r.status === tab).length;
+                  tab === "All"
+                    ? trips.length
+                    : trips.filter((r) => r.status === tab).length;
                 return (
                   <button
                     className={`relative -mb-px flex h-10 items-center gap-2 border-b-2 px-3 text-sm font-semibold transition-colors ${activeTab === tab ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground"}`}
@@ -305,7 +339,9 @@ export function RideRequestsPage() {
               <div className="px-5 py-16 text-center">
                 <Search className="mx-auto size-8 text-brand-soft" />
                 <p className="mt-3 text-sm font-semibold text-foreground">
-                  {trips.length === 0 ? "No ride requests yet" : "No requests match your search"}
+                  {trips.length === 0
+                    ? "No ride requests yet"
+                    : "No requests match your search"}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   {trips.length === 0
@@ -375,22 +411,38 @@ export function RideRequestsPage() {
   );
 }
 
-function RequestRow({ serial, request }: { serial: number; request: RideRequest & { onAssign?: (id: string) => void } }) {
+function RequestRow({
+  serial,
+  request,
+}: {
+  serial: number;
+  request: RideRequest & { onAssign?: (id: string) => void };
+}) {
   return (
     <tr className="border-b border-border/80 text-xs last:border-0 hover:bg-muted/35">
-      <td className="px-4 py-4 font-semibold text-muted-foreground">{serial}</td>
+      <td className="px-4 py-4 font-semibold text-muted-foreground">
+        {serial}
+      </td>
       <td className="py-4 font-bold text-primary">{request.id}</td>
       <td className="py-4">
         <Passenger request={request} />
       </td>
-      <td className="truncate pr-4 text-muted-foreground" title={request.pickup}>
+      <td
+        className="truncate pr-4 text-muted-foreground"
+        title={request.pickup}
+      >
         {request.pickup}
       </td>
-      <td className="truncate pr-4 text-muted-foreground" title={request.destination}>
+      <td
+        className="truncate pr-4 text-muted-foreground"
+        title={request.destination}
+      >
         {request.destination}
       </td>
       <td className="py-4">
-        <strong className="block font-semibold text-foreground">{request.date}</strong>
+        <strong className="block font-semibold text-foreground">
+          {request.date}
+        </strong>
         <span className="mt-1 block text-muted-foreground">{request.time}</span>
       </td>
       <td className="py-4">
@@ -442,7 +494,13 @@ function RequestRow({ serial, request }: { serial: number; request: RideRequest 
   );
 }
 
-function RequestCard({ serial, request }: { serial: number; request: RideRequest }) {
+function RequestCard({
+  serial,
+  request,
+}: {
+  serial: number;
+  request: RideRequest;
+}) {
   return (
     <article className="p-5">
       <div className="flex items-start gap-3">
@@ -476,7 +534,9 @@ function RequestCard({ serial, request }: { serial: number; request: RideRequest
         </div>
         <div>
           <dt className="font-semibold text-muted-foreground">Driver</dt>
-          <dd className="mt-1 text-foreground">{request.driver ?? "Not assigned"}</dd>
+          <dd className="mt-1 text-foreground">
+            {request.driver ?? "Not assigned"}
+          </dd>
         </div>
       </dl>
       <div className="ml-7 mt-4 flex items-center gap-2">
@@ -510,8 +570,12 @@ function Passenger({ request }: { request: RideRequest }) {
         {request.initials}
       </span>
       <span className="min-w-0">
-        <strong className="block truncate text-[13px] text-foreground">{request.passenger}</strong>
-        <span className="mt-0.5 block text-[11px] text-muted-foreground">{request.phone}</span>
+        <strong className="block truncate text-[13px] text-foreground">
+          {request.passenger}
+        </strong>
+        <span className="mt-0.5 block text-[11px] text-muted-foreground">
+          {request.phone}
+        </span>
       </span>
     </div>
   );
