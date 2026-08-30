@@ -48,6 +48,14 @@ export function DriverDetailPage({ driverId }: { driverId: string }) {
 
   const profile = driver?.profile || null;
   const licenseNumber = profile?.licenseNumber || "—";
+  const licenseExpirationDate = profile?.licenseExpirationDate
+    ? new Date(profile.licenseExpirationDate).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        timeZone: "UTC",
+      })
+    : "—";
 
   const vehicle = profile?.vehicle;
   const vehicleText = vehicle
@@ -151,6 +159,7 @@ export function DriverDetailPage({ driverId }: { driverId: string }) {
           email={email}
           phone={phone}
           licenseNumber={licenseNumber}
+          licenseExpirationDate={licenseExpirationDate}
           vehicleText={vehicleText}
           createdAt={createdAt}
           accountStatus={accountStatus}
@@ -175,6 +184,7 @@ function ProfileTab({
   email,
   phone,
   licenseNumber,
+  licenseExpirationDate,
   vehicleText,
   createdAt,
   accountStatus,
@@ -186,6 +196,7 @@ function ProfileTab({
   email: string;
   phone: string;
   licenseNumber: string;
+  licenseExpirationDate: string;
   vehicleText: string;
   createdAt: string;
   accountStatus: string;
@@ -239,6 +250,7 @@ function ProfileTab({
           title="Employment details"
           items={[
             ["Driver license no.", licenseNumber],
+            ["License expiration", licenseExpirationDate],
             ["Join date", createdAt],
             ["Assigned vehicle", vehicleText],
             ["Approval status", accountStatus],
