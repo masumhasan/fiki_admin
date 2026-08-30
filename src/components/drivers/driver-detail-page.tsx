@@ -2,18 +2,14 @@
 
 import {
   ArrowLeft,
-  CalendarDays,
   CarFront,
   Check,
-  Clock3,
   DollarSign,
   Info,
   LoaderCircle,
   Mail,
-  MapPin,
   Phone,
   Star,
-  WalletCards,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -27,7 +23,10 @@ export function DriverDetailPage({ driverId }: { driverId: string }) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const token = window.localStorage.getItem("fiki_auth_token");
-    if (!token) { setLoading(false); return; }
+    if (!token) {
+      setLoading(false);
+      return;
+    }
     getAdminDriverDetailApi(token, driverId).then((res) => {
       if (res.success && res.data) setDriver(res.data);
       setLoading(false);
@@ -40,7 +39,11 @@ export function DriverDetailPage({ driverId }: { driverId: string }) {
   const accountStatus = driver?.accountStatus || "—";
   const isActive = accountStatus === "ACTIVE";
   const createdAt = driver?.createdAt
-    ? new Date(driver.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    ? new Date(driver.createdAt).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })
     : "—";
 
   const profile = driver?.profile || null;
@@ -48,13 +51,19 @@ export function DriverDetailPage({ driverId }: { driverId: string }) {
 
   const vehicle = profile?.vehicle;
   const vehicleText = vehicle
-    ? [vehicle.make, vehicle.model].filter(Boolean).join(" ") + (vehicle.licensePlate ? ` — ${vehicle.licensePlate}` : "")
+    ? [vehicle.make, vehicle.model].filter(Boolean).join(" ") +
+      (vehicle.licensePlate ? ` — ${vehicle.licensePlate}` : "")
     : "—";
 
-  const rating = profile?.rating != null ? profile.rating.toFixed(1) : "—";
-  const completedTrips: any[] = (driver?.trips || []).filter((t: any) => t.status === "COMPLETED");
+  const completedTrips: any[] = (driver?.trips || []).filter(
+    (t: any) => t.status === "COMPLETED",
+  );
   const allTrips: any[] = driver?.trips || [];
-  const stats = driver?.stats || { completedTrips: 0, totalTrips: 0, totalFare: 0 };
+  const stats = driver?.stats || {
+    completedTrips: 0,
+    totalTrips: 0,
+    totalFare: 0,
+  };
 
   const statusColors: Record<string, string> = {
     ACTIVE: "bg-emerald-50 text-emerald-700",
@@ -62,7 +71,8 @@ export function DriverDetailPage({ driverId }: { driverId: string }) {
     PENDING: "bg-amber-50 text-amber-600",
     INACTIVE: "bg-gray-100 text-gray-500",
   };
-  const statusBadge = statusColors[accountStatus] || "bg-gray-100 text-gray-500";
+  const statusBadge =
+    statusColors[accountStatus] || "bg-gray-100 text-gray-500";
 
   if (loading) {
     return (
@@ -75,8 +85,15 @@ export function DriverDetailPage({ driverId }: { driverId: string }) {
   if (!driver) {
     return (
       <div className="rounded-xl border border-border bg-card p-10 text-center">
-        <p className="text-sm font-semibold text-foreground">Driver not found or you are not authorized.</p>
-        <Link href="/drivers" className="mt-4 inline-block text-xs font-bold text-primary hover:underline">← Back to Drivers</Link>
+        <p className="text-sm font-semibold text-foreground">
+          Driver not found or you are not authorized.
+        </p>
+        <Link
+          href="/drivers"
+          className="mt-4 inline-block text-xs font-bold text-primary hover:underline"
+        >
+          ← Back to Drivers
+        </Link>
       </div>
     );
   }
@@ -89,7 +106,9 @@ export function DriverDetailPage({ driverId }: { driverId: string }) {
             <h1 className="text-2xl font-bold tracking-[-0.03em] text-[#16345e]">
               Driver details
             </h1>
-            <span className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold ${statusBadge}`}>
+            <span
+              className={`flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold ${statusBadge}`}
+            >
               {isActive && <Check className="size-3.5" />}
               {accountStatus.charAt(0) + accountStatus.slice(1).toLowerCase()}
             </span>
@@ -118,7 +137,9 @@ export function DriverDetailPage({ driverId }: { driverId: string }) {
             type="button"
           >
             {t === "profile" ? "Driver profile" : "Earnings"}
-            {tab === t && <span className="absolute inset-x-0 bottom-0 h-0.5 bg-primary" />}
+            {tab === t && (
+              <span className="absolute inset-x-0 bottom-0 h-0.5 bg-primary" />
+            )}
           </button>
         ))}
       </div>
@@ -133,7 +154,6 @@ export function DriverDetailPage({ driverId }: { driverId: string }) {
           vehicleText={vehicleText}
           createdAt={createdAt}
           accountStatus={accountStatus}
-          rating={rating}
           completedTripsCount={stats.completedTrips}
           availabilityStatus={profile?.availabilityStatus || "—"}
         />
@@ -158,7 +178,6 @@ function ProfileTab({
   vehicleText,
   createdAt,
   accountStatus,
-  rating,
   completedTripsCount,
   availabilityStatus,
 }: {
@@ -170,13 +189,18 @@ function ProfileTab({
   vehicleText: string;
   createdAt: string;
   accountStatus: string;
-  rating: string;
   completedTripsCount: number;
   availabilityStatus: string;
 }) {
-  const initials = name !== "—"
-    ? name.split(" ").map((n: string) => n[0]).join("").toUpperCase().substring(0, 2)
-    : "—";
+  const initials =
+    name !== "—"
+      ? name
+          .split(" ")
+          .map((n: string) => n[0])
+          .join("")
+          .toUpperCase()
+          .substring(0, 2)
+      : "—";
 
   return (
     <div className="grid items-start gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
@@ -187,7 +211,9 @@ function ProfileTab({
           </span>
           <h2 className="mt-5 text-xl font-bold text-foreground">{name}</h2>
           <p className="mt-1 text-xs text-muted-foreground">{driverId}</p>
-          <span className={`mt-3 inline-flex items-center gap-1 rounded-full px-3 py-1 text-[10px] font-bold ${accountStatus === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-muted text-muted-foreground"}`}>
+          <span
+            className={`mt-3 inline-flex items-center gap-1 rounded-full px-3 py-1 text-[10px] font-bold ${accountStatus === "ACTIVE" ? "bg-emerald-50 text-emerald-700" : "bg-muted text-muted-foreground"}`}
+          >
             {accountStatus === "ACTIVE" && <Check className="size-3" />}
             {accountStatus.charAt(0) + accountStatus.slice(1).toLowerCase()}
           </span>
@@ -196,8 +222,6 @@ function ProfileTab({
           <Contact icon={Phone} value={phone} />
           <Contact icon={Mail} value={email} />
           <Contact icon={CarFront} value={vehicleText} />
-          <Contact icon={Star} value={`${rating} rating`} />
-          <Contact icon={Clock3} value={`${availabilityStatus.charAt(0) + availabilityStatus.slice(1).toLowerCase()} availability`} />
         </div>
       </aside>
 
@@ -222,15 +246,6 @@ function ProfileTab({
             ["Completed trips", String(completedTripsCount)],
           ]}
         />
-        <section className={cardClass}>
-          <div className="flex items-center gap-2">
-            <MapPin className="size-4 text-muted-foreground" />
-            <h2 className={sectionTitle}>Service area</h2>
-          </div>
-          <p className="mt-3 text-sm text-muted-foreground">
-            Service zone information is not stored in the system. Assign zones via fleet management.
-          </p>
-        </section>
       </div>
     </div>
   );
@@ -252,10 +267,26 @@ function EarningsTab({
   return (
     <div className="space-y-5">
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <EarningMetric icon={CarFront} label="Total trips" value={String(stats.totalTrips)} />
-        <EarningMetric icon={Check} label="Completed trips" value={String(stats.completedTrips)} />
-        <EarningMetric icon={DollarSign} label="Total fares" value={money(stats.totalFare)} />
-        <EarningMetric icon={Star} label="Driver" value={driverName !== "—" ? driverName.split(" ")[0] : "—"} />
+        <EarningMetric
+          icon={CarFront}
+          label="Total trips"
+          value={String(stats.totalTrips)}
+        />
+        <EarningMetric
+          icon={Check}
+          label="Completed trips"
+          value={String(stats.completedTrips)}
+        />
+        <EarningMetric
+          icon={DollarSign}
+          label="Total fares"
+          value={money(stats.totalFare)}
+        />
+        <EarningMetric
+          icon={Star}
+          label="Driver"
+          value={driverName !== "—" ? driverName.split(" ")[0] : "—"}
+        />
       </section>
 
       <section className="overflow-hidden rounded-xl border border-[#e1e6ee] bg-card shadow-[0_4px_14px_rgba(15,37,74,.04)]">
@@ -268,7 +299,9 @@ function EarningsTab({
         {allTrips.length === 0 ? (
           <div className="px-5 py-14 text-center">
             <CarFront className="mx-auto size-8 text-muted-foreground/40" />
-            <p className="mt-3 text-sm font-semibold text-foreground">No trips found</p>
+            <p className="mt-3 text-sm font-semibold text-foreground">
+              No trips found
+            </p>
             <p className="mt-1 text-xs text-muted-foreground">
               This driver has not completed any trips yet.
             </p>
@@ -290,15 +323,27 @@ function EarningsTab({
                 {allTrips.map((trip) => (
                   <tr className="border-t border-border" key={trip._id}>
                     <td className="px-5 py-3.5 text-muted-foreground">
-                      {trip.createdAt ? new Date(trip.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                      {trip.createdAt
+                        ? new Date(trip.createdAt).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })
+                        : "—"}
                     </td>
                     <td className="py-3.5 font-medium text-foreground">
                       {trip.passengerName || "—"}
                     </td>
-                    <td className="max-w-36 truncate py-3.5 pr-4 text-muted-foreground" title={trip.pickup || ""}>
+                    <td
+                      className="max-w-36 truncate py-3.5 pr-4 text-muted-foreground"
+                      title={trip.pickup || ""}
+                    >
                       {trip.pickup || "—"}
                     </td>
-                    <td className="max-w-36 truncate py-3.5 pr-4 text-muted-foreground" title={trip.dropoff || ""}>
+                    <td
+                      className="max-w-36 truncate py-3.5 pr-4 text-muted-foreground"
+                      title={trip.dropoff || ""}
+                    >
                       {trip.dropoff || "—"}
                     </td>
                     <td className="py-3.5 font-semibold text-foreground">
@@ -318,8 +363,9 @@ function EarningsTab({
       <aside className="flex gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-xs leading-5 text-blue-700">
         <Info className="size-4 shrink-0" />
         <p>
-          <strong>Earnings note:</strong> Fare totals are based on trip records in the system.
-          Payroll processing, bonuses, and deductions are managed separately by the payroll team.
+          <strong>Earnings note:</strong> Fare totals are based on trip records
+          in the system. Payroll processing, bonuses, and deductions are managed
+          separately by the payroll team.
         </p>
       </aside>
     </div>
@@ -346,7 +392,9 @@ function TripStatusBadge({ status }: { status: string }) {
     DRIVER_ARRIVED: "Arrived",
   };
   return (
-    <span className={`rounded-full px-2.5 py-1 text-[9px] font-bold ${styles[status] || "bg-muted text-muted-foreground"}`}>
+    <span
+      className={`rounded-full px-2.5 py-1 text-[9px] font-bold ${styles[status] || "bg-muted text-muted-foreground"}`}
+    >
       {label[status] || status}
     </span>
   );
@@ -368,7 +416,13 @@ function Contact({ icon: Icon, value }: { icon: typeof Phone; value: string }) {
   );
 }
 
-function InformationCard({ items, title }: { items: string[][]; title: string }) {
+function InformationCard({
+  items,
+  title,
+}: {
+  items: string[][];
+  title: string;
+}) {
   return (
     <section className={cardClass}>
       <h2 className={sectionTitle}>{title}</h2>
@@ -384,7 +438,15 @@ function InformationCard({ items, title }: { items: string[][]; title: string })
   );
 }
 
-function EarningMetric({ icon: Icon, label, value }: { icon: typeof DollarSign; label: string; value: string }) {
+function EarningMetric({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof DollarSign;
+  label: string;
+  value: string;
+}) {
   return (
     <article className="rounded-xl border border-[#e1e6ee] bg-card p-4 shadow-[0_4px_14px_rgba(15,37,74,.04)]">
       <span className="grid size-9 place-items-center rounded-xl bg-blue-50 text-blue-500">
