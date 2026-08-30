@@ -448,10 +448,18 @@ export function DriverApplicationPage({
             </div>
           </ReviewSection>
           <ReviewSection icon={Signature} title="Digital signature">
-            <div className="grid h-24 place-items-center rounded-xl border border-border bg-muted/45">
-              <p className="font-serif text-2xl italic text-primary/70">
-                {liveApp?.signature || fullName}
-              </p>
+            <div className="grid h-24 place-items-center rounded-xl border border-border bg-muted/45 p-2">
+              {liveApp?.signature?.startsWith("data:image/") ? (
+                <img
+                  src={liveApp.signature}
+                  alt="Digital Signature"
+                  className="max-h-20 w-auto object-contain"
+                />
+              ) : (
+                <p className="font-serif text-2xl italic text-primary/70">
+                  {liveApp?.signature || fullName}
+                </p>
+              )}
             </div>
             <InfoGrid
               items={[
