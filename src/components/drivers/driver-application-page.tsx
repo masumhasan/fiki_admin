@@ -30,7 +30,11 @@ import { useState } from "react";
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { getVehiclesApi, approveDriverApplicationApi, getDriverApplicationByIdApi } from "@/lib/api";
+import {
+  getVehiclesApi,
+  approveDriverApplicationApi,
+  getDriverApplicationByIdApi,
+} from "@/lib/api";
 import { WeeklyScheduleModal } from "@/components/schedule/weekly-schedule-modal";
 
 type Decision = "Pending review" | "Approved" | "Rejected";
@@ -62,7 +66,10 @@ function DriverApplicationSkeleton() {
       <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_310px]">
         <div className="space-y-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <div key={i} className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-sm">
+            <div
+              key={i}
+              className="rounded-2xl border border-border bg-card p-5 space-y-4 shadow-sm"
+            >
               <div className="h-5 w-48 rounded bg-muted" />
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 pt-2">
                 {[1, 2, 3, 4, 5, 6].map((j) => (
@@ -159,7 +166,11 @@ export function DriverApplicationPage({
       const token = window.localStorage.getItem("fiki_auth_token");
       if (token) {
         const targetId = liveApp?._id || applicationId;
-        const res = await approveDriverApplicationApi(token, targetId, vehicleId);
+        const res = await approveDriverApplicationApi(
+          token,
+          targetId,
+          vehicleId,
+        );
         if (res.success) {
           setDecision("Approved");
           setModalOpen(false);
@@ -180,9 +191,15 @@ export function DriverApplicationPage({
 
   const fullName = liveApp?.fullName || "—";
   const initials = liveApp?.fullName
-    ? liveApp.fullName.split(" ").map((n: string) => n[0]).join("").toUpperCase().substring(0, 2)
+    ? liveApp.fullName
+        .split(" ")
+        .map((n: string) => n[0])
+        .join("")
+        .toUpperCase()
+        .substring(0, 2)
     : "—";
-  const cityState = [liveApp?.city, liveApp?.state].filter(Boolean).join(", ") || "—";
+  const cityState =
+    [liveApp?.city, liveApp?.state].filter(Boolean).join(", ") || "—";
 
   return (
     <div className="pb-20">
@@ -194,7 +211,9 @@ export function DriverApplicationPage({
             </h1>
             <DecisionBadge decision={decision} />
           </div>
-          <p className="mt-1 text-xs text-brand-placeholder">{liveApp?.applicationId || applicationId}</p>
+          <p className="mt-1 text-xs text-brand-placeholder">
+            {liveApp?.applicationId || applicationId}
+          </p>
         </div>
         <Link
           aria-label="Back to applications"
@@ -224,7 +243,12 @@ export function DriverApplicationPage({
                   ["Full name", fullName],
                   ["Email address", liveApp?.email || "—"],
                   ["Phone number", liveApp?.phone || "—"],
-                  ["Street address", liveApp?.streetAddress ? `${liveApp.streetAddress}${liveApp.streetAddress2 ? `, ${liveApp.streetAddress2}` : ""}` : "—"],
+                  [
+                    "Street address",
+                    liveApp?.streetAddress
+                      ? `${liveApp.streetAddress}${liveApp.streetAddress2 ? `, ${liveApp.streetAddress2}` : ""}`
+                      : "—",
+                  ],
                   ["City", liveApp?.city || "—"],
                   ["State", liveApp?.state || "—"],
                   ["Postal code", liveApp?.zipCode || "—"],
@@ -240,10 +264,25 @@ export function DriverApplicationPage({
           >
             <InfoGrid
               items={[
-                ["Position applying for", liveApp?.position || (liveApp?.positionType ? `Driver (${liveApp.positionType.charAt(0) + liveApp.positionType.slice(1).toLowerCase()})` : "Driver")],
+                [
+                  "Position applying for",
+                  liveApp?.position ||
+                    (liveApp?.positionType
+                      ? `Driver (${liveApp.positionType.charAt(0) + liveApp.positionType.slice(1).toLowerCase()})`
+                      : "Driver"),
+                ],
                 ["Employment status", liveApp?.employmentStatus || "—"],
                 ["Desired salary", liveApp?.desiredSalary || "—"],
-                ["Available start date", liveApp?.availableStartDate || (liveApp?.submittedDate ? new Date(liveApp.submittedDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "—")],
+                [
+                  "Available start date",
+                  liveApp?.availableStartDate ||
+                    (liveApp?.submittedDate
+                      ? new Date(liveApp.submittedDate).toLocaleDateString(
+                          "en-US",
+                          { month: "long", day: "numeric", year: "numeric" },
+                        )
+                      : "—"),
+                ],
                 ["How did you hear about us", liveApp?.howDidYouHear || "—"],
               ]}
             />
@@ -251,9 +290,26 @@ export function DriverApplicationPage({
           <ReviewSection icon={ShieldCheck} title="Eligibility">
             <InfoGrid
               items={[
-                ["Authorized to work in US", liveApp?.authorizedInUS === "no" ? "✗ No" : liveApp?.authorizedInUS === "yes" ? "✓ Yes" : "—"],
-                ["Felony conviction", liveApp?.felonyConviction === "yes" ? "Yes" : liveApp?.felonyConviction === "no" ? "✓ No" : "—"],
-                ["Felony explanation", liveApp?.felonyExplanation || "N/A — No felony conviction"],
+                [
+                  "Authorized to work in US",
+                  liveApp?.authorizedInUS === "no"
+                    ? "✗ No"
+                    : liveApp?.authorizedInUS === "yes"
+                      ? "✓ Yes"
+                      : "—",
+                ],
+                [
+                  "Felony conviction",
+                  liveApp?.felonyConviction === "yes"
+                    ? "Yes"
+                    : liveApp?.felonyConviction === "no"
+                      ? "✓ No"
+                      : "—",
+                ],
+                [
+                  "Felony explanation",
+                  liveApp?.felonyExplanation || "N/A — No felony conviction",
+                ],
               ]}
             />
           </ReviewSection>
@@ -264,7 +320,10 @@ export function DriverApplicationPage({
                 <InfoGrid
                   items={[
                     ["School name", liveApp?.highSchool || "—"],
-                    ["Graduated", liveApp?.highSchoolGraduated === "no" ? "No" : "✓ Yes"],
+                    [
+                      "Graduated",
+                      liveApp?.highSchoolGraduated === "no" ? "No" : "✓ Yes",
+                    ],
                   ]}
                 />
               </InsetCard>
@@ -273,7 +332,14 @@ export function DriverApplicationPage({
                   items={[
                     ["Institution", liveApp?.college || "—"],
                     ["Degree", liveApp?.degree || "—"],
-                    ["Graduated", liveApp?.collegeGraduated === "no" ? "No" : liveApp?.collegeGraduated === "yes" ? "✓ Yes" : "—"],
+                    [
+                      "Graduated",
+                      liveApp?.collegeGraduated === "no"
+                        ? "No"
+                        : liveApp?.collegeGraduated === "yes"
+                          ? "✓ Yes"
+                          : "—",
+                    ],
                   ]}
                 />
               </InsetCard>
@@ -282,11 +348,19 @@ export function DriverApplicationPage({
 
           <ReviewSection icon={BriefcaseBusiness} title="Employment history">
             <div className="space-y-4">
-               <HistoryCard
+              <HistoryCard
                 company={liveApp?.previousEmployer || "—"}
-                dates={liveApp?.employmentFromDate || liveApp?.employmentToDate ? `${liveApp?.employmentFromDate || ""} – ${liveApp?.employmentToDate || ""}` : "—"}
+                dates={
+                  liveApp?.employmentFromDate || liveApp?.employmentToDate
+                    ? `${liveApp?.employmentFromDate || ""} – ${liveApp?.employmentToDate || ""}`
+                    : "—"
+                }
                 position={liveApp?.jobTitle || "—"}
-                salary={liveApp?.startingSalary || liveApp?.endingSalary ? `${liveApp?.startingSalary || ""} → ${liveApp?.endingSalary || ""}` : "—"}
+                salary={
+                  liveApp?.startingSalary || liveApp?.endingSalary
+                    ? `${liveApp?.startingSalary || ""} → ${liveApp?.endingSalary || ""}`
+                    : "—"
+                }
                 reason={liveApp?.reasonForLeaving || "—"}
                 responsibilities={liveApp?.responsibilities || ""}
               />
@@ -296,7 +370,16 @@ export function DriverApplicationPage({
           <ReviewSection icon={UsersRound} title="Professional references">
             <div className="grid gap-4 sm:grid-cols-2">
               <Reference
-                initials={liveApp?.referenceName ? liveApp.referenceName.split(" ").map((n: string) => n[0]).join("").toUpperCase().substring(0, 2) : "PR"}
+                initials={
+                  liveApp?.referenceName
+                    ? liveApp.referenceName
+                        .split(" ")
+                        .map((n: string) => n[0])
+                        .join("")
+                        .toUpperCase()
+                        .substring(0, 2)
+                    : "PR"
+                }
                 name={liveApp?.referenceName || "—"}
                 position={liveApp?.referenceRelationship || "—"}
                 phone={liveApp?.referencePhone || "—"}
@@ -307,11 +390,38 @@ export function DriverApplicationPage({
             <InfoGrid
               items={[
                 ["Driver license number", liveApp?.licenseNumber || "—"],
-                ["Social security number", liveApp?.socialSecurityNumber ? `•••-••-${liveApp.socialSecurityNumber.slice(-4)}` : "—"],
-                ["Date of birth", liveApp?.dateOfBirth || (liveApp?.dobMonth ? `${liveApp.dobMonth}/${liveApp.dobDay}/${liveApp.dobYear}` : "—")],
-                ["Years of driving experience", liveApp?.drivingExperience ? `${liveApp.drivingExperience} years` : "—"],
+                [
+                  "Social security number",
+                  liveApp?.socialSecurityNumber
+                    ? `•••-••-${liveApp.socialSecurityNumber.slice(-4)}`
+                    : "—",
+                ],
+                [
+                  "Date of birth",
+                  liveApp?.dateOfBirth ||
+                    (liveApp?.dobMonth
+                      ? `${liveApp.dobMonth}/${liveApp.dobDay}/${liveApp.dobYear}`
+                      : "—"),
+                ],
+                [
+                  "Years of driving experience",
+                  liveApp?.drivingExperience
+                    ? `${liveApp.drivingExperience} years`
+                    : "—",
+                ],
                 ["Driver category", liveApp?.driverCategory || "—"],
-                ["License expiration date", liveApp?.licenseExpirationDate ? new Date(liveApp.licenseExpirationDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "—"],
+                [
+                  "License expiration date",
+                  liveApp?.licenseExpirationDate
+                    ? new Date(
+                        liveApp.licenseExpirationDate,
+                      ).toLocaleDateString("en-US", {
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                      })
+                    : "—",
+                ],
               ]}
             />
           </ReviewSection>
@@ -345,7 +455,21 @@ export function DriverApplicationPage({
             <InfoGrid
               items={[
                 ["Signed by", fullName],
-                ["Signed date", liveApp?.submittedDate ? new Date(liveApp.submittedDate).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "—"],
+                [
+                  "Signed date",
+                  liveApp?.submittedDate
+                    ? new Date(liveApp.submittedDate).toLocaleDateString(
+                        "en-US",
+                        { month: "long", day: "numeric", year: "numeric" },
+                      )
+                    : "—",
+                ],
+                [
+                  "Background check auth",
+                  liveApp?.authorizeBackgroundCheck
+                    ? "✓ Authorized"
+                    : "✗ Not Authorized",
+                ],
                 ["Verification status", "✓ Verified"],
               ]}
             />
@@ -404,7 +528,11 @@ export function DriverApplicationPage({
               <SummaryLine
                 icon={CalendarDays}
                 label="Experience"
-                value={liveApp?.drivingExperience ? `${liveApp.drivingExperience} years` : "—"}
+                value={
+                  liveApp?.drivingExperience
+                    ? `${liveApp.drivingExperience} years`
+                    : "—"
+                }
               />
               <SummaryLine
                 icon={IdCard}
@@ -414,7 +542,14 @@ export function DriverApplicationPage({
               <SummaryLine
                 icon={CalendarDays}
                 label="Application date"
-                value={liveApp?.submittedDate ? new Date(liveApp.submittedDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"}
+                value={
+                  liveApp?.submittedDate
+                    ? new Date(liveApp.submittedDate).toLocaleDateString(
+                        "en-US",
+                        { month: "short", day: "numeric", year: "numeric" },
+                      )
+                    : "—"
+                }
               />
               <SummaryLine
                 icon={CalendarDays}
@@ -559,9 +694,24 @@ function VehicleAssignmentModal({
     vehicles.length > 0
       ? vehicles
       : [
-          { _id: "v1", modelName: "Toyota", licensePlate: "Corolla Altis 2022", year: 2022 },
-          { _id: "v2", modelName: "Honda", licensePlate: "CR-V 2021", year: 2021 },
-          { _id: "v3", modelName: "Hyundai", licensePlate: "Tucson 2020", year: 2020 },
+          {
+            _id: "v1",
+            modelName: "Toyota",
+            licensePlate: "Corolla Altis 2022",
+            year: 2022,
+          },
+          {
+            _id: "v2",
+            modelName: "Honda",
+            licensePlate: "CR-V 2021",
+            year: 2021,
+          },
+          {
+            _id: "v3",
+            modelName: "Hyundai",
+            licensePlate: "Tucson 2020",
+            year: 2020,
+          },
         ];
 
   return (
@@ -569,8 +719,12 @@ function VehicleAssignmentModal({
       <div className="w-full max-w-md space-y-5 rounded-[28px] border border-border bg-card p-6 shadow-2xl sm:p-7">
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-xl font-extrabold text-foreground">Select Vehicle and Assign</h2>
-            <p className="mt-1 text-xs text-muted-foreground">Choose a vehicle from the list below</p>
+            <h2 className="text-xl font-extrabold text-foreground">
+              Select Vehicle and Assign
+            </h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Choose a vehicle from the list below
+            </p>
           </div>
           <button
             onClick={onClose}
@@ -586,8 +740,12 @@ function VehicleAssignmentModal({
             <Car className="size-5" />
           </div>
           <div>
-            <h3 className="text-xs font-bold text-foreground">Available Vehicles</h3>
-            <p className="text-[11px] text-muted-foreground">Select a vehicle to continue</p>
+            <h3 className="text-xs font-bold text-foreground">
+              Available Vehicles
+            </h3>
+            <p className="text-[11px] text-muted-foreground">
+              Select a vehicle to continue
+            </p>
           </div>
         </div>
 
@@ -607,13 +765,19 @@ function VehicleAssignmentModal({
               >
                 <div
                   className={`grid size-5 shrink-0 place-items-center rounded-full border-2 transition-all ${
-                    isSelected ? "border-amber-500 bg-amber-500" : "border-muted-foreground/40"
+                    isSelected
+                      ? "border-amber-500 bg-amber-500"
+                      : "border-muted-foreground/40"
                   }`}
                 >
-                  {isSelected && <div className="size-2 rounded-full bg-white" />}
+                  {isSelected && (
+                    <div className="size-2 rounded-full bg-white" />
+                  )}
                 </div>
                 <div>
-                  <h4 className="text-sm font-bold text-foreground">{v.modelName}</h4>
+                  <h4 className="text-sm font-bold text-foreground">
+                    {v.modelName}
+                  </h4>
                   <p className="text-xs text-muted-foreground">
                     {v.licensePlate} {v.year ? `· ${v.year}` : ""}
                   </p>
@@ -746,7 +910,9 @@ function HistoryCard({
           <p className="text-[10px] text-muted-foreground sm:col-span-2 mt-2">
             Responsibilities
             <br />
-            <strong className="text-xs text-foreground font-medium block whitespace-pre-wrap">{responsibilities}</strong>
+            <strong className="text-xs text-foreground font-medium block whitespace-pre-wrap">
+              {responsibilities}
+            </strong>
           </p>
         )}
       </div>
@@ -804,7 +970,7 @@ function DocumentCard({
     const newWindow = window.open();
     if (newWindow) {
       newWindow.document.write(
-        `<iframe src="${fileData}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`
+        `<iframe src="${fileData}" frameborder="0" style="border:0; top:0px; left:0px; bottom:0px; right:0px; width:100%; height:100%;" allowfullscreen></iframe>`,
       );
     }
   };
@@ -820,8 +986,9 @@ function DocumentCard({
     let extension = "pdf";
     if (mimeType.includes("image/png")) extension = "png";
     else if (mimeType.includes("image/jpeg")) extension = "jpg";
-    else if (mimeType.includes("word") || mimeType.includes("officedocument")) extension = "docx";
-    
+    else if (mimeType.includes("word") || mimeType.includes("officedocument"))
+      extension = "docx";
+
     link.download = `Wisconsin_BID_Form_${name.replace(/\s+/g, "_")}.${extension}`;
     document.body.appendChild(link);
     link.click();
