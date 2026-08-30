@@ -476,7 +476,6 @@ export function DriverApplicationPage({
           <ReviewSection icon={UserRoundCheck} title="Admin review">
             <InfoGrid
               items={[
-                ["Reviewer", "Elena Castillo (HR Manager)"],
                 ["Review date", "December 29, 2024"],
                 ["Review status", decision],
               ]}
