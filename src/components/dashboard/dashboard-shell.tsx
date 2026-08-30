@@ -31,13 +31,13 @@ const navigation = [
   { label: "Shift Reports", href: "/vehicle-reports", icon: ClipboardList },
   { label: "Vehicles", href: "/vehicles", icon: CarFront },
   {
-    label: "Earning Management",
+    label: "Payroll",
     href: "/earning-management",
     icon: DollarSign,
   },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
   {
-    label: "Dispatch Management",
+    label: "Dispatch Number",
     href: "/dispatch-management",
     icon: PhoneCall,
   },
