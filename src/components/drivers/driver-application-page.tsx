@@ -419,6 +419,7 @@ export function DriverApplicationPage({
                         month: "long",
                         day: "numeric",
                         year: "numeric",
+                        timeZone: "UTC",
                       })
                     : "—",
                 ],
