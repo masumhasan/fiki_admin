@@ -12,7 +12,6 @@ import {
   type LucideIcon,
   MapPin,
   Printer,
-  Star,
   UserRoundCog,
   X,
   AlertTriangle,
@@ -239,9 +238,6 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
   const driverPhone = driverObj?.phone || "—";
   const driverInitials = driverObj ? getInitials(driverName) : "—";
   const driverProfile = trip.driverProfile;
-  const driverRating = driverProfile?.rating
-    ? String(driverProfile.rating)
-    : "5.0";
   const driverAvailability = driverProfile?.availabilityStatus || "Active";
 
   const vehicleObj = driverProfile?.vehicle;
@@ -493,13 +489,11 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
         >
           <p>{driverPhone}</p>
           {driverObj && (
-            <p className="flex items-center gap-1 font-bold text-foreground">
-              <Star className="size-3.5 fill-secondary text-secondary" />{" "}
-              {driverRating}
-              <span className="ml-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-700 capitalize">
+            <div className="mt-1 flex items-center">
+              <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] text-emerald-700 capitalize">
                 {driverAvailability.toLowerCase()}
               </span>
-            </p>
+            </div>
           )}
         </PersonCard>
 
