@@ -680,7 +680,7 @@ export function SchedulePage() {
           description="Plan driver coverage and resolve schedule conflicts."
         />
 
-        <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
+        <section className="grid gap-4 sm:grid-cols-3">
           <Metric
             icon={CalendarDays}
             label="Drivers scheduled today"
@@ -698,12 +698,6 @@ export function SchedulePage() {
             label="Drivers off today"
             value={String(metrics.offToday)}
             tone="bg-violet-50 text-violet-600"
-          />
-          <Metric
-            icon={AlertTriangle}
-            label="Schedule issues"
-            value={String(metrics.scheduleIssues)}
-            tone="bg-amber-50 text-amber-600"
           />
         </section>
 
