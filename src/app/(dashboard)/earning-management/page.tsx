@@ -23,6 +23,7 @@ interface DriverEarningItem {
   name: string;
   email: string;
   phone: string;
+  avatarUrl?: string;
   vehicle: string;
   licensePlate: string;
   hourlyRate: number;
@@ -278,9 +279,13 @@ export default function EarningManagementPage() {
                   <tr key={driver.driverId} className="hover:bg-slate-50/70 transition-colors">
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="grid size-9 place-items-center rounded-xl bg-blue-100 font-bold text-blue-700">
-                          {driver.name.substring(0, 2).toUpperCase()}
-                        </div>
+                        {driver.avatarUrl ? (
+                          <img src={driver.avatarUrl} alt={driver.name} className="size-9 rounded-xl object-cover shrink-0 border border-border" />
+                        ) : (
+                          <div className="grid size-9 place-items-center rounded-xl bg-blue-100 font-bold text-blue-700">
+                            {driver.name.substring(0, 2).toUpperCase()}
+                          </div>
+                        )}
                         <div>
                           <p className="font-bold text-slate-900">{driver.name}</p>
                           <p className="text-[11px] text-slate-500">{driver.email || driver.phone}</p>

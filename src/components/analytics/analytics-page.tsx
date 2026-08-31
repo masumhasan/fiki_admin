@@ -58,7 +58,7 @@ export function AnalyticsPage() {
     };
     monthlyRidePerformance?: Array<{ month: string; requested: number; completed: number }>;
     revenueOverview?: Array<{ month: string; monthlyRevenue: number; outstanding: number }>;
-    topDrivers?: Array<{ id: string; initials: string; name: string; trips: number; rating: string; revenue: string; status: string }>;
+    topDrivers?: Array<{ id: string; initials: string; name: string; avatarUrl?: string; trips: number; rating: string; revenue: string; status: string }>;
     recentRideRequests?: Array<{ id: string; rawId?: string; passenger: string; destination: string; status: string; price: string }>;
   } | null>(null);
 
@@ -185,7 +185,7 @@ export function AnalyticsPage() {
 
   // Driver Table Data
   const topDriversData = (analyticsData?.topDrivers || []).map(
-    (d) => [d.initials, d.name, String(d.trips), d.rating, d.revenue, d.status] as const,
+    (d: any) => [d.initials, d.name, String(d.trips), d.rating, d.revenue, d.status, d.avatarUrl || ""] as const,
   );
 
   // Ride Table Data
@@ -589,7 +589,7 @@ function DataCard({
   );
 }
 
-function DriverTable({ data }: { data: ReadonlyArray<readonly [string, string, string, string, string, string]> }) {
+function DriverTable({ data }: { data: ReadonlyArray<readonly [string, string, string, string, string, string, string?]> }) {
   if (data.length === 0) {
     return (
       <div className="p-6 text-center text-xs text-muted-foreground">
@@ -610,13 +610,17 @@ function DriverTable({ data }: { data: ReadonlyArray<readonly [string, string, s
           </tr>
         </thead>
         <tbody>
-          {data.map(([initials, name, trips, rating, revenue, status], idx) => (
+          {data.map(([initials, name, trips, rating, revenue, status, avatarUrl], idx) => (
             <tr className="border-t border-border" key={`${name}-${idx}`}>
               <td className="px-5 py-3">
                 <span className="flex items-center gap-2 font-semibold">
-                  <i className="grid size-7 place-items-center rounded-full bg-blue-600 text-[9px] not-italic text-white">
-                    {initials}
-                  </i>
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt={name} className="size-7 rounded-full object-cover shrink-0 border border-border" />
+                  ) : (
+                    <i className="grid size-7 place-items-center rounded-full bg-blue-600 text-[9px] not-italic text-white">
+                      {initials}
+                    </i>
+                  )}
                   {name}
                 </span>
               </td>

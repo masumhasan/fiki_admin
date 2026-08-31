@@ -21,6 +21,7 @@ type Report = {
   driver: string;
   initials: string;
   avatar: string;
+  avatarUrl?: string;
   vehicle: string;
   plate: string;
   date: string;
@@ -59,6 +60,7 @@ export function VehicleReportsPage({ hideHeader }: { hideHeader?: boolean } = {}
               driver: driverName,
               initials,
               avatar: "bg-primary",
+              avatarUrl: r.driverAvatarUrl || r.avatarUrl || "",
               vehicle: r.vehicleName || [r.make, r.vehicleModel].filter(Boolean).join(" ") || "—",
               plate: r.vehicleNumber || r.licensePlate || "—",
               date: r.shiftDateText || (r.createdAt ? new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"),
@@ -220,11 +222,15 @@ function ReportCard({ report }: { report: Report }) {
   return (
     <article className="rounded-2xl border border-border bg-card p-5 shadow-[0_6px_22px_rgba(8,37,82,0.06)] sm:p-6">
       <div className="flex items-start justify-between">
-        <span
-          className={`grid size-14 place-items-center rounded-full text-lg font-bold text-white ${report.avatar}`}
-        >
-          {report.initials}
-        </span>
+        {report.avatarUrl ? (
+          <img src={report.avatarUrl} alt={report.driver} className="size-14 rounded-full object-cover shrink-0 border border-border" />
+        ) : (
+          <span
+            className={`grid size-14 place-items-center rounded-full text-lg font-bold text-white ${report.avatar}`}
+          >
+            {report.initials}
+          </span>
+        )}
         <div className="flex items-center gap-2">
           <Status status={report.status} />
         </div>

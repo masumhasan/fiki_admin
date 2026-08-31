@@ -502,6 +502,7 @@ export function SchedulePage() {
         name: d.name || "Driver",
         id: `DRV-${String(idx + 1).padStart(4, "0")}`,
         mongoId: d.id || d._id,
+        avatarUrl: d.avatarUrl || d.profile?.avatarUrl || "",
         tone: colors[idx % colors.length],
         total: totalStr,
         weeklySchedule,
@@ -763,9 +764,13 @@ export function SchedulePage() {
                       onClick={() => setSelectedId(driver.id)}
                       type="button"
                     >
-                      <span className={`grid size-8 place-items-center rounded-full text-[10px] font-bold text-white ${driver.tone}`}>
-                        {driver.initials}
-                      </span>
+                      {driver.avatarUrl ? (
+                        <img src={driver.avatarUrl} alt={driver.name} className="size-8 rounded-full object-cover shrink-0 border border-border" />
+                      ) : (
+                        <span className={`grid size-8 place-items-center rounded-full text-[10px] font-bold text-white ${driver.tone}`}>
+                          {driver.initials}
+                        </span>
+                      )}
                       <span>
                         <strong className="block text-xs">{driver.name}</strong>
                         <small className="text-[10px] text-muted-foreground">{driver.id.slice(-8).toUpperCase()}</small>
@@ -804,9 +809,13 @@ export function SchedulePage() {
                 </select>
                 {selected ? (
                   <div className="flex items-center gap-3 rounded-xl border border-border p-3 bg-card relative z-0">
-                    <span className={`grid size-9 place-items-center rounded-full text-xs font-bold text-white ${selected.tone || "bg-primary"}`}>
-                      {selected.initials}
-                    </span>
+                    {selected.avatarUrl ? (
+                      <img src={selected.avatarUrl} alt={selected.name} className="size-9 rounded-full object-cover shrink-0 border border-border" />
+                    ) : (
+                      <span className={`grid size-9 place-items-center rounded-full text-xs font-bold text-white ${selected.tone || "bg-primary"}`}>
+                        {selected.initials}
+                      </span>
+                    )}
                     <div className="min-w-0 flex-1">
                       <strong className="block truncate text-xs">{selected.name}</strong>
                       <span className="text-[10px] text-muted-foreground">{selected.id}</span>
