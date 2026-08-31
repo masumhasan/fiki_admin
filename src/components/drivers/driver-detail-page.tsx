@@ -1,8 +1,10 @@
 "use client";
 
 import {
+  AlertCircle,
   ArrowLeft,
   CalendarDays,
+  CalendarPlus,
   CarFront,
   Check,
   ChevronDown,
@@ -15,15 +17,25 @@ import {
   LoaderCircle,
   Mail,
   Phone,
+  Plus,
   Route,
   Star,
+
+  Trash2,
   TrendingUp,
   WalletCards,
   X,
 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { getAdminDriverDetailApi, updateDriverEarningsApi } from "@/lib/api";
+import {
+  addOneTimeChangeApi,
+  deleteOneTimeChangeApi,
+  getAdminDriverDetailApi,
+  getOneTimeChangesApi,
+  updateDriverEarningsApi,
+  updateDriverScheduleApi,
+} from "@/lib/api";
 
 export interface FortnightPeriod {
   id: string;
@@ -36,7 +48,7 @@ export interface FortnightPeriod {
 }
 
 export function DriverDetailPage({ driverId }: { driverId: string }) {
-  const [tab, setTab] = useState<"profile" | "earnings">("profile");
+  const [tab, setTab] = useState<"profile" | "earnings" | "schedule">("profile");
   const [loading, setLoading] = useState(true);
   const [fetchingPeriod, setFetchingPeriod] = useState(false);
   const [driver, setDriver] = useState<any>(null);
@@ -186,14 +198,14 @@ export function DriverDetailPage({ driverId }: { driverId: string }) {
       </section>
 
       <div className="flex border-b border-border">
-        {(["profile", "earnings"] as const).map((t) => (
+        {(["profile", "earnings", "schedule"] as const).map((t) => (
           <button
             key={t}
             className={`relative px-5 py-3 text-sm font-bold capitalize ${tab === t ? "text-primary" : "text-muted-foreground"}`}
             onClick={() => setTab(t)}
             type="button"
           >
-            {t === "profile" ? "Driver profile" : "Earnings"}
+            {t === "profile" ? "Driver profile" : t === "earnings" ? "Earnings" : "Schedule"}
             {tab === t && (
               <span className="absolute inset-x-0 bottom-0 h-0.5 bg-primary" />
             )}
@@ -215,6 +227,11 @@ export function DriverDetailPage({ driverId }: { driverId: string }) {
           completedTripsCount={stats.completedTrips}
           availabilityStatus={profile?.availabilityStatus || "—"}
           avatarUrl={driver?.avatarUrl || profile?.avatarUrl || ""}
+        />
+      ) : tab === "schedule" ? (
+        <ScheduleTab
+          driverId={driverId}
+          weeklySchedule={profile?.weeklySchedule || []}
         />
       ) : (
         <EarningsTab
@@ -762,5 +779,450 @@ function EarningMetric({
       <p className="mt-4 text-lg font-bold text-foreground">{value}</p>
       <p className="mt-1 text-[10px] text-muted-foreground">{label}</p>
     </article>
+  );
+}
+
+// ─── ScheduleTab ─────────────────────────────────────────────────────────────
+
+const DAY_ABBRS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;
+type DayAbbr = typeof DAY_ABBRS[number];
+
+interface DaySchedule {
+  day: DayAbbr;
+  working: boolean;
+  startTime: string;
+  endTime: string;
+}
+
+interface OneTimeChange {
+  _id: string;
+  date: string;
+  working: boolean;
+  startTime?: string;
+  endTime?: string;
+  reason?: string;
+}
+
+function ScheduleTab({
+  driverId,
+  weeklySchedule: initialSchedule,
+}: {
+  driverId: string;
+  weeklySchedule: DaySchedule[];
+}) {
+  // ── Weekly schedule state ──────────────────────────────────────────────────
+  const defaultSchedule: DaySchedule[] = DAY_ABBRS.map((day) => {
+    const existing = initialSchedule.find((s) => s.day === day);
+    return existing || {
+      day,
+      working: day !== "Sat" && day !== "Sun",
+      startTime: "08:00 AM",
+      endTime: "04:00 PM",
+    };
+  });
+
+  const [schedule, setSchedule] = useState<DaySchedule[]>(defaultSchedule);
+  const [savingSchedule, setSavingSchedule] = useState(false);
+  const [scheduleMsg, setScheduleMsg] = useState("");
+
+  // ── One-time changes state ──────────────────────────────────────────────────
+  const [changes, setChanges] = useState<OneTimeChange[]>([]);
+  const [loadingChanges, setLoadingChanges] = useState(true);
+  const [showOverrideDialog, setShowOverrideDialog] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Override dialog form state
+  const [overrideDate, setOverrideDate] = useState("");
+  const [overrideWorking, setOverrideWorking] = useState(true);
+  const [overrideStart, setOverrideStart] = useState("08:00 AM");
+  const [overrideEnd, setOverrideEnd] = useState("04:00 PM");
+  const [overrideReason, setOverrideReason] = useState("");
+  const [savingOverride, setSavingOverride] = useState(false);
+  const [overrideMsg, setOverrideMsg] = useState("");
+
+  const getToken = () =>
+    typeof window !== "undefined" ? window.localStorage.getItem("fiki_auth_token") || "" : "";
+
+  // ── Fetch one-time changes ─────────────────────────────────────────────────
+  const fetchChanges = async () => {
+    setLoadingChanges(true);
+    const res = await getOneTimeChangesApi(getToken(), driverId);
+    if (res.success && res.data?.oneTimeChanges) {
+      setChanges(res.data.oneTimeChanges);
+    }
+    setLoadingChanges(false);
+  };
+
+  useEffect(() => {
+    fetchChanges();
+  }, [driverId]);
+
+  // ── Save weekly schedule ───────────────────────────────────────────────────
+  const handleSaveSchedule = async () => {
+    setSavingSchedule(true);
+    setScheduleMsg("");
+    const res = await updateDriverScheduleApi(getToken(), driverId, schedule);
+    setSavingSchedule(false);
+    setScheduleMsg(res.success ? "Schedule saved." : res.error?.message || "Failed to save.");
+    setTimeout(() => setScheduleMsg(""), 3000);
+  };
+
+  // ── Save override ─────────────────────────────────────────────────────────
+  const handleSaveOverride = async () => {
+    if (!overrideDate) {
+      setOverrideMsg("Date is required.");
+      return;
+    }
+    setSavingOverride(true);
+    setOverrideMsg("");
+    const res = await addOneTimeChangeApi(getToken(), driverId, {
+      date: overrideDate,
+      working: overrideWorking,
+      startTime: overrideWorking ? overrideStart : undefined,
+      endTime: overrideWorking ? overrideEnd : undefined,
+      reason: overrideReason || undefined,
+    });
+    setSavingOverride(false);
+    if (res.success) {
+      setShowOverrideDialog(false);
+      setOverrideDate("");
+      setOverrideWorking(true);
+      setOverrideStart("08:00 AM");
+      setOverrideEnd("04:00 PM");
+      setOverrideReason("");
+      fetchChanges();
+    } else {
+      setOverrideMsg(res.error?.message || "Failed to save override.");
+    }
+  };
+
+  // ── Delete override ───────────────────────────────────────────────────────
+  const handleDeleteChange = async (changeId: string) => {
+    setDeletingId(changeId);
+    await deleteOneTimeChangeApi(getToken(), driverId, changeId);
+    setDeletingId(null);
+    fetchChanges();
+  };
+
+  // ── Update day entry ──────────────────────────────────────────────────────
+  const updateDay = (day: DayAbbr, patch: Partial<DaySchedule>) => {
+    setSchedule((prev) =>
+      prev.map((d) => (d.day === day ? { ...d, ...patch } : d))
+    );
+  };
+
+  return (
+    <div className="space-y-6">
+
+      {/* ── Weekly Schedule Editor ─── */}
+      <section className="rounded-2xl border border-[#e1e6ee] bg-card p-5 shadow-[0_4px_14px_rgba(15,37,74,.04)]">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-bold text-foreground">Weekly Schedule</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Set which days this driver works and their shift hours.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleSaveSchedule}
+            disabled={savingSchedule}
+            className="inline-flex h-9 items-center gap-2 rounded-lg bg-primary px-4 text-xs font-bold text-white hover:opacity-90 disabled:opacity-50"
+          >
+            {savingSchedule ? (
+              <LoaderCircle className="size-4 animate-spin" />
+            ) : (
+              <Check className="size-4" />
+            )}
+            Save Schedule
+          </button>
+        </div>
+
+        {scheduleMsg && (
+          <p className={`mt-3 rounded-lg px-3 py-2 text-xs font-semibold ${scheduleMsg === "Schedule saved." ? "bg-emerald-50 text-emerald-700" : "bg-red-50 text-red-600"}`}>
+            {scheduleMsg}
+          </p>
+        )}
+
+        <div className="mt-5 overflow-hidden rounded-xl border border-border">
+          <table className="w-full text-left text-xs">
+            <thead className="border-b border-border bg-muted/50 text-muted-foreground">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Day</th>
+                <th className="px-4 py-3 font-semibold">Working</th>
+                <th className="px-4 py-3 font-semibold">Start Time</th>
+                <th className="px-4 py-3 font-semibold">End Time</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border">
+              {schedule.map((row) => (
+                <tr key={row.day} className="hover:bg-muted/30">
+                  <td className="px-4 py-3 font-bold text-foreground">{row.day}</td>
+                  <td className="px-4 py-3">
+                    <button
+                      type="button"
+                      onClick={() => updateDay(row.day, { working: !row.working })}
+                      className={`inline-flex h-7 w-14 items-center justify-center rounded-full text-[11px] font-bold transition-colors ${
+                        row.working
+                          ? "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+                          : "bg-muted text-muted-foreground hover:bg-muted/80"
+                      }`}
+                    >
+                      {row.working ? "On" : "Off"}
+                    </button>
+                  </td>
+                  <td className="px-4 py-3">
+                    <input
+                      type="text"
+                      value={row.startTime}
+                      disabled={!row.working}
+                      onChange={(e) => updateDay(row.day, { startTime: e.target.value })}
+                      placeholder="08:00 AM"
+                      className="h-8 w-28 rounded-lg border border-border bg-card px-3 text-xs text-foreground disabled:opacity-40 focus:border-blue-500 focus:outline-none"
+                    />
+                  </td>
+                  <td className="px-4 py-3">
+                    <input
+                      type="text"
+                      value={row.endTime}
+                      disabled={!row.working}
+                      onChange={(e) => updateDay(row.day, { endTime: e.target.value })}
+                      placeholder="04:00 PM"
+                      className="h-8 w-28 rounded-lg border border-border bg-card px-3 text-xs text-foreground disabled:opacity-40 focus:border-blue-500 focus:outline-none"
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-3 text-[11px] text-muted-foreground">
+          Time format: 08:00 AM / 04:00 PM. Changes take effect immediately after saving.
+        </p>
+      </section>
+
+      {/* ── One-Time Schedule Changes ─── */}
+      <section className="rounded-2xl border border-[#e1e6ee] bg-card p-5 shadow-[0_4px_14px_rgba(15,37,74,.04)]">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-bold text-foreground">Emergency / One-Time Overrides</h2>
+            <p className="mt-0.5 text-xs text-muted-foreground">
+              Grant or block this driver for a specific date, overriding their weekly schedule.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setShowOverrideDialog(true);
+              setOverrideMsg("");
+            }}
+            className="inline-flex h-9 items-center gap-2 rounded-lg bg-amber-500 px-4 text-xs font-bold text-white hover:bg-amber-600"
+          >
+            <Plus className="size-4" />
+            Add Override
+          </button>
+        </div>
+
+        <div className="mt-4">
+          {loadingChanges ? (
+            <div className="flex items-center justify-center py-8">
+              <LoaderCircle className="size-5 animate-spin text-primary" />
+            </div>
+          ) : changes.length === 0 ? (
+            <div className="rounded-xl border border-dashed border-border py-8 text-center text-xs text-muted-foreground">
+              No one-time overrides set. Click &quot;Add Override&quot; to grant emergency access.
+            </div>
+          ) : (
+            <div className="overflow-hidden rounded-xl border border-border">
+              <table className="w-full text-left text-xs">
+                <thead className="border-b border-border bg-muted/50 text-muted-foreground">
+                  <tr>
+                    <th className="px-4 py-3 font-semibold">Date</th>
+                    <th className="px-4 py-3 font-semibold">Status</th>
+                    <th className="px-4 py-3 font-semibold">Hours</th>
+                    <th className="px-4 py-3 font-semibold">Reason</th>
+                    <th className="px-4 py-3 font-semibold"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {changes.map((ch) => {
+                    const dateDisplay = new Date(ch.date).toLocaleDateString("en-US", {
+                      weekday: "short",
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                      timeZone: "UTC",
+                    });
+                    return (
+                      <tr key={ch._id} className="hover:bg-muted/30">
+                        <td className="px-4 py-3 font-semibold text-foreground">{dateDisplay}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold ${ch.working ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"}`}>
+                            {ch.working ? "Working" : "Day Off"}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground">
+                          {ch.working ? `${ch.startTime || "—"} – ${ch.endTime || "—"}` : "—"}
+                        </td>
+                        <td className="px-4 py-3 max-w-48 truncate text-muted-foreground">
+                          {ch.reason || "—"}
+                        </td>
+                        <td className="px-4 py-3">
+                          <button
+                            type="button"
+                            disabled={deletingId === ch._id}
+                            onClick={() => handleDeleteChange(ch._id)}
+                            className="inline-flex size-7 items-center justify-center rounded-lg text-red-400 hover:bg-red-50 hover:text-red-600 disabled:opacity-50"
+                            title="Delete override"
+                          >
+                            {deletingId === ch._id
+                              ? <LoaderCircle className="size-3.5 animate-spin" />
+                              : <Trash2 className="size-3.5" />
+                            }
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* ── Emergency Override Dialog ─── */}
+      {showOverrideDialog && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          onMouseDown={(e) => { if (e.target === e.currentTarget) setShowOverrideDialog(false); }}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm"
+        >
+          <div className="w-full max-w-md overflow-hidden rounded-2xl border border-border bg-card shadow-2xl">
+            <header className="relative border-b border-border px-5 py-4 pr-12">
+              <h3 className="text-base font-bold text-foreground">Add Schedule Override</h3>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Set a specific date override for this driver. This overrides their weekly schedule.
+              </p>
+              <button
+                type="button"
+                onClick={() => setShowOverrideDialog(false)}
+                className="absolute right-4 top-4 grid size-8 place-items-center rounded-lg text-muted-foreground hover:bg-muted"
+              >
+                <X className="size-4" />
+              </button>
+            </header>
+
+            <div className="space-y-4 p-5">
+              {/* Date */}
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-foreground">
+                  Date <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="date"
+                  value={overrideDate}
+                  onChange={(e) => setOverrideDate(e.target.value)}
+                  className="h-10 w-full rounded-lg border border-border bg-card px-3 text-sm text-foreground focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Working toggle */}
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-foreground">Override Type</label>
+                <div className="grid grid-cols-2 overflow-hidden rounded-xl border border-border bg-muted">
+                  <button
+                    type="button"
+                    onClick={() => setOverrideWorking(true)}
+                    className={`py-2.5 text-xs font-bold transition-colors ${overrideWorking ? "bg-emerald-500 text-white" : "text-muted-foreground hover:bg-muted/80"}`}
+                  >
+                    ✓ Working Day
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setOverrideWorking(false)}
+                    className={`py-2.5 text-xs font-bold transition-colors ${!overrideWorking ? "bg-slate-500 text-white" : "text-muted-foreground hover:bg-muted/80"}`}
+                  >
+                    ✗ Day Off
+                  </button>
+                </div>
+              </div>
+
+              {/* Times — only when working */}
+              {overrideWorking && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-foreground">Start Time</label>
+                    <input
+                      type="text"
+                      value={overrideStart}
+                      onChange={(e) => setOverrideStart(e.target.value)}
+                      placeholder="08:00 AM"
+                      className="h-10 w-full rounded-lg border border-border bg-card px-3 text-sm text-foreground focus:border-blue-500 focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="mb-1.5 block text-xs font-semibold text-foreground">End Time</label>
+                    <input
+                      type="text"
+                      value={overrideEnd}
+                      onChange={(e) => setOverrideEnd(e.target.value)}
+                      placeholder="04:00 PM"
+                      className="h-10 w-full rounded-lg border border-border bg-card px-3 text-sm text-foreground focus:border-blue-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Reason */}
+              <div>
+                <label className="mb-1.5 block text-xs font-semibold text-foreground">Reason (optional)</label>
+                <input
+                  type="text"
+                  value={overrideReason}
+                  onChange={(e) => setOverrideReason(e.target.value)}
+                  placeholder="Emergency coverage, medical leave, etc."
+                  className="h-10 w-full rounded-lg border border-border bg-card px-3 text-sm text-foreground focus:border-blue-500 focus:outline-none"
+                />
+              </div>
+
+              {/* Info banner */}
+              <div className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2.5 text-xs text-amber-800">
+                <AlertCircle className="mt-0.5 size-3.5 shrink-0" />
+                <span>
+                  {overrideWorking
+                    ? "This will allow the driver to clock in on this date, even if it&apos;s their day off."
+                    : "This will prevent the driver from clocking in on this date, even if it&apos;s a working day."}
+                </span>
+              </div>
+
+              {overrideMsg && (
+                <p className="rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-600">{overrideMsg}</p>
+              )}
+
+              <div className="flex gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setShowOverrideDialog(false)}
+                  className="h-10 flex-1 rounded-lg border border-border bg-card text-xs font-semibold text-foreground hover:bg-muted"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleSaveOverride}
+                  disabled={savingOverride}
+                  className="flex h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-amber-500 text-xs font-bold text-white hover:bg-amber-600 disabled:opacity-50"
+                >
+                  {savingOverride ? <LoaderCircle className="size-4 animate-spin" /> : <Check className="size-4" />}
+                  Save Override
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 }
