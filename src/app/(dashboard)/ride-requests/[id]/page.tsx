@@ -495,47 +495,79 @@ export default function RideRequestDetails({
                 </div>
               </article>
 
-              {/* 5. Digital Signature Card */}
-              <article className={card}>
-                <CardHead
-                  icon={<PenTool />}
-                  title="Digital Signature"
-                  subtitle="Electronically captured at time of submission"
-                />
-                <div className="p-5">
-                  <div className="grid gap-4 md:grid-cols-[1.8fr_1fr]">
-                    <div className="flex min-h-24 items-center justify-center rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-                      {trip.signature && trip.signature.startsWith("data:image") ? (
-                        <img
-                          src={trip.signature}
-                          alt="Digital Signature"
-                          className="h-16 max-w-full object-contain"
-                        />
-                      ) : (
-                        <span className="font-serif italic text-2xl font-bold tracking-wide text-[#2b4c7e]">
-                          {trip.printedName || trip.signature || passengerName || "Sarah Mitchell"}
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex flex-col justify-center space-y-3 rounded-xl border border-slate-100 bg-slate-50/50 p-4 text-xs">
+              {/* 5. Digital Signature / Case Manager Card */}
+              {trip.caseManagerName ? (
+                <article className={card}>
+                  <CardHead
+                    icon={<UserRound className="size-4 text-[#173d76]" />}
+                    title="Case Manager"
+                    subtitle="Contact information for ride coordination"
+                  />
+                  <div className="p-5">
+                    <div className="grid gap-4 md:grid-cols-3 text-xs">
                       <div>
                         <p className="text-[10px] font-bold uppercase tracking-wider text-[#8190a5]">
-                          Signed Date
+                          Name
                         </p>
-                        <p className="mt-0.5 font-bold text-slate-800">{submittedAt}</p>
+                        <p className="mt-0.5 font-bold text-slate-800">{trip.caseManagerName}</p>
                       </div>
                       <div>
                         <p className="text-[10px] font-bold uppercase tracking-wider text-[#8190a5]">
-                          Relationship
+                          Phone Number
                         </p>
-                        <p className="mt-0.5 font-bold text-slate-800">
-                          {trip.relationshipToPassenger || trip.relationship || "Daughter / Legal Guardian"}
+                        <p className="mt-0.5 font-bold text-slate-800">{trip.caseManagerPhone || "—"}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-[#8190a5]">
+                          Email Address
                         </p>
+                        <p className="mt-0.5 font-bold text-slate-800">{trip.caseManagerEmail || "—"}</p>
                       </div>
                     </div>
                   </div>
-                </div>
-              </article>
+                </article>
+              ) : (
+                <article className={card}>
+                  <CardHead
+                    icon={<PenTool />}
+                    title="Digital Signature"
+                    subtitle="Electronically captured at time of submission"
+                  />
+                  <div className="p-5">
+                    <div className="grid gap-4 md:grid-cols-[1.8fr_1fr]">
+                      <div className="flex min-h-24 items-center justify-center rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                        {trip.signature && trip.signature.startsWith("data:image") ? (
+                          <img
+                            src={trip.signature}
+                            alt="Digital Signature"
+                            className="h-16 max-w-full object-contain"
+                          />
+                        ) : (
+                          <span className="font-serif italic text-2xl font-bold tracking-wide text-[#2b4c7e]">
+                            {trip.printedName || trip.signature || passengerName || "Sarah Mitchell"}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex flex-col justify-center space-y-3 rounded-xl border border-slate-100 bg-slate-50/50 p-4 text-xs">
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-[#8190a5]">
+                            Signed Date
+                          </p>
+                          <p className="mt-0.5 font-bold text-slate-800">{submittedAt}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-[#8190a5]">
+                            Relationship
+                          </p>
+                          <p className="mt-0.5 font-bold text-slate-800">
+                            {trip.relationshipToPassenger || trip.relationship || "Daughter / Legal Guardian"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              )}
 
               <article className={card}>
                 <CardHead icon={<Route />} title="Activity Timeline" subtitle="End-to-end request lifecycle" />

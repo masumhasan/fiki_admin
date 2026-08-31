@@ -183,6 +183,11 @@ export default function ManualRideRequestsPage({
     signatureDate: new Date().toISOString().split("T")[0],
     printedName: "",
     relationshipToPassenger: "",
+
+    requestSource: "ADMIN",
+    caseManagerName: "",
+    caseManagerPhone: "",
+    caseManagerEmail: "",
   });
 
   const handleInputChange = (field: string, value: any) => {
@@ -239,11 +244,9 @@ export default function ManualRideRequestsPage({
       !formData.destinationAddress ||
       !sDate ||
       !formData.pickupTime ||
-      !formData.fare ||
-      !formData.printedName ||
-      !formData.signature
+      !formData.fare
     ) {
-      setErrorMsg("Please fill out all required fields and sign the document.");
+      setErrorMsg("Please fill out all required fields.");
       return;
     }
 
@@ -943,53 +946,53 @@ export default function ManualRideRequestsPage({
           </div>
         </div>
 
-        {/* Section 07: Signature */}
+        {/* Section 07: Case Manager */}
         <div className="rounded-[18px] border border-[#e1e5ea] bg-white p-6 shadow-[0_9px_24px_rgba(15,35,65,0.07)]">
           <div className="flex items-center gap-3 border-b border-[#f1f3f7] pb-4 mb-4">
             <span className="flex size-7 items-center justify-center rounded-full bg-[#edf2fb] text-xs font-bold text-[#173d76]">
               07
             </span>
-            <h2 className="text-base font-bold text-[#172033]">Signature</h2>
+            <h2 className="text-base font-bold text-[#172033]">Case Manager</h2>
           </div>
-          <div className="grid gap-6 md:grid-cols-3">
-            <div className="md:col-span-1 space-y-2">
-              <label className="text-xs font-semibold text-[#172033]">
-                Signature Here *
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-[#172033]">
+                Case Manager Name
               </label>
-              <SignaturePad
-                value={formData.signature}
-                onChange={(val) => handleInputChange("signature", val)}
+              <input
+                type="text"
+                className="w-full rounded-xl border border-[#e1e5ea] px-4 py-2.5 text-sm"
+                value={formData.caseManagerName}
+                onChange={(e) =>
+                  handleInputChange("caseManagerName", e.target.value)
+                }
               />
             </div>
-            <div className="md:col-span-2 space-y-4">
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-[#172033]">
-                  Printed Name *
-                </label>
-                <input
-                  type="text"
-                  className="w-full rounded-xl border border-[#e1e5ea] px-4 py-2.5 text-sm"
-                  value={formData.printedName}
-                  onChange={(e) =>
-                    handleInputChange("printedName", e.target.value)
-                  }
-                  required
-                />
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-[#172033]">
-                  Relationship to Passenger
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Self, Parent, Case Manager"
-                  className="w-full rounded-xl border border-[#e1e5ea] px-4 py-2.5 text-sm"
-                  value={formData.relationshipToPassenger}
-                  onChange={(e) =>
-                    handleInputChange("relationshipToPassenger", e.target.value)
-                  }
-                />
-              </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-[#172033]">
+                Case Manager Phone
+              </label>
+              <input
+                type="tel"
+                className="w-full rounded-xl border border-[#e1e5ea] px-4 py-2.5 text-sm"
+                value={formData.caseManagerPhone}
+                onChange={(e) =>
+                  handleInputChange("caseManagerPhone", e.target.value)
+                }
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-[#172033]">
+                Case Manager Email
+              </label>
+              <input
+                type="email"
+                className="w-full rounded-xl border border-[#e1e5ea] px-4 py-2.5 text-sm"
+                value={formData.caseManagerEmail}
+                onChange={(e) =>
+                  handleInputChange("caseManagerEmail", e.target.value)
+                }
+              />
             </div>
           </div>
         </div>
