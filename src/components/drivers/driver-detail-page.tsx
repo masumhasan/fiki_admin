@@ -165,6 +165,7 @@ export function DriverDetailPage({ driverId }: { driverId: string }) {
           accountStatus={accountStatus}
           completedTripsCount={stats.completedTrips}
           availabilityStatus={profile?.availabilityStatus || "—"}
+          avatarUrl={driver?.avatarUrl || profile?.avatarUrl || ""}
         />
       ) : (
         <EarningsTab
@@ -190,6 +191,7 @@ function ProfileTab({
   accountStatus,
   completedTripsCount,
   availabilityStatus,
+  avatarUrl,
 }: {
   driverId: string;
   name: string;
@@ -202,6 +204,7 @@ function ProfileTab({
   accountStatus: string;
   completedTripsCount: number;
   availabilityStatus: string;
+  avatarUrl?: string;
 }) {
   const initials =
     name !== "—"
@@ -217,8 +220,12 @@ function ProfileTab({
     <div className="grid items-start gap-5 xl:grid-cols-[360px_minmax(0,1fr)]">
       <aside className={`${cardClass} xl:sticky xl:top-24`}>
         <div className="text-center">
-          <span className="mx-auto grid size-24 place-items-center rounded-2xl bg-primary text-3xl font-bold text-primary-foreground">
-            {initials}
+          <span className="mx-auto grid size-24 place-items-center overflow-hidden rounded-2xl bg-primary text-3xl font-bold text-primary-foreground">
+            {avatarUrl ? (
+              <img src={avatarUrl} alt={name} className="size-full object-cover" />
+            ) : (
+              initials
+            )}
           </span>
           <h2 className="mt-5 text-xl font-bold text-foreground">{name}</h2>
           <p className="mt-1 text-xs text-muted-foreground">{driverId}</p>

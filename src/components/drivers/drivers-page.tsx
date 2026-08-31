@@ -37,6 +37,7 @@ type Driver = {
   email: string;
   initials: string;
   avatar: string;
+  avatarUrl?: string;
   joined: string;
   status: DriverStatus;
   vehicle: string;
@@ -115,6 +116,7 @@ export function DriversPage({ hideHeader }: { hideHeader?: boolean } = {}) {
               name: d.name || "Driver",
               email: d.email || "",
               initials,
+              avatarUrl: d.avatarUrl || profile.avatarUrl || "",
               avatar: "bg-primary",
               joined: d.createdAt
                 ? new Date(d.createdAt).toLocaleDateString("en-US", {
@@ -612,9 +614,13 @@ function DriverCard({
     <article className="rounded-xl border border-[#e1e6ee] bg-card p-5 shadow-[0_4px_14px_rgba(15,37,74,.04)]">
       <div className="flex items-start justify-between">
         <span
-          className={`grid size-14 place-items-center rounded-full text-lg font-bold text-white ${driver.avatar}`}
+          className={`grid size-14 place-items-center overflow-hidden rounded-full text-lg font-bold text-white ${driver.avatar}`}
         >
-          {driver.initials}
+          {driver.avatarUrl ? (
+            <img src={driver.avatarUrl} alt={driver.name} className="size-full object-cover" />
+          ) : (
+            driver.initials
+          )}
         </span>
         <div className="flex items-center gap-2">
           <DriverStatus status={driver.status} />
