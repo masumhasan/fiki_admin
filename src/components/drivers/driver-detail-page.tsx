@@ -49,12 +49,17 @@ export function DriverDetailPage({ driverId }: { driverId: string }) {
   const profile = driver?.profile || null;
   const licenseNumber = profile?.licenseNumber || "—";
   const licenseExpirationDate = profile?.licenseExpirationDate
-    ? new Date(profile.licenseExpirationDate).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-        timeZone: "UTC",
-      })
+    ? (() => {
+        const d = new Date(profile.licenseExpirationDate);
+        return !isNaN(d.getTime())
+          ? d.toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+              timeZone: "UTC",
+            })
+          : profile.licenseExpirationDate;
+      })()
     : "—";
 
   const vehicle = profile?.vehicle;
