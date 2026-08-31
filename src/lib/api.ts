@@ -43,9 +43,13 @@ export async function loginApi(email: string, password: string): Promise<LoginRe
   }
 }
 
-export async function getAdminDriverDetailApi(token: string, driverId: string) {
+export async function getAdminDriverDetailApi(token: string, driverId: string, startDate?: string, endDate?: string) {
   try {
-    const res = await fetch(`${API_BASE_URL}/admin/drivers/${driverId}`, {
+    let url = `${API_BASE_URL}/admin/drivers/${driverId}`;
+    if (startDate && endDate) {
+      url += `?startDate=${encodeURIComponent(startDate)}&endDate=${encodeURIComponent(endDate)}`;
+    }
+    const res = await fetch(url, {
       headers: { Authorization: `Bearer ${token}` },
     });
     return await res.json();
@@ -462,7 +466,7 @@ export async function getScheduleOverviewApi(token: string, weekStart?: string) 
 export async function updateDriverEarningsApi(
   token: string,
   driverId: string,
-  data: { hourlyRate?: number; approvedHours?: number; tripBonusRate?: number; payrollStatus?: string }
+  data: { hourlyRate?: number; approvedHours?: number; tripBonusRate?: number; payrollStatus?: string; periodId?: string }
 ) {
   try {
     const res = await fetch(`${API_BASE_URL}/admin/earnings/${driverId}`, {
