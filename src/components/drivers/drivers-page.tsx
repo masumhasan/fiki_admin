@@ -103,7 +103,7 @@ export function DriversPage({ hideHeader }: { hideHeader?: boolean } = {}) {
                   month: "short",
                   day: "numeric",
                   year: "numeric",
-                  timeZone: "UTC",
+                  timeZone: "America/Chicago",
                 });
               } else {
                 expiryStr = profile.licenseExpirationDate;
@@ -122,6 +122,7 @@ export function DriversPage({ hideHeader }: { hideHeader?: boolean } = {}) {
                 ? new Date(d.createdAt).toLocaleDateString("en-US", {
                     month: "short",
                     year: "numeric",
+                    timeZone: "America/Chicago",
                   })
                 : "—",
               status,

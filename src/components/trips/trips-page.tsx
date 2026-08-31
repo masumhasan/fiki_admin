@@ -90,12 +90,14 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
                 month: "short",
                 day: "numeric",
                 year: "numeric",
+                timeZone: "America/Chicago",
               })
             : "—";
           const timeStr = t.createdAt
             ? new Date(t.createdAt).toLocaleTimeString("en-US", {
                 hour: "numeric",
                 minute: "2-digit",
+                timeZone: "America/Chicago",
               })
             : "—";
 

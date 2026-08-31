@@ -98,6 +98,7 @@ export function DriverDetailPage({ driverId }: { driverId: string }) {
         month: "short",
         day: "numeric",
         year: "numeric",
+        timeZone: "America/Chicago",
       })
     : "—";
 
@@ -111,7 +112,7 @@ export function DriverDetailPage({ driverId }: { driverId: string }) {
               month: "short",
               day: "numeric",
               year: "numeric",
-              timeZone: "UTC",
+              timeZone: "America/Chicago",
             })
           : profile.licenseExpirationDate;
       })()
@@ -653,6 +654,7 @@ function EarningsTab({
                             month: "short",
                             day: "numeric",
                             year: "numeric",
+                            timeZone: "America/Chicago",
                           })
                         : "—"}
                     </td>
@@ -1051,7 +1053,7 @@ function ScheduleTab({
                       month: "short",
                       day: "numeric",
                       year: "numeric",
-                      timeZone: "UTC",
+                      timeZone: "America/Chicago",
                     });
                     return (
                       <tr key={ch._id} className="hover:bg-muted/30">

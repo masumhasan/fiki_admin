@@ -40,7 +40,7 @@ function formatDate(dateVal?: string | Date): string {
     month: "short",
     day: "numeric",
     year: "numeric",
-    timeZone: "UTC",
+    timeZone: "America/Chicago",
   });
 }
 
@@ -330,12 +330,13 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
       month: "short",
       day: "numeric",
       year: "numeric",
-      timeZone: "UTC",
+      timeZone: "America/Chicago",
     });
     const timeStr = d.toLocaleTimeString("en-US", {
       hour: "numeric",
       minute: "2-digit",
       hour12: true,
+      timeZone: "America/Chicago",
     });
     return `${dateStr} ${timeStr}`;
   }
