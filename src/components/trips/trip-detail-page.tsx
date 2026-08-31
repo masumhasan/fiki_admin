@@ -44,6 +44,18 @@ function formatDate(dateVal?: string | Date): string {
   });
 }
 
+function formatTimeTo12Hour(timeStr?: string): string {
+  if (!timeStr) return "";
+  const match = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return timeStr;
+  let hours = parseInt(match[1], 10);
+  const minutes = match[2];
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  return `${hours}:${minutes} ${ampm}`;
+}
+
 function formatTime(dateVal?: string | Date): string {
   if (!dateVal) return "—";
   const d = new Date(dateVal);
@@ -252,13 +264,13 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
   const dropoffAddress =
     trip.dropoffLocation?.address || trip.returnDestinationAddress || "—";
   const pickupTimeStr = [
-    trip.pickupTime,
+    trip.pickupTime ? formatTimeTo12Hour(trip.pickupTime) : "",
     trip.pickupDate ? formatDate(trip.pickupDate) : formatDate(trip.createdAt),
   ]
     .filter(Boolean)
     .join(" · ");
   const dropoffMeta = trip.appointmentTime
-    ? `Appointment: ${trip.appointmentTime}`
+    ? `Appointment: ${formatTimeTo12Hour(trip.appointmentTime)}`
     : `Scheduled: ${formatDate(trip.scheduledTime || trip.createdAt)}`;
 
   const driverNotes =

@@ -62,6 +62,7 @@ export default function DashboardPage() {
                   ? new Date(t.createdAt).toLocaleTimeString([], {
                       hour: "2-digit",
                       minute: "2-digit",
+                      hour12: true,
                     })
                   : "Now",
                 "#2563eb",

@@ -42,6 +42,18 @@ function statusLabel(status: string): { text: string; color: string } {
   }
 }
 
+function formatTimeTo12Hour(timeStr?: string): string {
+  if (!timeStr) return "";
+  const match = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+  if (!match) return timeStr;
+  let hours = parseInt(match[1], 10);
+  const minutes = match[2];
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  return `${hours}:${minutes} ${ampm}`;
+}
+
 export default function RideRequestDetails({
   params,
 }: {
@@ -119,16 +131,19 @@ export default function RideRequestDetails({
   const currentDriverId = trip?.driverId?._id || trip?.driverId;
   const hasDriver = !!currentDriverId;
   const passengerPhone = trip?.passengerId?.phone || "—";
-  const passengerEmail = trip?.passengerId?.email || "—";
+  const rawPassengerEmail = trip?.passengerId?.email || "";
+  const passengerEmail = (rawPassengerEmail.startsWith("manual_") && rawPassengerEmail.endsWith("@fikitransit.com")) || !rawPassengerEmail
+    ? "No Emails"
+    : rawPassengerEmail;
   const pickup = trip?.pickupLocation?.address || "—";
   const dropoff = trip?.dropoffLocation?.address || "—";
   const status = trip?.status || "REQUESTED";
   const { text: statusText, color: statusColor } = statusLabel(status);
   const submittedAt = trip?.createdAt
-    ? new Date(trip.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })
+    ? new Date(trip.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true })
     : "—";
   const scheduledAt = trip?.scheduledTime
-    ? new Date(trip.scheduledTime).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit" })
+    ? new Date(trip.scheduledTime).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true })
     : "—";
 
   const isFareDecided =
@@ -153,8 +168,12 @@ export default function RideRequestDetails({
     ? new Date(endDateRaw).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
     : "—";
 
-  const pickupTimeStr = trip?.pickupTime || (trip?.scheduledTime ? new Date(trip.scheduledTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "—");
-  const returnPickupTimeStr = trip?.returnPickupTime || "—";
+  const pickupTimeStr = trip?.pickupTime
+    ? formatTimeTo12Hour(trip.pickupTime)
+    : (trip?.scheduledTime
+        ? new Date(trip.scheduledTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true })
+        : "—");
+  const returnPickupTimeStr = trip?.returnPickupTime ? formatTimeTo12Hour(trip.returnPickupTime) : "—";
   const recurringDaysList: string[] = Array.isArray(trip?.recurringDays) ? trip.recurringDays : [];
 
   const colorMap: Record<string, string> = {
@@ -428,7 +447,7 @@ export default function RideRequestDetails({
                     value={trip.privatePay ? "Private Pay" : (trip.insuranceName ? "Government Program" : "Government Program")}
                   />
                   <Label
-                    label="Broker / Insurance Name"
+                    label="Insurance Provider"
                     value={trip.insuranceName || "Medi-Cal"}
                   />
                   <Label
@@ -439,12 +458,6 @@ export default function RideRequestDetails({
                     label="Member ID"
                     value={trip.authNumber ? `ACB${id.slice(-8).toUpperCase()}` : "ACB123456789"}
                   />
-                  <div className="sm:col-span-2">
-                    <Label
-                      label="Insurance Provider"
-                      value={trip.insuranceName ? `${trip.insuranceName} (Medi-Cal Managed Care)` : "Anthem Blue Cross (Medi-Cal Managed Care)"}
-                    />
-                  </div>
                 </div>
               </article>
 
@@ -458,7 +471,14 @@ export default function RideRequestDetails({
                 <div className="grid gap-x-8 gap-y-4 p-5 sm:grid-cols-2">
                   <Label label="Full Name" value={trip.guardianName || passengerName || "Sarah Mitchell"} />
                   <Label label="Relationship to Rider" value={trip.relationshipToPassenger || trip.relationship || "Daughter"} />
-                  <Label label="Email Address" value={trip.guardianEmail || passengerEmail || "sarah.mitchell@email.com"} />
+                  <Label 
+                    label="Email Address" 
+                    value={
+                      (trip.guardianEmail && !(trip.guardianEmail.startsWith("manual_") && trip.guardianEmail.endsWith("@fikitransit.com")))
+                        ? trip.guardianEmail
+                        : "No Emails"
+                    } 
+                  />
                   <Label label="Phone Number" value={trip.guardianPhone || passengerPhone || "(916) 234-5678"} />
                 </div>
               </article>

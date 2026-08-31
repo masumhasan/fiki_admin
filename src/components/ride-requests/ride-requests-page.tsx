@@ -158,11 +158,13 @@ export function RideRequestsPage({ hideHeader }: { hideHeader?: boolean }) {
               ? new Date(t.scheduledTime).toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",
+                  hour12: true,
                 })
               : t.createdAt
                 ? new Date(t.createdAt).toLocaleTimeString([], {
                     hour: "2-digit",
                     minute: "2-digit",
+                    hour12: true,
                   })
                 : "—",
             recurring: recurringText || undefined,
