@@ -504,3 +504,42 @@ export async function updateDriverProfileApi(
     return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to update driver profile" } };
   }
 }
+
+export async function forgotPasswordApi(email: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+    });
+    return await res.json();
+  } catch {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to send reset code" } };
+  }
+}
+
+export async function verifyOtpApi(email: string, otp: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/verify-otp`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, otp }),
+    });
+    return await res.json();
+  } catch {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to verify code" } };
+  }
+}
+
+export async function resetPasswordApi(email: string, otp: string, newPassword: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, otp, newPassword }),
+    });
+    return await res.json();
+  } catch {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to reset password" } };
+  }
+}

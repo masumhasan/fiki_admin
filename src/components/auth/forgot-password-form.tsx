@@ -4,13 +4,28 @@ import { ArrowLeft, CheckCircle2, Mail } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 
+import { Loader2 } from "lucide-react";
+import { forgotPasswordApi } from "@/lib/api";
+
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSent(true);
+    setError("");
+    setLoading(true);
+
+    const res = await forgotPasswordApi(email);
+    setLoading(false);
+
+    if (res.success) {
+      setSent(true);
+    } else {
+      setError(res.error?.message || "Failed to send verification code");
+    }
   }
 
   if (sent) {
@@ -62,8 +77,13 @@ export function ForgotPasswordForm() {
           />
         </div>
       </div>
-      <button className={primaryButtonClass} type="submit">
-        Send verification code
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-3 text-xs font-semibold text-red-700">
+          {error}
+        </div>
+      )}
+      <button className={primaryButtonClass} disabled={loading} type="submit">
+        {loading ? <Loader2 className="size-4 animate-spin" /> : "Send verification code"}
       </button>
       <Link className={backLinkClass} href="/login">
         <ArrowLeft aria-hidden="true" className="size-3.5" /> Back to sign in
