@@ -776,7 +776,7 @@ export function SchedulePage() {
                         <small className="text-[10px] text-muted-foreground">{driver.id.slice(-8).toUpperCase()}</small>
                       </span>
                     </button>
-                    {driver.shifts.map((shiftItem: any, index: number) => (
+                    {(driver.shifts || []).map((shiftItem: any, index: number) => (
                       <ShiftCell key={displayDays[index]?.day || index} shift={shiftItem} />
                     ))}
                     <strong className="text-center text-xs">{driver.total}</strong>
