@@ -28,7 +28,6 @@ const navigation = [
   { label: "Rides", href: "/ride-requests", icon: ClipboardList },
   { label: "Schedule", href: "/schedule", icon: CalendarDays },
   { label: "Drivers", href: "/drivers", icon: UsersRound },
-  { label: "Shift Reports", href: "/vehicle-reports", icon: ClipboardList },
   { label: "Vehicles", href: "/vehicles", icon: CarFront },
   {
     label: "Payroll",
@@ -49,7 +48,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const pathname = usePathname();
   const currentPage = navigation.find(
-    (item) => pathname === item.href || pathname.startsWith(`${item.href}/`),
+    (item) => pathname === item.href || pathname.startsWith(`${item.href}/`) || (item.href === "/drivers" && pathname.startsWith("/vehicle-reports")),
   );
   const isTripDetail = /^\/trips\/[^/]+$/.test(pathname);
   const isDriverDetail = /^\/drivers\/[^/]+$/.test(pathname);
@@ -182,9 +181,9 @@ export function DashboardShell({ children }: { children: ReactNode }) {
                 <>
                   <Link
                     className="hidden font-medium text-brand-muted transition hover:text-primary sm:block"
-                    href="/vehicle-reports"
+                    href="/drivers?tab=reports"
                   >
-                    Vehicle reports
+                    Shift reports
                   </Link>
                   <span className="hidden text-brand-soft sm:block">/</span>
                   <span className="truncate font-bold text-primary">
@@ -336,7 +335,9 @@ function Sidebar({
         <div className="space-y-1.5">
           {navigation.map((item) => {
             const active =
-              pathname === item.href || pathname.startsWith(`${item.href}/`);
+              pathname === item.href ||
+              pathname.startsWith(`${item.href}/`) ||
+              (item.href === "/drivers" && pathname.startsWith("/vehicle-reports"));
             const Icon = item.icon;
             return (
               <Link

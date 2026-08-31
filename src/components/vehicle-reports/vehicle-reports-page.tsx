@@ -29,7 +29,7 @@ type Report = {
   status: ReportStatus;
 };
 
-export function VehicleReportsPage() {
+export function VehicleReportsPage({ hideHeader }: { hideHeader?: boolean } = {}) {
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"All" | ReportStatus>("All");
   const [reports, setReports] = useState<Report[]>([]);
@@ -95,10 +95,12 @@ export function VehicleReportsPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Shift reports"
-        description="Review driver-submitted shift and vehicle inspection reports."
-      />
+      {!hideHeader && (
+        <PageHeader
+          title="Shift reports"
+          description="Review driver-submitted shift and vehicle inspection reports."
+        />
+      )}
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Summary
           label="Total reports"

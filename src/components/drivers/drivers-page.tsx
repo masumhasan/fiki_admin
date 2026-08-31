@@ -49,7 +49,7 @@ type Driver = {
   rawLicenseExpirationDate: string;
 };
 
-export function DriversPage() {
+export function DriversPage({ hideHeader }: { hideHeader?: boolean } = {}) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"All" | DriverStatus>("All");
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -240,22 +240,24 @@ export function DriversPage() {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="Drivers"
-        description={
-          loading
-            ? "Loading drivers…"
-            : `${drivers.length} registered driver${drivers.length !== 1 ? "s" : ""}`
-        }
-        action={
-          <Link
-            className="flex h-9 items-center rounded-lg bg-primary px-4 text-xs font-bold text-primary-foreground hover:bg-[#0d2c58]"
-            href="/drivers/applications"
-          >
-            View new requests
-          </Link>
-        }
-      />
+      {!hideHeader && (
+        <PageHeader
+          title="Drivers"
+          description={
+            loading
+              ? "Loading drivers…"
+              : `${drivers.length} registered driver${drivers.length !== 1 ? "s" : ""}`
+          }
+          action={
+            <Link
+              className="flex h-9 items-center rounded-lg bg-primary px-4 text-xs font-bold text-primary-foreground hover:bg-[#0d2c58]"
+              href="/drivers/applications"
+            >
+              View new requests
+            </Link>
+          }
+        />
+      )}
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-5">
         <Summary
           label="Total drivers"
