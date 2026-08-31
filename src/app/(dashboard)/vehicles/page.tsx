@@ -29,6 +29,7 @@ interface VehicleItem {
   year: number;
   fleetId: string;
   status: string;
+  plateExpirationDate?: string;
   createdAt: string;
 }
 
@@ -37,6 +38,7 @@ export default function VehiclesPage() {
   const [numberPlate, setNumberPlate] = useState("");
   const [vinNumber, setVinNumber] = useState("");
   const [year, setYear] = useState("");
+  const [plateExpirationDate, setPlateExpirationDate] = useState("");
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
@@ -67,7 +69,7 @@ export default function VehiclesPage() {
     setErrorMsg("");
     setSuccessMsg("");
 
-    if (!modelName || !numberPlate || !vinNumber || !year) {
+    if (!modelName || !numberPlate || !vinNumber || !year || !plateExpirationDate) {
       setErrorMsg("All fields are required to proceed.");
       return;
     }
@@ -94,6 +96,7 @@ export default function VehiclesPage() {
             licensePlate: numberPlate,
             vin: vinNumber,
             year: yearNum,
+            plateExpirationDate,
           });
         } else {
           res = await createVehicleApi(token, {
@@ -101,6 +104,7 @@ export default function VehiclesPage() {
             licensePlate: numberPlate,
             vin: vinNumber,
             year: yearNum,
+            plateExpirationDate,
           });
         }
 
@@ -122,6 +126,7 @@ export default function VehiclesPage() {
     setNumberPlate(v.licensePlate);
     setVinNumber(v.vin);
     setYear(String(v.year));
+    setPlateExpirationDate(v.plateExpirationDate || "");
     setErrorMsg("");
     setSuccessMsg("");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -151,6 +156,7 @@ export default function VehiclesPage() {
     setNumberPlate("");
     setVinNumber("");
     setYear("");
+    setPlateExpirationDate("");
     setErrorMsg("");
     setSuccessMsg("");
   };
@@ -256,6 +262,20 @@ export default function VehiclesPage() {
               />
               <p className="mt-1.5 text-[11px] text-muted-foreground">
                 Enter the vehicle manufacturing year.
+              </p>
+            </div>
+
+            {/* Plate Expiration Date */}
+            <div>
+              <label className="block text-xs font-bold text-foreground">Plate Expiration Date</label>
+              <input
+                type="date"
+                className="mt-2 h-11 w-full rounded-xl border border-input bg-card px-4 text-sm outline-none placeholder:text-muted-foreground focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10"
+                value={plateExpirationDate}
+                onChange={(e) => setPlateExpirationDate(e.target.value)}
+              />
+              <p className="mt-1.5 text-[11px] text-muted-foreground">
+                Select plate expiration date.
               </p>
             </div>
           </div>
@@ -366,6 +386,23 @@ export default function VehiclesPage() {
                         year: "numeric",
                       })
                     : "11 Aug 2026"}
+                </dd>
+              </div>
+
+              <div>
+                <dt className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <Calendar className="size-3.5" />
+                  PLATE EXPIRATION
+                </dt>
+                <dd className="mt-1 font-bold text-foreground">
+                  {v.plateExpirationDate
+                    ? new Date(v.plateExpirationDate).toLocaleDateString("en-US", {
+                        day: "numeric",
+                        month: "short",
+                        year: "numeric",
+                        timeZone: "UTC",
+                      })
+                    : "—"}
                 </dd>
               </div>
             </dl>

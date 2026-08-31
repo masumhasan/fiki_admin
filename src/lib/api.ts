@@ -227,7 +227,7 @@ export async function getVehiclesApi(token: string) {
   }
 }
 
-export async function createVehicleApi(token: string, vehicleData: { modelName: string; licensePlate: string; vin: string; year: number }) {
+export async function createVehicleApi(token: string, vehicleData: { modelName: string; licensePlate: string; vin: string; year: number; plateExpirationDate: string }) {
   try {
     const res = await fetch(`${API_BASE_URL}/admin/vehicles`, {
       method: "POST",
@@ -243,7 +243,7 @@ export async function createVehicleApi(token: string, vehicleData: { modelName: 
   }
 }
 
-export async function updateVehicleApi(token: string, id: string, vehicleData: Partial<{ modelName: string; licensePlate: string; vin: string; year: number }>) {
+export async function updateVehicleApi(token: string, id: string, vehicleData: Partial<{ modelName: string; licensePlate: string; vin: string; year: number; plateExpirationDate: string }>) {
   try {
     const res = await fetch(`${API_BASE_URL}/admin/vehicles/${id}`, {
       method: "PUT",
