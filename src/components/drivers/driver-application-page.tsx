@@ -416,26 +416,6 @@ export function DriverApplicationPage({
             />
           </ReviewSection>
 
-          <ReviewSection icon={FileText} title="Uploaded documents">
-            <div className="grid gap-3 sm:grid-cols-2">
-              {documents.map(([name, status]) => {
-                let currentStatus = status;
-                let fileData = "";
-                if (name === "BID form") {
-                  currentStatus = liveApp?.bidForm ? "Verified" : "Missing";
-                  fileData = liveApp?.bidForm || "";
-                }
-                return (
-                  <DocumentCard
-                    key={name}
-                    name={name}
-                    status={currentStatus}
-                    fileData={fileData}
-                  />
-                );
-              })}
-            </div>
-          </ReviewSection>
           <ReviewSection icon={Signature} title="Digital signature">
             <div className="grid h-24 place-items-center rounded-xl border border-border bg-muted/45 p-2">
               {liveApp?.signature?.startsWith("data:image/") ? (
