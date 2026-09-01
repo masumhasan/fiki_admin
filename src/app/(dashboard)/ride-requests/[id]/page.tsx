@@ -185,18 +185,21 @@ export default function RideRequestDetails({
 
   useEffect(() => {
     if (trip) {
+      const pickupAddr = trip.pickupLocation?.address || trip.streetAddress || "";
+      const dropoffAddr = trip.dropoffLocation?.address || trip.destinationAddress || "";
+
       setTripInfoForm({
         tripType: trip.tripType || "one-way",
         schedule: trip.schedule || "one-time",
         startDate: trip.startDate || trip.pickupDate || "",
         endDate: trip.endDate || trip.returnDate || "",
         pickupTime: trip.pickupTime || "",
-        returnPickupTime: trip.returnPickupTime || "",
+        returnPickupTime: trip.returnPickupTime || "05:00 PM",
         recurringDays: Array.isArray(trip.recurringDays) ? [...trip.recurringDays] : [],
-        pickupAddress: trip.pickupLocation?.address || trip.streetAddress || "",
-        destinationAddress: trip.dropoffLocation?.address || trip.destinationAddress || "",
-        returnPickupAddress: trip.returnPickupAddress || "",
-        returnDestinationAddress: trip.returnDestinationAddress || "",
+        pickupAddress: pickupAddr,
+        destinationAddress: dropoffAddr,
+        returnPickupAddress: trip.returnPickupAddress || dropoffAddr,
+        returnDestinationAddress: trip.returnDestinationAddress || pickupAddr,
       });
 
       setMobilityForm({
