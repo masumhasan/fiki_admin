@@ -59,10 +59,11 @@ export default function DashboardPage() {
                 t.dropoffLocation?.address || "Dropoff Address",
                 statusStr,
                 t.createdAt
-                  ? new Date(t.createdAt).toLocaleTimeString([], {
+                  ? new Date(t.createdAt).toLocaleTimeString("en-US", {
                       hour: "2-digit",
                       minute: "2-digit",
                       hour12: true,
+                      timeZone: "America/Chicago",
                     })
                   : "Now",
                 "#2563eb",

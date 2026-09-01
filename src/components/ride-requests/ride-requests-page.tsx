@@ -162,25 +162,29 @@ export function RideRequestsPage({ hideHeader }: { hideHeader?: boolean }) {
                   month: "short",
                   day: "numeric",
                   year: "numeric",
+                  timeZone: "America/Chicago",
                 })
               : t.createdAt
                 ? new Date(t.createdAt).toLocaleDateString("en-US", {
                     month: "short",
                     day: "numeric",
                     year: "numeric",
+                    timeZone: "America/Chicago",
                   })
                 : "—",
             time: t.scheduledTime
-              ? new Date(t.scheduledTime).toLocaleTimeString([], {
+              ? new Date(t.scheduledTime).toLocaleTimeString("en-US", {
                   hour: "2-digit",
                   minute: "2-digit",
                   hour12: true,
+                  timeZone: "America/Chicago",
                 })
               : t.createdAt
-                ? new Date(t.createdAt).toLocaleTimeString([], {
+                ? new Date(t.createdAt).toLocaleTimeString("en-US", {
                     hour: "2-digit",
                     minute: "2-digit",
                     hour12: true,
+                    timeZone: "America/Chicago",
                   })
                 : "—",
             recurring: recurringText || undefined,

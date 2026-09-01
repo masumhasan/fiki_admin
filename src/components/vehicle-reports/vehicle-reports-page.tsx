@@ -63,7 +63,7 @@ export function VehicleReportsPage({ hideHeader }: { hideHeader?: boolean } = {}
               avatarUrl: r.driverAvatarUrl || r.avatarUrl || "",
               vehicle: r.vehicleName || [r.make, r.vehicleModel].filter(Boolean).join(" ") || "—",
               plate: r.vehicleNumber || r.licensePlate || "—",
-              date: r.shiftDateText || (r.createdAt ? new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "—"),
+              date: r.shiftDateText || (r.createdAt ? new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Chicago" }) : "—"),
               shift: r.shiftTimeText || r.shift || "—",
               distance: r.estimatedMiles != null ? `${r.estimatedMiles} mi` : (r.fuelLevelPercentage != null ? `${r.fuelLevelPercentage}% fuel` : "—"),
               status:

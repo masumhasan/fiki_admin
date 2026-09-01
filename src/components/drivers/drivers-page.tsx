@@ -768,6 +768,7 @@ export function ApplicationsTable() {
                   month: "short",
                   day: "numeric",
                   year: "numeric",
+                  timeZone: "America/Chicago",
                 })
               : "—",
             background:
@@ -781,6 +782,7 @@ export function ApplicationsTable() {
                   month: "short",
                   day: "numeric",
                   year: "numeric",
+                  timeZone: "America/Chicago",
                 })
               : "—",
             status:

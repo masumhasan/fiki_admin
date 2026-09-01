@@ -283,10 +283,10 @@ export default function RideRequestDetails({
   const status = trip?.status || "REQUESTED";
   const { text: statusText, color: statusColor } = statusLabel(status);
   const submittedAt = trip?.createdAt
-    ? new Date(trip.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true })
+    ? new Date(trip.createdAt).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "America/Chicago" })
     : "—";
   const scheduledAt = trip?.scheduledTime
-    ? new Date(trip.scheduledTime).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true })
+    ? new Date(trip.scheduledTime).toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "America/Chicago" })
     : "—";
 
   const isFareDecided =
@@ -303,18 +303,22 @@ export default function RideRequestDetails({
 
   const startDateRaw = trip?.startDate || trip?.pickupDate || trip?.recurringStartDate;
   const startDateStr = startDateRaw
-    ? new Date(startDateRaw).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    ? (/^\d{4}-\d{2}-\d{2}$/.test(String(startDateRaw).trim())
+        ? new Date(String(startDateRaw).trim() + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Chicago" })
+        : new Date(startDateRaw).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Chicago" }))
     : scheduledAt;
 
   const endDateRaw = trip?.endDate || trip?.returnDate || trip?.recurringEndDate;
   const endDateStr = endDateRaw
-    ? new Date(endDateRaw).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    ? (/^\d{4}-\d{2}-\d{2}$/.test(String(endDateRaw).trim())
+        ? new Date(String(endDateRaw).trim() + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Chicago" })
+        : new Date(endDateRaw).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Chicago" }))
     : "—";
 
   const pickupTimeStr = trip?.pickupTime
     ? formatTimeTo12Hour(trip.pickupTime)
     : (trip?.scheduledTime
-        ? new Date(trip.scheduledTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true })
+        ? new Date(trip.scheduledTime).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true, timeZone: "America/Chicago" })
         : "—");
   const rawReturnTime = trip?.returnPickupTime || trip?.recurringPickupTime || (isRoundTrip ? "05:00 PM" : "");
   const returnPickupTimeStr = rawReturnTime ? formatTimeTo12Hour(rawReturnTime) : "—";
@@ -329,7 +333,7 @@ export default function RideRequestDetails({
   };
 
   const submittedDateShort = trip?.createdAt
-    ? new Date(trip.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    ? new Date(trip.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Chicago" })
     : "Jul 12, 2026";
 
   const mobilityList = Array.isArray(trip?.mobilityOptions) && trip.mobilityOptions.length > 0

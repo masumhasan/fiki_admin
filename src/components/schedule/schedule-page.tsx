@@ -358,7 +358,7 @@ function OneTimeChangesTable({
                 </span>
                 {c.driverName}
               </td>
-              <td>{new Date(c.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" })}</td>
+              <td>{new Date(c.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Chicago" })}</td>
               <td>{c.working ? (c.startTime || "—") : <span className="text-muted-foreground">Day off</span>}</td>
               <td>{c.working ? (c.endTime || "—") : "—"}</td>
               <td>
@@ -558,7 +558,7 @@ export function SchedulePage() {
   }, []);
 
   const handleDeleteChange = async (change: OneTimeChange) => {
-    if (!window.confirm(`Delete this one-time change for ${change.driverName} on ${new Date(change.date).toLocaleDateString()}?`)) return;
+    if (!window.confirm(`Delete this one-time change for ${change.driverName} on ${new Date(change.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Chicago" })}?`)) return;
     const token = window.localStorage.getItem("fiki_auth_token") || "";
     const res = await deleteOneTimeChangeApi(token, change.driverId, change._id);
     if (res.success) {
@@ -652,7 +652,7 @@ export function SchedulePage() {
     : "8h 00m";
   const effectiveDateVal = selected?.effectiveDate
     ? (new Date(selected.effectiveDate).toString() !== "Invalid Date"
-        ? new Date(selected.effectiveDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+        ? new Date(selected.effectiveDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Chicago" })
         : selected.effectiveDate)
     : "Jun 30, 2026";
 

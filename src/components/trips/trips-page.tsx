@@ -106,6 +106,7 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
                 month: "short",
                 day: "numeric",
                 year: "numeric",
+                timeZone: "America/Chicago",
               })
             : (t.createdAt
                 ? new Date(t.createdAt).toLocaleDateString("en-US", {

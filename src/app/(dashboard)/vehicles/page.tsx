@@ -384,6 +384,7 @@ export default function VehiclesPage() {
                         day: "numeric",
                         month: "short",
                         year: "numeric",
+                        timeZone: "America/Chicago",
                       })
                     : "11 Aug 2026"}
                 </dd>
@@ -400,7 +401,7 @@ export default function VehiclesPage() {
                         day: "numeric",
                         month: "short",
                         year: "numeric",
-                        timeZone: "UTC",
+                        timeZone: "America/Chicago",
                       })
                     : "—"}
                 </dd>
