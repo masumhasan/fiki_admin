@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   CheckCircle2,
   ClipboardCheck,
+  DollarSign,
   FileCheck,
   FileText,
   LoaderCircle,
@@ -1054,6 +1055,25 @@ export default function RideRequestDetails({
             </main>
 
             <aside className="space-y-4">
+              <article className={`${card} p-4 space-y-3 border-blue-200 bg-blue-50/60 shadow-sm`}>
+                <div className="flex items-center gap-2 font-bold text-xs text-blue-900">
+                  <DollarSign className="size-4 text-blue-600" />
+                  Fare Quotation (Per Single Trip)
+                </div>
+                <p className="text-[11px] text-blue-800 leading-relaxed">
+                  {trip?.quotedFare
+                    ? `Current quoted fare: $${trip.quotedFare.toFixed(2)} per single trip leg.`
+                    : "Send a price quote to the passenger for a single trip leg."}
+                </p>
+                <Link
+                  href={`/ride-requests/${id}/quotation`}
+                  className="w-full flex items-center justify-center gap-1.5 rounded-lg bg-[#173d76] hover:bg-[#0d2c58] text-white font-bold text-xs py-2.5 shadow transition cursor-pointer"
+                >
+                  <DollarSign className="size-3.5" />
+                  {trip?.quotedFare ? "Update Fare Quote" : "Send Fare Quote"}
+                </Link>
+              </article>
+
               <article className={`${card} p-4 space-y-3 border-emerald-200 bg-emerald-50/50 shadow-sm`}>
                 <div className="flex items-center gap-2 font-bold text-xs text-emerald-900">
                   <RefreshCw className={`size-4 text-emerald-600 ${regenerating ? "animate-spin" : ""}`} />
@@ -1174,12 +1194,13 @@ export default function RideRequestDetails({
                 Request <strong className="text-[#173d76]">{id.slice(-8).toUpperCase()}</strong> — {statusText}
               </span>
               <div className="flex flex-wrap items-center gap-2">
-                {status === "REQUESTED" && (
+                {status !== "COMPLETED" && status !== "CANCELLED" && (
                   <Link
-                    className="rounded-lg bg-[#173d76] px-4 py-2 text-[11px] font-bold text-white transition hover:bg-[#173d76]/90"
+                    className="flex items-center gap-1.5 rounded-lg bg-[#173d76] px-4 py-2 text-[11px] font-bold text-white transition hover:bg-[#0d2c58] shadow cursor-pointer"
                     href={`/ride-requests/${id}/quotation`}
                   >
-                    Send Quotation
+                    <DollarSign className="size-3.5" />
+                    {trip?.quotedFare ? `Update Quote ($${trip.quotedFare.toFixed(2)}/trip)` : "Send Fare Quote (Per Trip)"}
                   </Link>
                 )}
                 {status === "QUOTE_COUNTERED" && (

@@ -35,7 +35,7 @@ export default function QuotationPage({
     const res = await sendQuoteApi(token, id, total, quoteNote || undefined);
     setSending(false);
     if (res.success) {
-      setNotice({ text: `Quotation of ${money(total)} sent to passenger for review.`, ok: true });
+      setNotice({ text: `Quotation of ${money(total)} per single trip sent to passenger for review.`, ok: true });
     } else {
       setNotice({ text: res.error?.message || "Failed to send quotation.", ok: false });
     }
@@ -48,15 +48,14 @@ export default function QuotationPage({
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold tracking-[-.03em] text-[#16345e]">
-                Create Quotation
+                Create Quotation (Per Single Trip)
               </h1>
               <span className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-[11px] font-bold text-amber-600">
                 Pending Review
               </span>
             </div>
             <p className="mt-1 max-w-2xl text-[13px] text-[#72829a]">
-              Review the ride request, calculate the transportation cost, and
-              send the quotation to the passenger.
+              Calculate transportation cost per single trip leg and send quotation to the passenger.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -76,7 +75,7 @@ export default function QuotationPage({
                   <DollarSign />
                 </span>
                 <h2 className="text-sm font-bold text-[#2a3b54]">
-                  Price Calculation
+                  Single Trip Fare Calculation
                 </h2>
               </div>
               <div className="grid gap-4 p-5 md:grid-cols-3">
@@ -89,7 +88,7 @@ export default function QuotationPage({
                 <div className="md:col-span-3 rounded-xl border border-[#cdddf6] bg-[#eef5ff] p-5">
                   <div className="flex items-center gap-2 text-blue-700">
                     <Tag className="size-5" />
-                    <strong className="text-sm">Pricing Summary</strong>
+                    <strong className="text-sm">Pricing Summary (Per Trip Leg)</strong>
                   </div>
                   <div className="mt-5 grid gap-3 text-sm text-[#71829b] md:grid-cols-2">
                     <div>
@@ -104,8 +103,8 @@ export default function QuotationPage({
                     </div>
                   </div>
                   <div className="mt-5 border-t border-blue-200 pt-4">
-                    <span className="text-sm font-bold uppercase tracking-wider text-blue-600">Total Amount</span>
-                    <strong className="mt-1 block text-4xl font-bold text-[#1b4296]">{money(total)}</strong>
+                    <span className="text-sm font-bold uppercase tracking-wider text-blue-600">Single Trip Fare</span>
+                    <strong className="mt-1 block text-4xl font-bold text-[#1b4296]">{money(total)} <span className="text-sm font-normal text-blue-600">/ trip</span></strong>
                   </div>
                 </div>
               </div>
