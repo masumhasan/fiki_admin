@@ -4,6 +4,8 @@ import {
   ArrowLeft,
   BarChart3,
   Check,
+  ChevronLeft,
+  ChevronRight,
   Clock3,
   Eye,
   Fuel,
@@ -23,6 +25,7 @@ type ShiftDetail = {
   driverName: string;
   driverEmail: string;
   driverPhone: string;
+  driverAvatarUrl?: string;
   driverCode: string;
   vehicleName: string;
   vehicleNumber: string;
@@ -42,6 +45,8 @@ type ShiftDetail = {
   endNotes: string;
   startPhotoUrl: string;
   endPhotoUrl: string;
+  startPhotoUrls?: string[];
+  endPhotoUrls?: string[];
   totalHoursText: string;
 };
 
@@ -63,7 +68,7 @@ const conditionMap: Record<string, string> = {
 export function ShiftReportPage({ reportId }: { reportId: string }) {
   const [data, setData] = useState<ShiftDetail | null>(null);
   const [loading, setLoading] = useState(true);
-  const [preview, setPreview] = useState<"start" | "end" | null>(null);
+  const [previewState, setPreviewState] = useState<{ kind: "start" | "end"; photoIdx: number } | null>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -92,8 +97,15 @@ export function ShiftReportPage({ reportId }: { reportId: string }) {
         .substring(0, 2)
     : "DR";
 
-  const previewPhotoUrl =
-    preview === "start" ? data?.startPhotoUrl : preview === "end" ? data?.endPhotoUrl : null;
+  const previewPhotos = previewState
+    ? previewState.kind === "start"
+      ? (data?.startPhotoUrls && data.startPhotoUrls.length > 0 ? data.startPhotoUrls : data?.startPhotoUrl ? [data.startPhotoUrl] : [])
+      : (data?.endPhotoUrls && data.endPhotoUrls.length > 0 ? data.endPhotoUrls : data?.endPhotoUrl ? [data.endPhotoUrl] : [])
+    : [];
+
+  const currentPreviewUrl = previewState && previewPhotos.length > 0
+    ? previewPhotos[Math.min(previewState.photoIdx, previewPhotos.length - 1)]
+    : null;
 
   return (
     <div className="space-y-6">
@@ -133,14 +145,24 @@ export function ShiftReportPage({ reportId }: { reportId: string }) {
           <section className="rounded-2xl border border-border bg-card p-5 shadow-[0_6px_22px_rgba(8,37,82,0.06)] sm:p-7">
             <div className="grid items-center gap-5 lg:grid-cols-[minmax(270px,1fr)_2fr]">
               <div className="flex items-center gap-4">
-                <span className="relative grid size-16 shrink-0 place-items-center rounded-full bg-primary text-lg font-bold text-primary-foreground ring-4 ring-secondary">
-                  <span>{initials}</span>
+                <div className="relative size-16 shrink-0">
+                  {data.driverAvatarUrl ? (
+                    <img
+                      src={data.driverAvatarUrl}
+                      alt={data.driverName}
+                      className="size-16 rounded-full object-cover ring-4 ring-secondary"
+                    />
+                  ) : (
+                    <span className="grid size-16 place-items-center rounded-full bg-primary text-lg font-bold text-primary-foreground ring-4 ring-secondary">
+                      {initials}
+                    </span>
+                  )}
                   <i
-                    className={`absolute bottom-0 right-0 size-3.5 rounded-full border-2 border-card ${
+                    className={`absolute bottom-0 right-0 size-4 rounded-full border-2 border-card ${
                       data.status === "Completed" ? "bg-emerald-500" : "bg-blue-500"
                     }`}
                   />
-                </span>
+                </div>
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="text-lg font-bold text-foreground">{data.driverName}</h2>
@@ -170,8 +192,8 @@ export function ShiftReportPage({ reportId }: { reportId: string }) {
           </section>
 
           <section className="grid items-start gap-5 xl:grid-cols-2">
-            <InspectionCard kind="start" data={data} onPreview={() => setPreview("start")} />
-            <InspectionCard kind="end" data={data} onPreview={() => setPreview("end")} />
+            <InspectionCard kind="start" data={data} onPreview={(idx) => setPreviewState({ kind: "start", photoIdx: idx })} />
+            <InspectionCard kind="end" data={data} onPreview={(idx) => setPreviewState({ kind: "end", photoIdx: idx })} />
           </section>
 
           <section className="rounded-2xl border border-border bg-card p-5 shadow-[0_6px_22px_rgba(8,37,82,0.06)] sm:p-6">
@@ -201,51 +223,114 @@ export function ShiftReportPage({ reportId }: { reportId: string }) {
         </div>
       )}
 
-      {preview && data ? (
+      {previewState && data ? (
         <div
-          className="fixed inset-0 z-50 grid place-items-center bg-primary/70 p-5 backdrop-blur-md"
+          className="fixed inset-0 z-50 grid place-items-center bg-primary/75 p-4 backdrop-blur-md animate-in fade-in duration-200"
           role="dialog"
           aria-modal="true"
-          aria-label={`${preview} odometer photo`}
+          aria-label={`${previewState.kind} shift photos modal`}
         >
           <button
             aria-label="Close image preview"
             className="absolute inset-0 cursor-default"
-            onClick={() => setPreview(null)}
+            onClick={() => setPreviewState(null)}
             type="button"
           />
-          <div className="relative z-10 w-full max-w-2xl overflow-hidden rounded-2xl bg-card p-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b pb-3">
-              <h3 className="text-sm font-bold text-foreground">
-                {preview === "start" ? "Starting" : "Ending"} Odometer Evidence Photo
-              </h3>
+          <div className="relative z-10 w-full max-w-3xl overflow-hidden rounded-2xl bg-card p-5 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-border pb-3">
+              <div>
+                <h3 className="text-sm font-bold text-foreground">
+                  {previewState.kind === "start" ? "Starting" : "Ending"} Vehicle & Odometer Photos
+                </h3>
+                {previewPhotos.length > 1 && (
+                  <p className="text-xs text-muted-foreground">
+                    Photo {previewState.photoIdx + 1} of {previewPhotos.length}
+                  </p>
+                )}
+              </div>
               <button
                 type="button"
-                onClick={() => setPreview(null)}
-                className="grid size-8 place-items-center rounded-lg hover:bg-muted text-muted-foreground hover:text-foreground"
+                onClick={() => setPreviewState(null)}
+                className="grid size-8 place-items-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               >
                 <X className="size-4" />
               </button>
             </div>
-            <div className="mt-3 flex aspect-video items-center justify-center overflow-hidden rounded-xl bg-slate-950 text-white">
-              {previewPhotoUrl ? (
+
+            <div className="relative mt-4 flex aspect-video items-center justify-center overflow-hidden rounded-xl bg-slate-950 text-white shadow-inner">
+              {currentPreviewUrl ? (
                 <img
-                  src={previewPhotoUrl}
-                  alt={`${preview} odometer evidence`}
+                  src={currentPreviewUrl}
+                  alt={`${previewState.kind} evidence photo ${previewState.photoIdx + 1}`}
                   className="max-h-full w-full object-contain"
                 />
               ) : (
-                <div className="text-center p-6">
+                <div className="p-6 text-center">
                   <Gauge className="mx-auto size-14 text-secondary" />
                   <p className="mt-4 font-mono text-3xl font-bold">
-                    {preview === "start" ? data.startingOdometer : data.endingOdometer || "—"} mi
+                    {previewState.kind === "start" ? data.startingOdometer : data.endingOdometer || "—"} mi
                   </p>
                   <p className="mt-2 text-xs text-white/60">
                     Odometer reading · {data.shiftDateText}
                   </p>
                 </div>
               )}
+
+              {previewPhotos.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPreviewState((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              photoIdx: prev.photoIdx > 0 ? prev.photoIdx - 1 : previewPhotos.length - 1,
+                            }
+                          : null
+                      )
+                    }
+                    className="absolute left-3 top-1/2 -translate-y-1/2 grid size-10 place-items-center rounded-full bg-slate-900/80 text-white shadow-lg backdrop-blur-sm transition-transform hover:scale-110 hover:bg-slate-900"
+                  >
+                    <ChevronLeft className="size-5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setPreviewState((prev) =>
+                        prev
+                          ? {
+                              ...prev,
+                              photoIdx: prev.photoIdx < previewPhotos.length - 1 ? prev.photoIdx + 1 : 0,
+                            }
+                          : null
+                      )
+                    }
+                    className="absolute right-3 top-1/2 -translate-y-1/2 grid size-10 place-items-center rounded-full bg-slate-900/80 text-white shadow-lg backdrop-blur-sm transition-transform hover:scale-110 hover:bg-slate-900"
+                  >
+                    <ChevronRight className="size-5" />
+                  </button>
+                </>
+              )}
             </div>
+
+            {/* Modal Thumbnail Strip */}
+            {previewPhotos.length > 1 && (
+              <div className="mt-3 flex items-center justify-center gap-2 overflow-x-auto py-1">
+                {previewPhotos.map((url, idx) => (
+                  <button
+                    key={`${url}-${idx}`}
+                    type="button"
+                    onClick={() => setPreviewState({ ...previewState, photoIdx: idx })}
+                    className={`relative aspect-video w-16 overflow-hidden rounded-lg border-2 transition-all ${
+                      idx === previewState.photoIdx ? "border-blue-600 ring-2 ring-blue-600/30" : "border-border opacity-60 hover:opacity-100"
+                    }`}
+                  >
+                    <img src={url} alt={`Thumbnail ${idx + 1}`} className="size-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       ) : null}
@@ -260,13 +345,21 @@ function InspectionCard({
 }: {
   kind: "start" | "end";
   data: ShiftDetail;
-  onPreview: () => void;
+  onPreview: (initialIdx: number) => void;
 }) {
   const start = kind === "start";
   const fuelValue = start ? data.startFuel : data.endFuel;
   const rawCondition = start ? data.startCondition : data.endCondition;
   const notes = start ? data.startNotes : data.endNotes;
-  const photoUrl = start ? data.startPhotoUrl : data.endPhotoUrl;
+  
+  const rawPhotoUrls = start ? data.startPhotoUrls : data.endPhotoUrls;
+  const singlePhotoUrl = start ? data.startPhotoUrl : data.endPhotoUrl;
+  const photoList = Array.isArray(rawPhotoUrls) && rawPhotoUrls.length > 0
+    ? rawPhotoUrls
+    : singlePhotoUrl ? [singlePhotoUrl] : [];
+
+  const [activePhotoIdx, setActivePhotoIdx] = useState(0);
+
   const odoValue = start
     ? `${data.startingOdometer.toLocaleString()} mi`
     : data.endingOdometer
@@ -275,6 +368,8 @@ function InspectionCard({
 
   const selectedFuelDisplay = fuelMap[fuelValue] || fuelValue || "1/2";
   const selectedCondDisplay = conditionMap[rawCondition] || rawCondition || "Good";
+
+  const currentPhotoUrl = photoList[Math.min(activePhotoIdx, photoList.length - 1)] || "";
 
   return (
     <article className="rounded-2xl border border-border bg-card p-5 shadow-[0_6px_22px_rgba(8,37,82,0.06)] sm:p-6">
@@ -345,21 +440,28 @@ function InspectionCard({
         </p>
       </div>
       <div className="mt-5">
-        <p className="mb-2 text-xs text-muted-foreground">
-          Odometer photo ({start ? "start" : "end"})
-        </p>
+        <div className="mb-2 flex items-center justify-between">
+          <p className="text-xs font-semibold text-muted-foreground">
+            Vehicle & Odometer photos ({start ? "start" : "end"})
+          </p>
+          {photoList.length > 1 && (
+            <span className="rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-bold text-foreground">
+              {activePhotoIdx + 1} / {photoList.length} photos
+            </span>
+          )}
+        </div>
         <div
-          className={`relative grid aspect-[16/7] place-items-center overflow-hidden rounded-2xl ${
+          className={`relative grid aspect-[16/8] place-items-center overflow-hidden rounded-2xl ${
             start
               ? "bg-[radial-gradient(circle_at_center,#334b6b,#0b2347)]"
               : "bg-[linear-gradient(180deg,#eef2f7,#9ca7b8)]"
           }`}
         >
-          {photoUrl ? (
+          {currentPhotoUrl ? (
             <img
-              src={photoUrl}
-              alt={`${start ? "Start" : "End"} odometer photo`}
-              className="h-full w-full object-cover"
+              src={currentPhotoUrl}
+              alt={`${start ? "Start" : "End"} vehicle photo ${activePhotoIdx + 1}`}
+              className="h-full w-full object-cover transition-all duration-300"
             />
           ) : (
             <div className="text-center text-white">
@@ -367,12 +469,53 @@ function InspectionCard({
               <p className="mt-2 font-mono text-xl font-bold">{odoValue}</p>
             </div>
           )}
+
+          {/* Carousel Arrows */}
+          {photoList.length > 1 && (
+            <>
+              <button
+                type="button"
+                onClick={() =>
+                  setActivePhotoIdx((prev) => (prev > 0 ? prev - 1 : photoList.length - 1))
+                }
+                className="absolute left-2.5 top-1/2 -translate-y-1/2 grid size-8 place-items-center rounded-full bg-slate-950/75 text-white shadow-md backdrop-blur-sm transition-transform hover:scale-110 hover:bg-slate-950"
+                title="Previous photo"
+              >
+                <ChevronLeft className="size-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setActivePhotoIdx((prev) => (prev < photoList.length - 1 ? prev + 1 : 0))
+                }
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 grid size-8 place-items-center rounded-full bg-slate-950/75 text-white shadow-md backdrop-blur-sm transition-transform hover:scale-110 hover:bg-slate-950"
+                title="Next photo"
+              >
+                <ChevronRight className="size-4" />
+              </button>
+
+              {/* Carousel Dot Indicators */}
+              <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-slate-950/60 px-2.5 py-1 backdrop-blur-sm">
+                {photoList.map((_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setActivePhotoIdx(i)}
+                    className={`size-2 rounded-full transition-all ${
+                      i === activePhotoIdx ? "w-4 bg-secondary" : "bg-white/60 hover:bg-white"
+                    }`}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+
           <button
-            className="absolute bottom-3 left-3 flex h-9 items-center gap-2 rounded-lg bg-card/90 px-4 text-xs font-bold text-primary shadow backdrop-blur-sm hover:bg-card"
-            onClick={onPreview}
+            className="absolute bottom-3 left-3 flex h-8 items-center gap-1.5 rounded-lg bg-card/90 px-3 text-xs font-bold text-primary shadow backdrop-blur-sm hover:bg-card"
+            onClick={() => onPreview(activePhotoIdx)}
             type="button"
           >
-            <Eye className="size-4" />
+            <Eye className="size-3.5" />
             View image
           </button>
         </div>
