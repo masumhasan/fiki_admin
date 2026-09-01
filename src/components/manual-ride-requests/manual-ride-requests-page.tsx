@@ -459,6 +459,9 @@ export default function ManualRideRequestsPage({
             </span>
             <h2 className="text-base font-bold text-[#172033]">Trip Details</h2>
           </div>
+          <div className="mb-4 rounded-xl border border-blue-200 bg-blue-50/80 p-3 text-xs text-blue-900 flex items-center gap-2">
+            <span className="font-semibold text-blue-950">🕒 Central Time Zone Notice:</span> All dates and pickup/return times are evaluated and scheduled in US Central Time (America/Chicago).
+          </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1.5 block text-xs font-semibold text-[#172033]">
