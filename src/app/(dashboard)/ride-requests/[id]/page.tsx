@@ -13,14 +13,16 @@ import {
   Route,
   Send,
   Shield,
+  Trash2,
   UserCheck,
   UserPlus,
   UserRound,
   X,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
-import { assignDriverApi, getAdminDriversApi, getAdminTripDetailApi, respondToCounterOfferApi } from "@/lib/api";
+import { assignDriverApi, deleteTripApi, getAdminDriversApi, getAdminTripDetailApi, respondToCounterOfferApi } from "@/lib/api";
 
 const card =
   "overflow-hidden rounded-xl border border-[#e1e6ee] bg-white shadow-[0_4px_14px_rgba(15,37,74,.04)]";
@@ -60,6 +62,7 @@ export default function RideRequestDetails({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const router = useRouter();
   const [trip, setTrip] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -67,6 +70,24 @@ export default function RideRequestDetails({
   const [selectedDriverId, setSelectedDriverId] = useState("");
   const [assigning, setAssigning] = useState(false);
   const [assignFeedback, setAssignFeedback] = useState<{ ok: boolean; text: string } | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteRequest = async () => {
+    if (!confirm("Are you sure you want to delete this ride request and all associated recurring trips? This action is permanent and will remove it from all financial accounting.")) {
+      return;
+    }
+    setDeleting(true);
+    const token = window.localStorage.getItem("fiki_auth_token");
+    if (token) {
+      const res = await deleteTripApi(token, id);
+      if (res.success) {
+        router.push("/ride-requests");
+      } else {
+        alert(res.error?.message || "Failed to delete ride request");
+        setDeleting(false);
+      }
+    }
+  };
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -211,12 +232,23 @@ export default function RideRequestDetails({
             driver assignment.
           </p>
         </div>
-        <Link
-          className="flex h-9 items-center gap-2 rounded-lg border border-[#dce4ed] bg-white px-3 text-xs font-semibold text-[#52647e] transition hover:border-[#173d76]/30 hover:bg-[#f3f6fa] hover:text-[#173d76]"
-          href="/ride-requests"
-        >
-          <ArrowLeft className="size-3.5" /> Back to Ride Requests
-        </Link>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={handleDeleteRequest}
+            disabled={deleting}
+            className="flex h-9 items-center gap-1.5 rounded-lg border border-red-200 bg-red-50 px-3 text-xs font-semibold text-red-600 transition hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
+          >
+            <Trash2 className="size-3.5" />
+            {deleting ? "Deleting..." : "Delete Request"}
+          </button>
+          <Link
+            className="flex h-9 items-center gap-2 rounded-lg border border-[#dce4ed] bg-white px-3 text-xs font-semibold text-[#52647e] transition hover:border-[#173d76]/30 hover:bg-[#f3f6fa] hover:text-[#173d76]"
+            href="/ride-requests"
+          >
+            <ArrowLeft className="size-3.5" /> Back to Ride Requests
+          </Link>
+        </div>
       </header>
 
       {loading ? (

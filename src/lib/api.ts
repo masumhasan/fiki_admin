@@ -138,6 +138,36 @@ export async function respondToCounterOfferApi(token: string, id: string, action
   }
 }
 
+export async function updateTripApi(token: string, id: string, data: any) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/trips/${id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to update trip" } };
+  }
+}
+
+export async function deleteTripApi(token: string, id: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/trips/${id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to delete trip" } };
+  }
+}
+
 export async function getAdminAnalyticsApi(token: string) {
   try {
     const res = await fetch(`${API_BASE_URL}/admin/analytics`, {

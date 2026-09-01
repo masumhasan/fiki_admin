@@ -12,17 +12,20 @@ import {
   type LucideIcon,
   MapPin,
   Printer,
+  Trash2,
   UserRoundCog,
   X,
   AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useState, useCallback } from "react";
 import {
   getAdminTripDetailApi,
   getAdminDriversApi,
   assignDriverApi,
   cancelTripAdminApi,
+  deleteTripApi,
 } from "@/lib/api";
 
 function getInitials(name: string): string {
@@ -184,6 +187,27 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
       alert("Network error while cancelling trip.");
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const router = useRouter();
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDeleteTrip = async () => {
+    if (!window.confirm("Are you sure you want to delete this trip and any associated recurring legs? This action is permanent and will remove it from all financial accounting.")) return;
+    setDeleting(true);
+    try {
+      const token = window.localStorage.getItem("fiki_auth_token") || "";
+      const res = await deleteTripApi(token, tripId);
+      if (res.success) {
+        router.push("/ride-requests?tab=trips");
+      } else {
+        alert(res.error?.message || "Failed to delete trip.");
+        setDeleting(false);
+      }
+    } catch {
+      alert("Network error while deleting trip.");
+      setDeleting(false);
     }
   };
 
@@ -443,17 +467,31 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
             onClick={handleOpenReassignModal}
           />
           <button
-            className="flex h-9 items-center justify-center gap-2 rounded-lg border border-red-400 px-3 text-xs font-bold text-red-500 transition hover:bg-red-50 disabled:opacity-50"
+            className="flex h-9 items-center justify-center gap-1.5 rounded-lg border border-red-400 px-3 text-xs font-bold text-red-500 transition hover:bg-red-50 disabled:opacity-50"
             disabled={isCancelled || isCompleted || cancelling}
             onClick={handleCancelTrip}
             type="button"
           >
             {cancelling ? (
-              <Loader2 className="size-4 animate-spin" />
+              <>
+                <Loader2 className="size-3.5 animate-spin" />
+                Cancelling...
+              </>
             ) : (
-              <X className="size-4" />
+              <>
+                <X className="size-3.5" />
+                Cancel trip
+              </>
             )}
-            {isCancelled ? "Ride cancelled" : "Cancel ride"}
+          </button>
+          <button
+            className="flex h-9 items-center justify-center gap-1.5 rounded-lg border border-red-300 bg-red-50 px-3 text-xs font-bold text-red-600 transition hover:bg-red-100 hover:text-red-700 disabled:opacity-50"
+            disabled={deleting}
+            onClick={handleDeleteTrip}
+            type="button"
+          >
+            <Trash2 className="size-3.5" />
+            {deleting ? "Deleting..." : "Delete trip"}
           </button>
         </div>
       </div>
