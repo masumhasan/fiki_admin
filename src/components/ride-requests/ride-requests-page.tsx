@@ -48,6 +48,7 @@ type RideRequest = {
   backendStatus?: string;
   quotedFare?: number;
   counterOffer?: number;
+  timestamp?: number;
 };
 
 const tabs = [
@@ -194,8 +195,11 @@ export function RideRequestsPage({ hideHeader }: { hideHeader?: boolean }) {
             backendStatus: t.status,
             quotedFare: t.quotedFare,
             counterOffer: t.counterOffer,
+            timestamp: new Date(t.createdAt || t.scheduledTime || t.startDate || 0).getTime(),
           };
         });
+
+        mapped.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
         setTrips(mapped);
       } else {
         setTrips([]);

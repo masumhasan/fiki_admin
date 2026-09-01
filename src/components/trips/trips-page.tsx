@@ -35,6 +35,7 @@ type Trip = {
   status: TripStatus;
   time: string;
   date: string;
+  timestamp?: number;
 };
 
 const filters = [
@@ -126,6 +127,16 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
                   })
                 : "—");
 
+          const dateValForSort = t.pickupDate || t.startDate || t.createdAt;
+          let timestamp = 0;
+          if (dateValForSort) {
+            const rawS = String(dateValForSort).trim();
+            const timeS = t.pickupTime || "00:00";
+            const fullIso = rawS.includes("T") ? rawS : `${rawS}T${timeS.length === 5 ? timeS : "00:00"}:00`;
+            const parsedD = new Date(fullIso);
+            timestamp = !isNaN(parsedD.getTime()) ? parsedD.getTime() : new Date(t.createdAt || 0).getTime();
+          }
+
           return {
             id: `TRP-${t._id.substring(t._id.length - 4).toUpperCase()}`,
             mongoId: t._id,
@@ -138,8 +149,11 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
             status: statusVal,
             time: timeStr,
             date: dateStr,
+            timestamp,
           };
         });
+
+        mapped.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
         setTrips(mapped);
       } else {
         setTrips([]);
