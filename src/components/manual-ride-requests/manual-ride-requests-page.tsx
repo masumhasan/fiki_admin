@@ -266,6 +266,15 @@ export default function ManualRideRequestsPage({
             returnDate: eDate,
             recurringStartDate: sDate,
             recurringEndDate: eDate,
+            returnPickupAddress: formData.tripType === "round-trip"
+              ? (formData.returnPickupAddress.trim() || formData.destinationAddress.trim())
+              : formData.returnPickupAddress,
+            returnDestinationAddress: formData.tripType === "round-trip"
+              ? (formData.returnDestinationAddress.trim() || formData.pickupAddress.trim())
+              : formData.returnDestinationAddress,
+            returnPickupTime: formData.tripType === "round-trip"
+              ? (formData.returnPickupTime.trim() || "05:00 PM")
+              : formData.returnPickupTime,
             fare: Number(formData.fare),
           };
 

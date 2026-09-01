@@ -130,6 +130,15 @@ export default function RideRequestDetails({
       ...tripInfoForm,
       pickupLocation: { address: tripInfoForm.pickupAddress },
       dropoffLocation: { address: tripInfoForm.destinationAddress },
+      returnPickupAddress: tripInfoForm.tripType === "round-trip"
+        ? (tripInfoForm.returnPickupAddress.trim() || tripInfoForm.destinationAddress.trim())
+        : tripInfoForm.returnPickupAddress,
+      returnDestinationAddress: tripInfoForm.tripType === "round-trip"
+        ? (tripInfoForm.returnDestinationAddress.trim() || tripInfoForm.pickupAddress.trim())
+        : tripInfoForm.returnDestinationAddress,
+      returnPickupTime: tripInfoForm.tripType === "round-trip"
+        ? (tripInfoForm.returnPickupTime.trim() || "05:00 PM")
+        : tripInfoForm.returnPickupTime,
     };
     const res = await updateTripApi(token, id, payload);
     if (res.success && res.data) {
