@@ -9,8 +9,11 @@ import {
   FileText,
   LoaderCircle,
   MapPin,
+  Pencil,
   PenTool,
+  RefreshCw,
   Route,
+  Save,
   Send,
   Shield,
   Trash2,
@@ -22,7 +25,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
-import { assignDriverApi, deleteTripApi, getAdminDriversApi, getAdminTripDetailApi, respondToCounterOfferApi } from "@/lib/api";
+import { assignDriverApi, deleteTripApi, getAdminDriversApi, getAdminTripDetailApi, regenerateTripsApi, respondToCounterOfferApi, updateTripApi } from "@/lib/api";
 
 const card =
   "overflow-hidden rounded-xl border border-[#e1e6ee] bg-white shadow-[0_4px_14px_rgba(15,37,74,.04)]";
@@ -72,6 +75,36 @@ export default function RideRequestDetails({
   const [assignFeedback, setAssignFeedback] = useState<{ ok: boolean; text: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Editing state for Trip Info
+  const [isEditingTripInfo, setIsEditingTripInfo] = useState(false);
+  const [savingTripInfo, setSavingTripInfo] = useState(false);
+  const [tripInfoForm, setTripInfoForm] = useState<any>({
+    tripType: "one-way",
+    schedule: "one-time",
+    startDate: "",
+    endDate: "",
+    pickupTime: "",
+    returnPickupTime: "",
+    recurringDays: [] as string[],
+    pickupAddress: "",
+    destinationAddress: "",
+    returnPickupAddress: "",
+    returnDestinationAddress: "",
+  });
+
+  // Editing state for Mobility & Special Needs
+  const [isEditingMobility, setIsEditingMobility] = useState(false);
+  const [savingMobility, setSavingMobility] = useState(false);
+  const [mobilityForm, setMobilityForm] = useState<any>({
+    mobilityOptions: [] as string[],
+    driverNotes: "",
+    specialInstructions: "",
+  });
+
+  // Regeneration state
+  const [regenerating, setRegenerating] = useState(false);
+  const [regenerateFeedback, setRegenerateFeedback] = useState<{ ok: boolean; text: string } | null>(null);
+
   const handleDeleteRequest = async () => {
     if (!confirm("Are you sure you want to delete this ride request and all associated recurring trips? This action is permanent and will remove it from all financial accounting.")) {
       return;
@@ -88,6 +121,82 @@ export default function RideRequestDetails({
       }
     }
   };
+
+  const handleSaveTripInfo = async () => {
+    const token = window.localStorage.getItem("fiki_auth_token");
+    if (!token) return;
+    setSavingTripInfo(true);
+    const payload = {
+      ...tripInfoForm,
+      pickupLocation: { address: tripInfoForm.pickupAddress },
+      dropoffLocation: { address: tripInfoForm.destinationAddress },
+    };
+    const res = await updateTripApi(token, id, payload);
+    if (res.success && res.data) {
+      setTrip(res.data);
+      setIsEditingTripInfo(false);
+    } else {
+      alert(res.error?.message || "Failed to update trip information");
+    }
+    setSavingTripInfo(false);
+  };
+
+  const handleSaveMobility = async () => {
+    const token = window.localStorage.getItem("fiki_auth_token");
+    if (!token) return;
+    setSavingMobility(true);
+    const res = await updateTripApi(token, id, mobilityForm);
+    if (res.success && res.data) {
+      setTrip(res.data);
+      setIsEditingMobility(false);
+    } else {
+      alert(res.error?.message || "Failed to update mobility & special needs");
+    }
+    setSavingMobility(false);
+  };
+
+  const handleRegenerateTrips = async () => {
+    if (!confirm("Regenerate future trips for this request based on the updated schedule and details?")) {
+      return;
+    }
+    const token = window.localStorage.getItem("fiki_auth_token");
+    if (!token) return;
+    setRegenerating(true);
+    setRegenerateFeedback(null);
+    const res = await regenerateTripsApi(token, id);
+    if (res.success) {
+      setRegenerateFeedback({ ok: true, text: res.message || "Future trips regenerated successfully!" });
+      const refreshed = await getAdminTripDetailApi(token, id);
+      if (refreshed.success && refreshed.data) setTrip(refreshed.data);
+    } else {
+      setRegenerateFeedback({ ok: false, text: res.error?.message || "Failed to regenerate trips" });
+    }
+    setRegenerating(false);
+  };
+
+  useEffect(() => {
+    if (trip) {
+      setTripInfoForm({
+        tripType: trip.tripType || "one-way",
+        schedule: trip.schedule || "one-time",
+        startDate: trip.startDate || trip.pickupDate || "",
+        endDate: trip.endDate || trip.returnDate || "",
+        pickupTime: trip.pickupTime || "",
+        returnPickupTime: trip.returnPickupTime || "",
+        recurringDays: Array.isArray(trip.recurringDays) ? [...trip.recurringDays] : [],
+        pickupAddress: trip.pickupLocation?.address || trip.streetAddress || "",
+        destinationAddress: trip.dropoffLocation?.address || trip.destinationAddress || "",
+        returnPickupAddress: trip.returnPickupAddress || "",
+        returnDestinationAddress: trip.returnDestinationAddress || "",
+      });
+
+      setMobilityForm({
+        mobilityOptions: Array.isArray(trip.mobilityOptions) ? [...trip.mobilityOptions] : [],
+        driverNotes: trip.driverNotes || "",
+        specialInstructions: trip.specialInstructions || trip.accessInformation || "",
+      });
+    }
+  }, [trip]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -327,83 +436,268 @@ export default function RideRequestDetails({
               </article>
 
               <article className={card}>
-                <CardHead icon={<Send />} title="Trip Information" subtitle="Schedule, route and destination details" />
+                <CardHead
+                  icon={<Send />}
+                  title="Trip Information"
+                  subtitle="Schedule, route and destination details"
+                  action={
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingTripInfo(!isEditingTripInfo)}
+                      className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 transition hover:bg-blue-100"
+                    >
+                      <Pencil className="size-3.5" />
+                      {isEditingTripInfo ? "Cancel" : "Edit"}
+                    </button>
+                  }
+                />
                 <div className="space-y-6 p-5">
-                  {/* Badges / Header Indicator */}
-                  <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 pb-4">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5] mr-2">
-                      Trip Type:
-                    </span>
-                    <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
-                      {isRecurring ? "Recurring Trip" : isRoundTrip ? "Round Trip" : "One-Way Trip"}
-                    </span>
-                    <span className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
-                      Schedule: {isRecurring ? "Recurring" : "One-Time"}
-                    </span>
-                  </div>
+                  {isEditingTripInfo ? (
+                    <div className="space-y-5">
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div>
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">Trip Type</label>
+                          <select
+                            value={tripInfoForm.tripType}
+                            onChange={(e) => setTripInfoForm({ ...tripInfoForm, tripType: e.target.value })}
+                            className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-[#173d76]"
+                          >
+                            <option value="one-way">One-Way</option>
+                            <option value="round-trip">Round-Trip</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">Schedule Type</label>
+                          <select
+                            value={tripInfoForm.schedule}
+                            onChange={(e) => setTripInfoForm({ ...tripInfoForm, schedule: e.target.value })}
+                            className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-[#173d76]"
+                          >
+                            <option value="one-time">One-Time</option>
+                            <option value="recurring">Recurring</option>
+                          </select>
+                        </div>
+                      </div>
 
-                  {/* Dates & Times Grid */}
-                  <div>
-                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5] mb-3">
-                      Schedule & Date Details
-                    </h4>
-                    <div className="grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
-                      <Label label="Start Date" value={startDateStr} />
-                      {(isRoundTrip || isRecurring || endDateStr !== "—") && (
-                        <Label label="End Date" value={endDateStr} />
-                      )}
-                      <Label label="Pickup Time" value={pickupTimeStr} />
-                      {isRoundTrip && (
-                        <Label label="Return Pickup Time" value={returnPickupTimeStr} />
-                      )}
-                      {isRecurring && (
-                        <div className="sm:col-span-2">
-                          <p className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">
-                            Recurring Days
-                          </p>
-                          <div className="mt-1.5 flex flex-wrap gap-1.5">
-                            {recurringDaysList.length > 0 ? (
-                              recurringDaysList.map((day: string) => (
-                                <span key={day} className="rounded-md bg-blue-100/70 border border-blue-200 px-2.5 py-0.5 text-xs font-semibold text-blue-800">
-                                  {day}
-                                </span>
-                              ))
-                            ) : (
-                              <span className="text-xs text-muted-foreground">—</span>
-                            )}
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                        <div>
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">Start Date</label>
+                          <input
+                            type="date"
+                            value={tripInfoForm.startDate}
+                            onChange={(e) => setTripInfoForm({ ...tripInfoForm, startDate: e.target.value })}
+                            className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-[#173d76]"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">End Date</label>
+                          <input
+                            type="date"
+                            value={tripInfoForm.endDate}
+                            onChange={(e) => setTripInfoForm({ ...tripInfoForm, endDate: e.target.value })}
+                            className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-[#173d76]"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">Pickup Time</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. 08:30 AM"
+                            value={tripInfoForm.pickupTime}
+                            onChange={(e) => setTripInfoForm({ ...tripInfoForm, pickupTime: e.target.value })}
+                            className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-[#173d76]"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">Return Pickup Time</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. 05:00 PM"
+                            value={tripInfoForm.returnPickupTime}
+                            onChange={(e) => setTripInfoForm({ ...tripInfoForm, returnPickupTime: e.target.value })}
+                            className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-[#173d76]"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">Recurring Days</label>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day) => {
+                            const checked = tripInfoForm.recurringDays.includes(day);
+                            return (
+                              <label
+                                key={day}
+                                className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+                                  checked
+                                    ? "border-blue-500 bg-blue-50 text-blue-800"
+                                    : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setTripInfoForm({ ...tripInfoForm, recurringDays: [...tripInfoForm.recurringDays, day] });
+                                    } else {
+                                      setTripInfoForm({
+                                        ...tripInfoForm,
+                                        recurringDays: tripInfoForm.recurringDays.filter((d: string) => d !== day),
+                                      });
+                                    }
+                                  }}
+                                  className="sr-only"
+                                />
+                                {day}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="grid gap-4 md:grid-cols-2">
+                        <div>
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">Pickup Address</label>
+                          <input
+                            type="text"
+                            value={tripInfoForm.pickupAddress}
+                            onChange={(e) => setTripInfoForm({ ...tripInfoForm, pickupAddress: e.target.value })}
+                            className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-[#173d76]"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">Destination Address</label>
+                          <input
+                            type="text"
+                            value={tripInfoForm.destinationAddress}
+                            onChange={(e) => setTripInfoForm({ ...tripInfoForm, destinationAddress: e.target.value })}
+                            className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-[#173d76]"
+                          />
+                        </div>
+                      </div>
+
+                      {tripInfoForm.tripType === "round-trip" && (
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <div>
+                            <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">Return Pickup Address</label>
+                            <input
+                              type="text"
+                              value={tripInfoForm.returnPickupAddress}
+                              onChange={(e) => setTripInfoForm({ ...tripInfoForm, returnPickupAddress: e.target.value })}
+                              className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-[#173d76]"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">Return Destination Address</label>
+                            <input
+                              type="text"
+                              value={tripInfoForm.returnDestinationAddress}
+                              onChange={(e) => setTripInfoForm({ ...tripInfoForm, returnDestinationAddress: e.target.value })}
+                              className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-[#173d76]"
+                            />
                           </div>
                         </div>
                       )}
-                      <Label label="Assigned Driver" value={trip.driverId?.name || "Not assigned"} />
-                    </div>
-                  </div>
 
-                  {/* Outbound Route Details */}
-                  <div className="border-t border-slate-100 pt-4">
-                    <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5] mb-3">
-                      {isRoundTrip ? "Outbound Route Details" : "Route Details"}
-                    </h4>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <Label label="Pickup Address" value={pickup} />
-                      <Label label="Destination Address" value={dropoff} />
-                    </div>
-                    <div className="mt-3 grid gap-3 md:grid-cols-2">
-                      <MapBox label="Pickup Address" address={pickup} />
-                      <MapBox label="Destination Address" address={dropoff} />
-                    </div>
-                  </div>
-
-                  {/* Return Route Details (when Round Trip) */}
-                  {isRoundTrip && (
-                    <div className="border-t border-slate-100 pt-4">
-                      <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5] mb-3">
-                        Return Route Details
-                      </h4>
-                      <div className="grid gap-4 md:grid-cols-2">
-                        <Label label="Return Pickup Address" value={trip.returnPickupAddress || dropoff} />
-                        <Label label="Return Destination Address" value={trip.returnDestinationAddress || pickup} />
+                      <div className="flex items-center gap-2 border-t pt-4">
+                        <button
+                          type="button"
+                          onClick={handleSaveTripInfo}
+                          disabled={savingTripInfo}
+                          className="flex h-9 items-center gap-1.5 rounded-lg bg-[#173d76] px-4 text-xs font-bold text-white shadow hover:bg-[#0d2c58] disabled:opacity-50"
+                        >
+                          <Save className="size-3.5" />
+                          {savingTripInfo ? "Saving..." : "Save Trip Info"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingTripInfo(false)}
+                          className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                        >
+                          Cancel
+                        </button>
                       </div>
                     </div>
+                  ) : (
+                    <>
+                      {/* Badges / Header Indicator */}
+                      <div className="flex flex-wrap items-center gap-2 border-b border-slate-100 pb-4">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5] mr-2">
+                          Trip Type:
+                        </span>
+                        <span className="rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700">
+                          {isRecurring ? "Recurring Trip" : isRoundTrip ? "Round Trip" : "One-Way Trip"}
+                        </span>
+                        <span className="rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                          Schedule: {isRecurring ? "Recurring" : "One-Time"}
+                        </span>
+                      </div>
+
+                      {/* Dates & Times Grid */}
+                      <div>
+                        <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5] mb-3">
+                          Schedule & Date Details
+                        </h4>
+                        <div className="grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+                          <Label label="Start Date" value={startDateStr} />
+                          {(isRoundTrip || isRecurring || endDateStr !== "—") && (
+                            <Label label="End Date" value={endDateStr} />
+                          )}
+                          <Label label="Pickup Time" value={pickupTimeStr} />
+                          {isRoundTrip && (
+                            <Label label="Return Pickup Time" value={returnPickupTimeStr} />
+                          )}
+                          {isRecurring && (
+                            <div className="sm:col-span-2">
+                              <p className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">
+                                Recurring Days
+                              </p>
+                              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                                {recurringDaysList.length > 0 ? (
+                                  recurringDaysList.map((day: string) => (
+                                    <span key={day} className="rounded-md bg-blue-100/70 border border-blue-200 px-2.5 py-0.5 text-xs font-semibold text-blue-800">
+                                      {day}
+                                    </span>
+                                  ))
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">—</span>
+                                )}
+                              </div>
+                            </div>
+                          )}
+                          <Label label="Assigned Driver" value={trip.driverId?.name || "Not assigned"} />
+                        </div>
+                      </div>
+
+                      {/* Outbound Route Details */}
+                      <div className="border-t border-slate-100 pt-4">
+                        <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5] mb-3">
+                          {isRoundTrip ? "Outbound Route Details" : "Route Details"}
+                        </h4>
+                        <div className="grid gap-4 md:grid-cols-2">
+                          <Label label="Pickup Address" value={pickup} />
+                          <Label label="Destination Address" value={dropoff} />
+                        </div>
+                        <div className="mt-3 grid gap-3 md:grid-cols-2">
+                          <MapBox label="Pickup Address" address={pickup} />
+                          <MapBox label="Destination Address" address={dropoff} />
+                        </div>
+                      </div>
+
+                      {/* Return Route Details (when Round Trip) */}
+                      {isRoundTrip && (
+                        <div className="border-t border-slate-100 pt-4">
+                          <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5] mb-3">
+                            Return Route Details
+                          </h4>
+                          <div className="grid gap-4 md:grid-cols-2">
+                            <Label label="Return Pickup Address" value={trip.returnPickupAddress || dropoff} />
+                            <Label label="Return Destination Address" value={trip.returnDestinationAddress || pickup} />
+                          </div>
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </article>
@@ -428,41 +722,141 @@ export default function RideRequestDetails({
                   icon={<Accessibility />}
                   title="Mobility & Special Needs"
                   subtitle="Accessibility requirements and driver instructions"
+                  action={
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingMobility(!isEditingMobility)}
+                      className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 transition hover:bg-blue-100"
+                    >
+                      <Pencil className="size-3.5" />
+                      {isEditingMobility ? "Cancel" : "Edit"}
+                    </button>
+                  }
                 />
                 <div className="space-y-4 p-5">
-                  <div>
-                    <p className="text-[10px] font-bold uppercase tracking-wider text-[#8190a5]">
-                      Selected Accommodations
-                    </p>
-                    <div className="mt-2.5 flex flex-wrap gap-2">
-                      {mobilityList.map((opt: string) => (
-                        <span
-                          key={opt}
-                          className="rounded-full border border-blue-200/80 bg-blue-50 px-3.5 py-1 text-xs font-semibold text-blue-700 shadow-2xs"
+                  {isEditingMobility ? (
+                    <div className="space-y-4">
+                      <div>
+                        <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">Mobility Accommodations</label>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          {[
+                            ["wheelchair", "Wheelchair"],
+                            ["transfer_wheelchair", "Transfer Wheelchair"],
+                            ["stretcher", "Stretcher"],
+                            ["hand_to_hand", "Hand-to-Hand"],
+                            ["personal_care_attendant", "Personal Care Attendant"],
+                            ["ambulatory", "Standard / Ambulatory"],
+                          ].map(([val, label]) => {
+                            const checked = mobilityForm.mobilityOptions.includes(val);
+                            return (
+                              <label
+                                key={val}
+                                className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition ${
+                                  checked
+                                    ? "border-blue-500 bg-blue-50 text-blue-800"
+                                    : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={checked}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setMobilityForm({ ...mobilityForm, mobilityOptions: [...mobilityForm.mobilityOptions, val] });
+                                    } else {
+                                      setMobilityForm({
+                                        ...mobilityForm,
+                                        mobilityOptions: mobilityForm.mobilityOptions.filter((o: string) => o !== val),
+                                      });
+                                    }
+                                  }}
+                                  className="sr-only"
+                                />
+                                {label}
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">Additional Driver Notes</label>
+                        <textarea
+                          rows={3}
+                          value={mobilityForm.driverNotes}
+                          onChange={(e) => setMobilityForm({ ...mobilityForm, driverNotes: e.target.value })}
+                          placeholder="Enter driver notes..."
+                          className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white p-3 text-xs font-medium text-slate-800 outline-none focus:border-[#173d76]"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">Special Instructions</label>
+                        <textarea
+                          rows={3}
+                          value={mobilityForm.specialInstructions}
+                          onChange={(e) => setMobilityForm({ ...mobilityForm, specialInstructions: e.target.value })}
+                          placeholder="Enter special instructions..."
+                          className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white p-3 text-xs font-medium text-slate-800 outline-none focus:border-[#173d76]"
+                        />
+                      </div>
+
+                      <div className="flex items-center gap-2 border-t pt-4">
+                        <button
+                          type="button"
+                          onClick={handleSaveMobility}
+                          disabled={savingMobility}
+                          className="flex h-9 items-center gap-1.5 rounded-lg bg-[#173d76] px-4 text-xs font-bold text-white shadow hover:bg-[#0d2c58] disabled:opacity-50"
                         >
-                          {formatMobilityLabel(opt)}
-                        </span>
-                      ))}
+                          <Save className="size-3.5" />
+                          {savingMobility ? "Saving..." : "Save Mobility Info"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingMobility(false)}
+                          className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
                     </div>
-                  </div>
+                  ) : (
+                    <>
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-[#8190a5]">
+                          Selected Accommodations
+                        </p>
+                        <div className="mt-2.5 flex flex-wrap gap-2">
+                          {mobilityList.map((opt: string) => (
+                            <span
+                              key={opt}
+                              className="rounded-full border border-blue-200/80 bg-blue-50 px-3.5 py-1 text-xs font-semibold text-blue-700 shadow-2xs"
+                            >
+                              {formatMobilityLabel(opt)}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
 
-                  <div className="rounded-xl border border-amber-200/90 bg-amber-50/80 p-4">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
-                      Additional driver notes
-                    </p>
-                    <p className={`mt-1 text-xs leading-relaxed ${trip?.driverNotes?.trim() ? "font-medium text-amber-950" : "font-semibold text-amber-700/80 italic"}`}>
-                      {driverNotesText}
-                    </p>
-                  </div>
+                      <div className="rounded-xl border border-amber-200/90 bg-amber-50/80 p-4">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
+                          Additional driver notes
+                        </p>
+                        <p className={`mt-1 text-xs leading-relaxed ${trip?.driverNotes?.trim() ? "font-medium text-amber-950" : "font-semibold text-amber-700/80 italic"}`}>
+                          {driverNotesText}
+                        </p>
+                      </div>
 
-                  <div className="rounded-xl border border-blue-100 bg-[#f4f7fc] p-4">
-                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
-                      Special instructions
-                    </p>
-                    <p className={`mt-1 text-xs leading-relaxed ${(trip?.specialInstructions || trip?.accessInformation)?.trim() ? "font-medium text-slate-800" : "font-semibold text-slate-500 italic"}`}>
-                      {specialInstructionsText}
-                    </p>
-                  </div>
+                      <div className="rounded-xl border border-blue-100 bg-[#f4f7fc] p-4">
+                        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
+                          Special instructions
+                        </p>
+                        <p className={`mt-1 text-xs leading-relaxed ${(trip?.specialInstructions || trip?.accessInformation)?.trim() ? "font-medium text-slate-800" : "font-semibold text-slate-500 italic"}`}>
+                          {specialInstructionsText}
+                        </p>
+                      </div>
+                    </>
+                  )}
                 </div>
               </article>
 
@@ -647,6 +1041,30 @@ export default function RideRequestDetails({
             </main>
 
             <aside className="space-y-4">
+              <article className={`${card} p-4 space-y-3 border-emerald-200 bg-emerald-50/50 shadow-sm`}>
+                <div className="flex items-center gap-2 font-bold text-xs text-emerald-900">
+                  <RefreshCw className={`size-4 text-emerald-600 ${regenerating ? "animate-spin" : ""}`} />
+                  Trip Regeneration
+                </div>
+                <p className="text-[11px] text-emerald-800 leading-relaxed">
+                  After editing dates, times, route, or recurring days, regenerate all future trips to apply changes across driver schedules.
+                </p>
+                {regenerateFeedback && (
+                  <p className={`text-[11px] font-semibold ${regenerateFeedback.ok ? "text-emerald-700" : "text-red-600"}`}>
+                    {regenerateFeedback.text}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  onClick={handleRegenerateTrips}
+                  disabled={regenerating}
+                  className="w-full flex items-center justify-center gap-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white font-bold text-xs py-2.5 shadow transition cursor-pointer"
+                >
+                  <RefreshCw className={`size-3.5 ${regenerating ? "animate-spin" : ""}`} />
+                  {regenerating ? "Regenerating..." : "Regenerate Future Trips"}
+                </button>
+              </article>
+
               <article className={card}>
                 <div className="bg-[#173d76] px-4 py-3 text-sm font-bold text-white">Quick Summary</div>
                 <div className="space-y-3 p-4">
@@ -803,14 +1221,17 @@ export default function RideRequestDetails({
   );
 }
 
-function CardHead({ icon, title, subtitle }: { icon: React.ReactNode; title: string; subtitle: string }) {
+function CardHead({ icon, title, subtitle, action }: { icon: React.ReactNode; title: string; subtitle: string; action?: React.ReactNode }) {
   return (
-    <header className="flex items-center gap-2 border-b px-4 py-3">
-      <span className="grid size-6 place-items-center rounded-full bg-[#edf2fb] text-[#365382] [&_svg]:size-3.5">{icon}</span>
-      <div>
-        <h2 className="text-sm font-bold text-[#2a3b54]">{title}</h2>
-        <p className="text-[11px] text-[#8a97aa]">{subtitle}</p>
+    <header className="flex items-center justify-between border-b px-4 py-3">
+      <div className="flex items-center gap-2">
+        <span className="grid size-6 place-items-center rounded-full bg-[#edf2fb] text-[#365382] [&_svg]:size-3.5">{icon}</span>
+        <div>
+          <h2 className="text-sm font-bold text-[#2a3b54]">{title}</h2>
+          <p className="text-[11px] text-[#8a97aa]">{subtitle}</p>
+        </div>
       </div>
+      {action}
     </header>
   );
 }

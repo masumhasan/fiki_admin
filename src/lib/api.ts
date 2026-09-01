@@ -168,6 +168,20 @@ export async function deleteTripApi(token: string, id: string) {
   }
 }
 
+export async function regenerateTripsApi(token: string, id: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/trips/${id}/regenerate`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to regenerate trips" } };
+  }
+}
+
 export async function getAdminAnalyticsApi(token: string) {
   try {
     const res = await fetch(`${API_BASE_URL}/admin/analytics`, {
