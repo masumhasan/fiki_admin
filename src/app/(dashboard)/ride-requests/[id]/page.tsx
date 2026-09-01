@@ -190,10 +190,14 @@ export default function RideRequestDetails({
 
   const mobilityList = Array.isArray(trip?.mobilityOptions) && trip.mobilityOptions.length > 0
     ? trip.mobilityOptions
-    : ["wheelchair", "wheelchair_securement", "personal_care_attendant", "transfer_wheelchair"];
+    : ["standard"];
 
-  const driverNotesText = trip?.driverNotes || "Passenger requires full transfer assistance. Please ensure hydraulic lift-equipped vehicle. Driver must confirm pickup at door.";
-  const specialInstructionsText = trip?.specialInstructions || trip?.accessInformation || "Patient has limited upper body mobility. Needs assistance with seat belt.";
+  const driverNotesText = trip?.driverNotes?.trim()
+    ? trip.driverNotes.trim()
+    : "No Additional driver notes";
+  const specialInstructionsText = (trip?.specialInstructions || trip?.accessInformation)?.trim()
+    ? (trip.specialInstructions || trip.accessInformation).trim()
+    : "No Special instructions";
 
   return (
     <div className="pb-20">
@@ -410,27 +414,23 @@ export default function RideRequestDetails({
                     </div>
                   </div>
 
-                  {driverNotesText && (
-                    <div className="rounded-xl border border-amber-200/90 bg-amber-50/80 p-4">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
-                        Additional driver notes
-                      </p>
-                      <p className="mt-1 text-xs font-medium text-amber-950 leading-relaxed">
-                        {driverNotesText}
-                      </p>
-                    </div>
-                  )}
+                  <div className="rounded-xl border border-amber-200/90 bg-amber-50/80 p-4">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
+                      Additional driver notes
+                    </p>
+                    <p className={`mt-1 text-xs leading-relaxed ${trip?.driverNotes?.trim() ? "font-medium text-amber-950" : "font-semibold text-amber-700/80 italic"}`}>
+                      {driverNotesText}
+                    </p>
+                  </div>
 
-                  {specialInstructionsText && (
-                    <div className="rounded-xl border border-blue-100 bg-[#f4f7fc] p-4">
-                      <p className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
-                        Special instructions
-                      </p>
-                      <p className="mt-1 text-xs font-medium text-slate-800 leading-relaxed">
-                        {specialInstructionsText}
-                      </p>
-                    </div>
-                  )}
+                  <div className="rounded-xl border border-blue-100 bg-[#f4f7fc] p-4">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-slate-700">
+                      Special instructions
+                    </p>
+                    <p className={`mt-1 text-xs leading-relaxed ${(trip?.specialInstructions || trip?.accessInformation)?.trim() ? "font-medium text-slate-800" : "font-semibold text-slate-500 italic"}`}>
+                      {specialInstructionsText}
+                    </p>
+                  </div>
                 </div>
               </article>
 

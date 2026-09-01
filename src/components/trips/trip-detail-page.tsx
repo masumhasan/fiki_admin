@@ -274,12 +274,11 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
     : `Scheduled: ${formatDate(trip.scheduledTime || trip.createdAt)}`;
 
   const driverNotes =
-    trip.driverNotes ||
-    "Passenger requires standard transit assistance. Vehicle is clean and prepped.";
+    trip.driverNotes?.trim() ||
+    "No Additional driver notes";
   const customerNotes =
-    trip.specialInstructions ||
-    trip.accessInformation ||
-    "Standard pick-up request. Please call driver on arrival.";
+    (trip.specialInstructions || trip.accessInformation)?.trim() ||
+    "No Special instructions";
 
   const statusBadge = getStatusBadge(trip.status);
   const isCancelled = trip.status === "CANCELLED";
