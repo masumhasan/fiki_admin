@@ -8,6 +8,7 @@ import {
   Loader2,
   Repeat2,
   Search,
+  Trash2,
   UserPlus,
   X,
 } from "lucide-react";
@@ -18,6 +19,7 @@ import {
   getAdminTripsApi,
   getAdminDriversApi,
   assignDriverApi,
+  deleteTripApi,
 } from "@/lib/api";
 
 type RequestStatus =
@@ -66,6 +68,20 @@ export function RideRequestsPage({ hideHeader }: { hideHeader?: boolean }) {
   const [availableDrivers, setAvailableDrivers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const handleDeleteRequest = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this ride request and all associated recurring trips? This action is permanent.")) {
+      return;
+    }
+    const token = window.localStorage.getItem("fiki_auth_token");
+    if (!token) return;
+    const res = await deleteTripApi(token, id);
+    if (res.success) {
+      fetchTripsAndDrivers();
+    } else {
+      alert(res.error?.message || "Failed to delete ride request");
+    }
+  };
+
   const fetchTripsAndDrivers = async () => {
     if (typeof window === "undefined") return;
     const token = window.localStorage.getItem("fiki_auth_token");
@@ -76,7 +92,7 @@ export function RideRequestsPage({ hideHeader }: { hideHeader?: boolean }) {
 
     try {
       const [tripsRes, driversRes] = await Promise.all([
-        getAdminTripsApi(token),
+        getAdminTripsApi(token, 1, 1000, undefined, "requests"),
         getAdminDriversApi(token),
       ]);
 
@@ -320,7 +336,10 @@ export function RideRequestsPage({ hideHeader }: { hideHeader?: boolean }) {
                     <RequestRow
                       key={request.rawId}
                       serial={(page - 1) * pageSize + index + 1}
-                      request={request}
+                      request={{
+                        ...request,
+                        onDelete: handleDeleteRequest,
+                      }}
                     />
                   ))}
                 </tbody>
@@ -332,7 +351,10 @@ export function RideRequestsPage({ hideHeader }: { hideHeader?: boolean }) {
                 <RequestCard
                   key={request.rawId}
                   serial={(page - 1) * pageSize + index + 1}
-                  request={request}
+                  request={{
+                    ...request,
+                    onDelete: handleDeleteRequest,
+                  }}
                 />
               ))}
             </div>
@@ -370,6 +392,8 @@ export function RideRequestsPage({ hideHeader }: { hideHeader?: boolean }) {
                 <option value="5">5</option>
                 <option value="10">10</option>
                 <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
               </select>
             </label>
             <p className="text-xs text-muted-foreground">
@@ -389,19 +413,55 @@ export function RideRequestsPage({ hideHeader }: { hideHeader?: boolean }) {
             >
               <ChevronLeft />
             </PageButton>
-            {Array.from({ length: pageCount }, (_, i) => i + 1).map((v) => (
-              <button
-                className={`grid size-9 place-items-center rounded-lg text-xs font-bold ${page === v ? "bg-primary text-primary-foreground" : "border border-border text-muted-foreground hover:bg-muted"}`}
-                key={v}
-                onClick={() => setPage(v)}
-                type="button"
-              >
-                {v}
-              </button>
-            ))}
+            {pageCount <= 7 ? (
+              Array.from({ length: pageCount }, (_, i) => i + 1).map((v) => (
+                <button
+                  className={`grid size-9 place-items-center rounded-lg text-xs font-bold ${page === v ? "bg-primary text-primary-foreground" : "border border-border text-muted-foreground hover:bg-muted"}`}
+                  key={v}
+                  onClick={() => setPage(v)}
+                  type="button"
+                >
+                  {v}
+                </button>
+              ))
+            ) : (
+              <>
+                {[1, 2].map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => setPage(v)}
+                    className={`grid size-9 place-items-center rounded-lg text-xs font-bold ${page === v ? "bg-primary text-primary-foreground" : "border border-border text-muted-foreground hover:bg-muted"}`}
+                    type="button"
+                  >
+                    {v}
+                  </button>
+                ))}
+                {page > 3 && <span className="px-1 text-xs text-muted-foreground">...</span>}
+                {page > 2 && page < pageCount - 1 && (
+                  <button
+                    onClick={() => setPage(page)}
+                    className="grid size-9 place-items-center rounded-lg text-xs font-bold bg-primary text-primary-foreground"
+                    type="button"
+                  >
+                    {page}
+                  </button>
+                )}
+                {page < pageCount - 2 && <span className="px-1 text-xs text-muted-foreground">...</span>}
+                {[pageCount - 1, pageCount].map((v) => (
+                  <button
+                    key={v}
+                    onClick={() => setPage(v)}
+                    className={`grid size-9 place-items-center rounded-lg text-xs font-bold ${page === v ? "bg-primary text-primary-foreground" : "border border-border text-muted-foreground hover:bg-muted"}`}
+                    type="button"
+                  >
+                    {v}
+                  </button>
+                ))}
+              </>
+            )}
             <PageButton
               label="Next page"
-              disabled={page === pageCount}
+              disabled={page === pageCount || pageCount === 0}
               onClick={() => setPage((v) => Math.min(pageCount, v + 1))}
             >
               <ChevronRight />
@@ -418,7 +478,7 @@ function RequestRow({
   request,
 }: {
   serial: number;
-  request: RideRequest & { onAssign?: (id: string) => void };
+  request: RideRequest & { onAssign?: (id: string) => void; onDelete?: (id: string) => void };
 }) {
   return (
     <tr className="border-b border-border/80 text-xs last:border-0 hover:bg-muted/35">
@@ -484,13 +544,23 @@ function RequestRow({
         <StatusBadge status={request.status} />
       </td>
       <td className="py-4 text-center">
-        <Link
-          aria-label={`View ${request.id}`}
-          className="inline-grid size-9 place-items-center rounded-lg border border-border text-muted-foreground transition hover:border-primary/30 hover:bg-muted hover:text-primary"
-          href={`/ride-requests/${request.rawId || request.id}`}
-        >
-          <Eye className="size-4" />
-        </Link>
+        <div className="flex items-center justify-center gap-1.5">
+          <Link
+            aria-label={`View ${request.id}`}
+            className="inline-grid size-8 place-items-center rounded-lg border border-border text-muted-foreground transition hover:border-primary/30 hover:bg-muted hover:text-primary cursor-pointer"
+            href={`/ride-requests/${request.rawId || request.id}`}
+          >
+            <Eye className="size-4" />
+          </Link>
+          <button
+            type="button"
+            aria-label={`Delete ${request.id}`}
+            onClick={() => request.onDelete?.(request.rawId || request.id)}
+            className="inline-grid size-8 place-items-center rounded-lg border border-red-200 bg-red-50 text-red-600 transition hover:bg-red-100 hover:text-red-700 cursor-pointer"
+          >
+            <Trash2 className="size-4" />
+          </button>
+        </div>
       </td>
     </tr>
   );
@@ -501,7 +571,7 @@ function RequestCard({
   request,
 }: {
   serial: number;
-  request: RideRequest;
+  request: RideRequest & { onDelete?: (id: string) => void };
 }) {
   return (
     <article className="p-5">
@@ -549,6 +619,14 @@ function RequestCard({
           <Eye className="size-3.5" />
           View details
         </Link>
+        <button
+          type="button"
+          onClick={() => request.onDelete?.((request as any).rawId || request.id)}
+          className="flex h-9 items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 text-xs font-bold text-red-600 hover:bg-red-100 cursor-pointer"
+        >
+          <Trash2 className="size-3.5" />
+          Delete
+        </button>
         {!request.driver ? (
           <button
             className="flex h-9 items-center gap-1.5 rounded-full bg-secondary px-3 text-xs font-bold text-secondary-foreground"

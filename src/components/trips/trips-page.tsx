@@ -8,11 +8,12 @@ import {
   Eye,
   Loader2,
   Search,
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, useEffect } from "react";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { getAdminTripsApi } from "@/lib/api";
+import { getAdminTripsApi, deleteTripApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 type TripStatus =
@@ -53,6 +54,20 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const handleDeleteTrip = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this trip? This action is permanent.")) {
+      return;
+    }
+    const token = window.localStorage.getItem("fiki_auth_token");
+    if (!token) return;
+    const res = await deleteTripApi(token, id);
+    if (res.success) {
+      fetchTrips();
+    } else {
+      alert(res.error?.message || "Failed to delete trip");
+    }
+  };
+
   const fetchTrips = async () => {
     if (typeof window === "undefined") return;
     const token = window.localStorage.getItem("fiki_auth_token");
@@ -61,7 +76,7 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
       return;
     }
     try {
-      const res = await getAdminTripsApi(token);
+      const res = await getAdminTripsApi(token, 1, 1000, undefined, "trips");
       if (res.success && res.data && Array.isArray(res.data.trips)) {
         const statusMap: Record<string, TripStatus> = {
           REQUESTED: "Need driver",
@@ -85,24 +100,33 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
               ? `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase()
               : passName.substring(0, 2).toUpperCase();
 
-          const dateStr = t.createdAt
-            ? new Date(t.createdAt).toLocaleDateString("en-US", {
+          const rawDateStr = t.pickupDate || t.startDate;
+          const dateStr = rawDateStr
+            ? new Date(rawDateStr + (rawDateStr.includes("T") ? "" : "T00:00:00")).toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
                 year: "numeric",
-                timeZone: "America/Chicago",
               })
-            : "—";
-          const timeStr = t.createdAt
-            ? new Date(t.createdAt).toLocaleTimeString("en-US", {
-                hour: "numeric",
-                minute: "2-digit",
-                timeZone: "America/Chicago",
-              })
-            : "—";
+            : (t.createdAt
+                ? new Date(t.createdAt).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                    year: "numeric",
+                    timeZone: "America/Chicago",
+                  })
+                : "—");
+          const timeStr = t.pickupTime
+            ? t.pickupTime
+            : (t.createdAt
+                ? new Date(t.createdAt).toLocaleTimeString("en-US", {
+                    hour: "numeric",
+                    minute: "2-digit",
+                    timeZone: "America/Chicago",
+                  })
+                : "—");
 
           return {
-            id: `TRP-${t._id.substring(t._id.length - 4)}`,
+            id: `TRP-${t._id.substring(t._id.length - 4).toUpperCase()}`,
             mongoId: t._id,
             passenger: passName,
             initials,
@@ -326,7 +350,7 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
                 </thead>
                 <tbody>
                   {visibleTrips.map((trip) => (
-                    <TripRow key={trip.mongoId} trip={trip} />
+                    <TripRow key={trip.mongoId} trip={trip} onDelete={handleDeleteTrip} />
                   ))}
                 </tbody>
               </table>
@@ -334,7 +358,7 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
 
             <div className="divide-y divide-border lg:hidden">
               {visibleTrips.map((trip) => (
-                <TripCard key={trip.mongoId} trip={trip} />
+                <TripCard key={trip.mongoId} trip={trip} onDelete={handleDeleteTrip} />
               ))}
             </div>
 
@@ -365,9 +389,11 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
                 value={pageSize}
                 onChange={(event) => setPageSize(event.target.value)}
               >
+                <option value="5">5</option>
                 <option value="10">10</option>
                 <option value="20">20</option>
                 <option value="50">50</option>
+                <option value="100">100</option>
               </select>
             </label>
             <p className="text-xs text-muted-foreground">
@@ -391,8 +417,8 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
               <ChevronLeft />
             </button>
 
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-              (pageNum) => (
+            {totalPages <= 7 ? (
+              Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
                 <button
                   key={pageNum}
                   onClick={() => setCurrentPage(pageNum)}
@@ -406,12 +432,56 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
                 >
                   {pageNum}
                 </button>
-              ),
+              ))
+            ) : (
+              <>
+                {[1, 2].map((pageNum) => (
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={cn(
+                      "grid size-9 place-items-center rounded-lg text-xs font-bold transition-colors cursor-pointer",
+                      pageNum === currentPage
+                        ? "bg-primary text-primary-foreground"
+                        : "border border-border text-foreground hover:bg-muted",
+                    )}
+                    type="button"
+                  >
+                    {pageNum}
+                  </button>
+                ))}
+                {currentPage > 3 && <span className="px-1 text-xs text-muted-foreground">...</span>}
+                {currentPage > 2 && currentPage < totalPages - 1 && (
+                  <button
+                    onClick={() => setCurrentPage(currentPage)}
+                    className="grid size-9 place-items-center rounded-lg text-xs font-bold bg-primary text-primary-foreground"
+                    type="button"
+                  >
+                    {currentPage}
+                  </button>
+                )}
+                {currentPage < totalPages - 2 && <span className="px-1 text-xs text-muted-foreground">...</span>}
+                {[totalPages - 1, totalPages].map((pageNum) => (
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={cn(
+                      "grid size-9 place-items-center rounded-lg text-xs font-bold transition-colors cursor-pointer",
+                      pageNum === currentPage
+                        ? "bg-primary text-primary-foreground"
+                        : "border border-border text-foreground hover:bg-muted",
+                    )}
+                    type="button"
+                  >
+                    {pageNum}
+                  </button>
+                ))}
+              </>
             )}
 
             <button
               aria-label="Next page"
-              disabled={currentPage === totalPages || filtered.length === 0}
+              disabled={currentPage === totalPages || totalPages === 0 || filtered.length === 0}
               onClick={() =>
                 setCurrentPage((prev) => Math.min(totalPages, prev + 1))
               }
@@ -427,7 +497,7 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
   );
 }
 
-function TripRow({ trip }: { trip: Trip }) {
+function TripRow({ trip, onDelete }: { trip: Trip; onDelete?: (id: string) => void }) {
   return (
     <tr className="border-b border-border/80 text-xs last:border-0 hover:bg-muted/35">
       <td className="px-5 py-4 font-bold text-primary">{trip.id}</td>
@@ -455,18 +525,26 @@ function TripRow({ trip }: { trip: Trip }) {
         <div className="flex justify-center gap-1.5">
           <Link
             aria-label={`View ${trip.id}`}
-            className="grid size-9 place-items-center rounded-lg border border-border text-muted-foreground transition hover:border-primary/30 hover:bg-muted hover:text-primary [&_svg]:size-4"
-            href={`/trips/${trip.mongoId || trip.id}`}
+            className="grid size-8 place-items-center rounded-lg border border-border text-muted-foreground transition hover:border-primary/30 hover:bg-muted hover:text-primary cursor-pointer"
+            href={`/ride-requests/${trip.mongoId || trip.id}`}
           >
-            <Eye />
+            <Eye className="size-4" />
           </Link>
+          <button
+            type="button"
+            aria-label={`Delete ${trip.id}`}
+            onClick={() => onDelete?.(trip.mongoId || trip.id)}
+            className="grid size-8 place-items-center rounded-lg border border-red-200 bg-red-50 text-red-600 transition hover:bg-red-100 hover:text-red-700 cursor-pointer"
+          >
+            <Trash2 className="size-4" />
+          </button>
         </div>
       </td>
     </tr>
   );
 }
 
-function TripCard({ trip }: { trip: Trip }) {
+function TripCard({ trip, onDelete }: { trip: Trip; onDelete?: (id: string) => void }) {
   return (
     <article className="p-5">
       <div className="flex items-start justify-between gap-3">
@@ -487,11 +565,19 @@ function TripCard({ trip }: { trip: Trip }) {
       <div className="mt-4 flex gap-2">
         <Link
           className="flex h-9 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-bold text-primary hover:bg-muted"
-          href={`/trips/${trip.mongoId || trip.id}`}
+          href={`/ride-requests/${trip.mongoId || trip.id}`}
         >
           <Eye className="size-3.5" />
           View
         </Link>
+        <button
+          type="button"
+          onClick={() => onDelete?.(trip.mongoId || trip.id)}
+          className="flex h-9 items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3 text-xs font-bold text-red-600 hover:bg-red-100 cursor-pointer"
+        >
+          <Trash2 className="size-3.5" />
+          Delete
+        </button>
       </div>
     </article>
   );

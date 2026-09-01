@@ -92,10 +92,11 @@ export async function updateDriverStatusApi(token: string, driverId: string, sta
   }
 }
 
-export async function getAdminTripsApi(token: string, page = 1, limit = 20, status?: string) {
+export async function getAdminTripsApi(token: string, page = 1, limit = 20, status?: string, type?: string) {
   try {
     const params = new URLSearchParams({ page: String(page), limit: String(limit) });
     if (status) params.append("status", status);
+    if (type) params.append("type", type);
 
     const res = await fetch(`${API_BASE_URL}/admin/trips?${params.toString()}`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -103,6 +104,18 @@ export async function getAdminTripsApi(token: string, page = 1, limit = 20, stat
     return await res.json();
   } catch (error) {
     return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to fetch trips" } };
+  }
+}
+
+export async function deleteTripApi(token: string, tripId: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/trips/${tripId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to delete trip" } };
   }
 }
 
@@ -151,20 +164,6 @@ export async function updateTripApi(token: string, id: string, data: any) {
     return await res.json();
   } catch (error) {
     return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to update trip" } };
-  }
-}
-
-export async function deleteTripApi(token: string, id: string) {
-  try {
-    const res = await fetch(`${API_BASE_URL}/admin/trips/${id}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-    return await res.json();
-  } catch (error) {
-    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to delete trip" } };
   }
 }
 
