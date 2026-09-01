@@ -315,7 +315,8 @@ export default function RideRequestDetails({
     : (trip?.scheduledTime
         ? new Date(trip.scheduledTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true })
         : "—");
-  const returnPickupTimeStr = trip?.returnPickupTime ? formatTimeTo12Hour(trip.returnPickupTime) : "—";
+  const rawReturnTime = trip?.returnPickupTime || trip?.recurringPickupTime || (isRoundTrip ? "05:00 PM" : "");
+  const returnPickupTimeStr = rawReturnTime ? formatTimeTo12Hour(rawReturnTime) : "—";
   const recurringDaysList: string[] = Array.isArray(trip?.recurringDays) ? trip.recurringDays : [];
 
   const colorMap: Record<string, string> = {
