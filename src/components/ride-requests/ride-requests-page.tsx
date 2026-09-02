@@ -522,7 +522,9 @@ function RequestRow({
             {request.recurring}
           </span>
         ) : (
-          <span className="text-muted-foreground/60">—</span>
+          <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-600">
+            No
+          </span>
         )}
       </td>
       <td className="py-4">
@@ -531,7 +533,9 @@ function RequestRow({
             <Check className="size-3" /> Yes
           </span>
         ) : (
-          <span className="text-muted-foreground/60">—</span>
+          <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-0.5 text-[11px] font-semibold text-slate-600">
+            No
+          </span>
         )}
       </td>
       <td className="py-4">
