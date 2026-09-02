@@ -265,7 +265,7 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
   }
 
   // Data processing
-  const passengerName = trip.fullName || trip.passengerId?.name || "Passenger";
+  const passengerName = trip.fullName || trip.passengerId?.fullName || trip.passengerId?.name || "Passenger";
   const passengerPhone = trip.phoneNumber || trip.passengerId?.phone || "—";
   const passengerEmail = trip.email || trip.passengerId?.email || "—";
   const passengerInitials = getInitials(passengerName);

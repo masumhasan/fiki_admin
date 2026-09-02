@@ -103,7 +103,11 @@ export function RideRequestsPage({ hideHeader }: { hideHeader?: boolean }) {
         Array.isArray(tripsRes.data.trips)
       ) {
         const mapped: RideRequest[] = tripsRes.data.trips.map((t: any) => {
-          const passengerName = t.passengerId?.name || "Passenger";
+          const passengerName =
+            t.fullName ||
+            t.passengerId?.fullName ||
+            t.passengerId?.name ||
+            "Passenger";
           const driverName = t.driverId?.name;
 
           let statusStr: RequestStatus = "Pending";
@@ -147,7 +151,7 @@ export function RideRequestsPage({ hideHeader }: { hideHeader?: boolean }) {
             id: `RR-${t._id.substring(t._id.length - 4).toUpperCase()}`,
             rawId: t._id,
             passenger: passengerName,
-            phone: t.passengerId?.phone || "—",
+            phone: t.phoneNumber || t.passengerId?.phone || "—",
             initials:
               passengerName
                 .split(" ")

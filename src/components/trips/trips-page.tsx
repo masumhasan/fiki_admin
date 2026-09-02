@@ -105,7 +105,11 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
         };
 
         const mapped: Trip[] = res.data.trips.map((t: any) => {
-          const passName = t.passengerId?.name || "Passenger";
+          const passName =
+            t.fullName ||
+            t.passengerId?.fullName ||
+            t.passengerId?.name ||
+            "Passenger";
           const driverName =
             t.driverId?.name || (t.driverId ? "Assigned Driver" : undefined);
           const statusVal = statusMap[t.status] ?? "Scheduled";

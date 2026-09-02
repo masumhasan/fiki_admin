@@ -35,7 +35,11 @@ export default function DashboardPage() {
         getAdminTripsApi(token).then((res) => {
           if (res.success && res.data && Array.isArray(res.data.trips)) {
             const mapped = res.data.trips.map((t: any) => {
-              const passengerName = t.passengerId?.name || "Passenger";
+              const passengerName =
+                t.fullName ||
+                t.passengerId?.fullName ||
+                t.passengerId?.name ||
+                "Passenger";
               const driverName = t.driverId?.name || "Unassigned";
               const ini =
                 passengerName

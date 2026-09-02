@@ -301,10 +301,10 @@ export default function RideRequestDetails({
     setActionLoading(false);
   }
 
-  const passengerName = trip?.passengerId?.name || "—";
+  const passengerName = trip?.fullName || trip?.passengerId?.fullName || trip?.passengerId?.name || "—";
   const currentDriverId = trip?.driverId?._id || trip?.driverId;
   const hasDriver = !!currentDriverId;
-  const passengerPhone = trip?.passengerId?.phone || "—";
+  const passengerPhone = trip?.phoneNumber || trip?.passengerId?.phone || "—";
   const rawPassengerEmail = trip?.passengerId?.email || "";
   const passengerEmail = (rawPassengerEmail.startsWith("manual_") && rawPassengerEmail.endsWith("@fikitransit.com")) || !rawPassengerEmail
     ? "No Emails"
