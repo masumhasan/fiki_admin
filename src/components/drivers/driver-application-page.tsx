@@ -392,12 +392,6 @@ export function DriverApplicationPage({
                       ? `${liveApp.dobMonth}/${liveApp.dobDay}/${liveApp.dobYear}`
                       : "—"),
                 ],
-                [
-                  "Years of driving experience",
-                  liveApp?.drivingExperience
-                    ? `${liveApp.drivingExperience} years`
-                    : "—",
-                ],
                 ["Driver category", liveApp?.driverCategory || "—"],
                 [
                   "License expiration date",
@@ -503,15 +497,6 @@ export function DriverApplicationPage({
                 value={`Driver — ${liveApp?.positionType ? liveApp.positionType.charAt(0) + liveApp.positionType.slice(1).toLowerCase() : "Ambulatory"}`}
               />
               <SummaryLine
-                icon={CalendarDays}
-                label="Experience"
-                value={
-                  liveApp?.drivingExperience
-                    ? `${liveApp.drivingExperience} years`
-                    : "—"
-                }
-              />
-              <SummaryLine
                 icon={IdCard}
                 label="License"
                 value={liveApp?.licenseNumber || "—"}
@@ -534,15 +519,6 @@ export function DriverApplicationPage({
                 value={liveApp?.availableStartDate || "—"}
               />
             </dl>
-            <div className="mt-5">
-              <div className="flex justify-between text-[10px]">
-                <span className="text-muted-foreground">Docs uploaded</span>
-                <strong>6 / 7</strong>
-              </div>
-              <div className="mt-2 h-1.5 rounded-full bg-muted">
-                <div className="h-full w-[85%] rounded-full bg-secondary" />
-              </div>
-            </div>
           </section>
           <section className={sideCardClass}>
             <h2 className="text-sm font-bold text-foreground">
@@ -552,46 +528,67 @@ export function DriverApplicationPage({
               <TimelineStep
                 done
                 label="Application submitted"
-                time="Dec 28, 2024"
+                time={
+                  liveApp?.submittedDate
+                    ? new Date(liveApp.submittedDate).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                        timeZone: "America/Chicago",
+                      })
+                    : liveApp?.createdAt
+                      ? new Date(liveApp.createdAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                          timeZone: "America/Chicago",
+                        })
+                      : "Submitted"
+                }
               />
               <TimelineStep
-                done
-                label="Documents uploaded"
-                time="Dec 28, 2024"
-              />
-              <TimelineStep done label="Admin viewed" time="Dec 29, 2024" />
-              <TimelineStep
-                done
-                label="Background verification"
-                time="Jan 2, 2025"
+                done={Boolean(liveApp?.authorizeBackgroundCheck)}
+                current={!liveApp?.authorizeBackgroundCheck && decision === "Pending review"}
+                label="Background check authorization"
+                time={liveApp?.authorizeBackgroundCheck ? "Authorized" : "Pending"}
               />
               <TimelineStep
-                current
-                label="Interview scheduled"
-                time="Jan 5, 2025"
+                done={decision === "Approved" || decision === "Rejected"}
+                current={decision === "Pending review"}
+                label="Admin review"
+                time={
+                  decision === "Approved" || decision === "Rejected"
+                    ? "Completed"
+                    : "In Review"
+                }
               />
-              <TimelineStep label="Approved / rejected" time="Pending" />
+              <TimelineStep
+                done={decision === "Approved"}
+                rejected={decision === "Rejected"}
+                current={decision === "Pending review"}
+                label={
+                  decision === "Approved"
+                    ? "Application Approved"
+                    : decision === "Rejected"
+                      ? "Application Rejected"
+                      : "Final Decision"
+                }
+                time={
+                  decision === "Approved"
+                    ? liveApp?.updatedAt
+                      ? new Date(liveApp.updatedAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                          timeZone: "America/Chicago",
+                        })
+                      : "Approved"
+                    : decision === "Rejected"
+                      ? "Rejected"
+                      : "Pending"
+                }
+              />
             </ol>
-          </section>
-          <section className={sideCardClass}>
-            <h2 className="text-sm font-bold text-foreground">Documents</h2>
-            <label className="mt-4 flex cursor-pointer flex-col items-center rounded-xl border border-dashed border-red-200 bg-red-50/35 p-5 text-center">
-              <Upload className="size-6 text-red-300" />
-              <span className="mt-2 text-xs font-semibold text-muted-foreground">
-                Drop files here or{" "}
-                <strong className="text-brand-yellow-hover">browse</strong>
-              </span>
-              <span className="mt-1 text-[9px] text-brand-placeholder">
-                PNG, PDF up to 10MB
-              </span>
-              <input className="sr-only" type="file" />
-            </label>
-            <button
-              className="mt-3 h-9 rounded-lg bg-secondary px-4 text-xs font-bold text-secondary-foreground"
-              type="button"
-            >
-              Preview documents
-            </button>
           </section>
         </aside>
       </div>
@@ -1035,28 +1032,48 @@ function SummaryLine({
 function TimelineStep({
   current = false,
   done = false,
+  rejected = false,
   label,
   time,
 }: {
   current?: boolean;
   done?: boolean;
+  rejected?: boolean;
   label: string;
   time: string;
 }) {
   return (
     <li className="flex gap-3">
       <span
-        className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border ${done ? "border-emerald-500 bg-emerald-500 text-white" : current ? "border-secondary bg-amber-50 text-brand-yellow-hover" : "border-border bg-muted"}`}
+        className={`mt-0.5 grid size-5 shrink-0 place-items-center rounded-full border ${
+          done
+            ? "border-emerald-500 bg-emerald-500 text-white"
+            : rejected
+              ? "border-red-500 bg-red-500 text-white"
+              : current
+                ? "border-amber-500 bg-amber-50 text-amber-600 font-bold"
+                : "border-border bg-muted"
+        }`}
       >
-        {done ? <Check className="size-3" /> : null}
+        {done ? (
+          <Check className="size-3" />
+        ) : rejected ? (
+          <X className="size-3" />
+        ) : null}
       </span>
       <div>
         <p
-          className={`text-[10px] font-bold ${done || current ? "text-foreground" : "text-brand-soft"}`}
+          className={`text-[10px] font-bold ${
+            done || current
+              ? "text-foreground"
+              : rejected
+                ? "text-red-600"
+                : "text-muted-foreground"
+          }`}
         >
           {label}
         </p>
-        <p className="mt-0.5 text-[9px] text-brand-placeholder">{time}</p>
+        <p className="mt-0.5 text-[9px] text-muted-foreground">{time}</p>
       </div>
     </li>
   );
