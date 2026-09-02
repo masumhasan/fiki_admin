@@ -590,3 +590,33 @@ export async function resetPasswordApi(email: string, otp: string, newPassword: 
     return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to reset password" } };
   }
 }
+
+export async function approveRideRequestApi(token: string, tripId: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/trips/${tripId}/approve`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to approve ride request" } };
+  }
+}
+
+export async function rejectRideRequestApi(token: string, tripId: string, reason?: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/trips/${tripId}/reject`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ reason }),
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to reject ride request" } };
+  }
+}

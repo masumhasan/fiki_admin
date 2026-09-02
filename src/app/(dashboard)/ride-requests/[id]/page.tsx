@@ -17,6 +17,7 @@ import {
   Save,
   Send,
   Shield,
+  ShieldAlert,
   Trash2,
   UserCheck,
   UserPlus,
@@ -26,7 +27,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useState } from "react";
-import { assignDriverApi, deleteTripApi, getAdminDriversApi, getAdminTripDetailApi, regenerateTripsApi, respondToCounterOfferApi, updateTripApi } from "@/lib/api";
+import { approveRideRequestApi, assignDriverApi, deleteTripApi, getAdminDriversApi, getAdminTripDetailApi, regenerateTripsApi, rejectRideRequestApi, respondToCounterOfferApi, updateTripApi } from "@/lib/api";
 
 const card =
   "overflow-hidden rounded-xl border border-[#e1e6ee] bg-white shadow-[0_4px_14px_rgba(15,37,74,.04)]";
@@ -266,6 +267,36 @@ export default function RideRequestDetails({
       setTrip(res.data);
     } else {
       alert(res.error?.message || "Failed to update trip status");
+    }
+    setActionLoading(false);
+  }
+
+  async function handleApproveRequest() {
+    if (typeof window === "undefined") return;
+    const token = window.localStorage.getItem("fiki_auth_token");
+    if (!token) return;
+    setActionLoading(true);
+    const res = await approveRideRequestApi(token, id);
+    if (res.success && res.data) {
+      setTrip(res.data);
+      setAssignFeedback({ ok: true, text: "Ride request approved successfully! Driver assignment unlocked." });
+    } else {
+      alert(res.error?.message || "Failed to approve ride request");
+    }
+    setActionLoading(false);
+  }
+
+  async function handleRejectRequest() {
+    if (!confirm("Are you sure you want to reject this ride request?")) return;
+    if (typeof window === "undefined") return;
+    const token = window.localStorage.getItem("fiki_auth_token");
+    if (!token) return;
+    setActionLoading(true);
+    const res = await rejectRideRequestApi(token, id, "Rejected by admin");
+    if (res.success && res.data) {
+      setTrip(res.data);
+    } else {
+      alert(res.error?.message || "Failed to reject ride request");
     }
     setActionLoading(false);
   }
@@ -1150,44 +1181,58 @@ export default function RideRequestDetails({
                   <p className="text-[11px] text-muted-foreground mt-1">Select driver, vehicle and schedule</p>
                 </div>
                 
-                <div className="relative">
-                  <select
-                    className="h-10 w-full appearance-none rounded-lg border border-[#e1e6ee] bg-white px-3 pr-10 text-[13px] text-[#34435a] outline-none focus:border-[#173d76] focus:ring-2 focus:ring-[#173d76]/10"
-                    value={selectedDriverId}
-                    onChange={(e) => {
-                      setSelectedDriverId(e.target.value);
-                      setAssignFeedback(null);
-                    }}
-                    disabled={assigning}
-                  >
-                    <option value="">{hasDriver ? "Change driver" : "Assign driver"}</option>
-                    {drivers.map((d: any) => (
-                      <option key={d.id || d._id} value={d.id || d._id}>
-                        {d.name} {d.profile?.vehicle?.licensePlate ? `(${d.profile.vehicle.licensePlate})` : ""}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#8190a5]">
-                    <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
+                {status !== "ACCEPTED" && status !== "DRIVER_ARRIVING" && status !== "DRIVER_ARRIVED" && status !== "IN_PROGRESS" && status !== "COMPLETED" ? (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 space-y-1">
+                    <p className="font-bold flex items-center gap-1.5 text-amber-800">
+                      <ShieldAlert className="size-4 text-amber-600" />
+                      Approval Required
+                    </p>
+                    <p className="text-[11px] leading-relaxed text-amber-700">
+                      Driver assignment is locked. Please approve the ride request first.
+                    </p>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    <div className="relative">
+                      <select
+                        className="h-10 w-full appearance-none rounded-lg border border-[#e1e6ee] bg-white px-3 pr-10 text-[13px] text-[#34435a] outline-none focus:border-[#173d76] focus:ring-2 focus:ring-[#173d76]/10"
+                        value={selectedDriverId}
+                        onChange={(e) => {
+                          setSelectedDriverId(e.target.value);
+                          setAssignFeedback(null);
+                        }}
+                        disabled={assigning}
+                      >
+                        <option value="">{hasDriver ? "Change driver" : "Assign driver"}</option>
+                        {drivers.map((d: any) => (
+                          <option key={d.id || d._id} value={d.id || d._id}>
+                            {d.name} {d.profile?.vehicle?.licensePlate ? `(${d.profile.vehicle.licensePlate})` : ""}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#8190a5]">
+                        <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      </div>
+                    </div>
 
-                {assignFeedback && (
-                  <p className={`text-[11px] font-semibold ${assignFeedback.ok ? "text-emerald-600" : "text-red-600"}`}>
-                    {assignFeedback.text}
-                  </p>
+                    {assignFeedback && (
+                      <p className={`text-[11px] font-semibold ${assignFeedback.ok ? "text-emerald-600" : "text-red-600"}`}>
+                        {assignFeedback.text}
+                      </p>
+                    )}
+
+                    <button
+                      type="button"
+                      disabled={!selectedDriverId || selectedDriverId === currentDriverId || assigning}
+                      onClick={handleAssignDriver}
+                      className="w-full h-10 rounded-lg bg-[#173d76] hover:bg-[#0d2c58] disabled:opacity-50 text-white font-bold text-xs transition duration-150 cursor-pointer"
+                    >
+                      {assigning ? "Assigning..." : "Confirm Assignment"}
+                    </button>
+                  </>
                 )}
-
-                <button
-                  type="button"
-                  disabled={!selectedDriverId || selectedDriverId === currentDriverId || assigning}
-                  onClick={handleAssignDriver}
-                  className="w-full h-10 rounded-lg bg-[#173d76] hover:bg-[#0d2c58] disabled:opacity-50 text-white font-bold text-xs transition duration-150"
-                >
-                  {assigning ? "Assigning..." : "Confirm Assignment"}
-                </button>
               </article>
             </aside>
           </div>
@@ -1207,42 +1252,54 @@ export default function RideRequestDetails({
                     {trip?.quotedFare ? `Update Quote ($${trip.quotedFare.toFixed(2)}/trip)` : "Send Fare Quote (Per Trip)"}
                   </Link>
                 )}
+
+                {/* Approve & Reject Ride Request Buttons */}
+                {status !== "ACCEPTED" && status !== "COMPLETED" && status !== "CANCELLED" && status !== "QUOTE_DENIED" && (
+                  <button
+                    type="button"
+                    onClick={handleApproveRequest}
+                    disabled={actionLoading}
+                    className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-[11px] font-bold text-white shadow transition hover:bg-emerald-700 disabled:opacity-50 cursor-pointer"
+                  >
+                    <CheckCircle2 className="size-3.5" />
+                    Approve Ride Request
+                  </button>
+                )}
+
+                {status !== "QUOTE_DENIED" && status !== "CANCELLED" && status !== "COMPLETED" && (
+                  <button
+                    type="button"
+                    onClick={handleRejectRequest}
+                    disabled={actionLoading}
+                    className="flex items-center gap-1.5 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-[11px] font-bold text-red-600 transition hover:bg-red-100 disabled:opacity-50 cursor-pointer"
+                  >
+                    <X className="size-3.5" />
+                    Reject Request
+                  </button>
+                )}
+
                 {status === "QUOTE_COUNTERED" && (
                   <>
                     <button
                       onClick={() => handleCounterAction("ACCEPT")}
                       disabled={actionLoading}
-                      className="flex items-center gap-1.5 rounded-lg bg-emerald-600 px-4 py-2 text-[11px] font-bold text-white shadow transition hover:bg-emerald-700 disabled:opacity-50"
+                      className="flex items-center gap-1.5 rounded-lg bg-purple-600 px-4 py-2 text-[11px] font-bold text-white shadow transition hover:bg-purple-700 disabled:opacity-50 cursor-pointer"
                       type="button"
                     >
                       <CheckCircle2 className="size-3.5" />
                       Accept Counter Offer ({trip.counterOffer ? `$${trip.counterOffer.toFixed(2)}` : ""})
                     </button>
-                    <button
-                      onClick={() => handleCounterAction("DECLINE")}
-                      disabled={actionLoading}
-                      className="flex items-center gap-1.5 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-[11px] font-bold text-red-600 transition hover:bg-red-100 disabled:opacity-50"
-                      type="button"
-                    >
-                      <X className="size-3.5" />
-                      Decline Counter Offer
-                    </button>
-                    <Link
-                      className="rounded-lg border border-border bg-card px-4 py-2 text-[11px] font-bold text-muted-foreground transition hover:bg-muted"
-                      href={`/ride-requests/${id}/quotation`}
-                    >
-                      Resend Quotation
-                    </Link>
                   </>
                 )}
+
                 {status === "QUOTE_SENT" && (
                   <span className="rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-[11px] font-semibold text-blue-600">
                     Awaiting passenger response…
                   </span>
                 )}
-                {status === "QUOTE_ACCEPTED" && (
+                {status === "ACCEPTED" && (
                   <span className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-semibold text-emerald-700">
-                    Quote accepted — assign a driver
+                    ✓ Approved — Driver Assignment Unlocked
                   </span>
                 )}
                 {status === "QUOTE_DENIED" && (

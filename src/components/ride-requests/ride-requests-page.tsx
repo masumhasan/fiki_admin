@@ -541,15 +541,19 @@ function RequestRow({
       <td className="py-4">
         {request.driver ? (
           <span className="font-medium text-foreground">{request.driver}</span>
-        ) : (
+        ) : request.backendStatus === "ACCEPTED" ? (
           <button
-            className="inline-flex items-center gap-1 font-bold text-brand-yellow-hover"
+            className="inline-flex items-center gap-1 font-bold text-brand-yellow-hover cursor-pointer"
             type="button"
             onClick={() => request.onAssign?.(request.rawId)}
           >
             <UserPlus className="size-3.5" />
             Assign
           </button>
+        ) : (
+          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200/80 rounded-full px-2 py-0.5" title="Approve ride request to enable driver assignment">
+            Pending Approval
+          </span>
         )}
       </td>
       <td className="py-4">
