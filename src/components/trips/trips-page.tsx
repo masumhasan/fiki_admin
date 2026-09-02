@@ -47,6 +47,21 @@ const filters = [
   "Cancelled",
 ] as const;
 
+function formatTimeTo12Hour(timeStr?: string): string {
+  if (!timeStr) return "—";
+  const trimmed = timeStr.trim();
+  const match = /^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i.exec(trimmed);
+  if (!match) return timeStr;
+  let hours = parseInt(match[1], 10);
+  const minutes = match[2];
+  const ampmParam = match[3] ? match[3].toUpperCase() : null;
+  if (ampmParam) return `${hours}:${minutes} ${ampmParam}`;
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  return `${hours}:${minutes} ${ampm}`;
+}
+
 export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
   const [query, setQuery] = useState("");
   const [status, setStatus] =
@@ -104,6 +119,7 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
           const rawDateStr = t.pickupDate || t.startDate;
           const dateStr = rawDateStr
             ? new Date(rawDateStr + (rawDateStr.includes("T") ? "" : "T00:00:00")).toLocaleDateString("en-US", {
+                weekday: "short",
                 month: "short",
                 day: "numeric",
                 year: "numeric",
@@ -111,6 +127,7 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
               })
             : (t.createdAt
                 ? new Date(t.createdAt).toLocaleDateString("en-US", {
+                    weekday: "short",
                     month: "short",
                     day: "numeric",
                     year: "numeric",
@@ -118,11 +135,12 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
                   })
                 : "—");
           const timeStr = t.pickupTime
-            ? t.pickupTime
+            ? formatTimeTo12Hour(t.pickupTime)
             : (t.createdAt
                 ? new Date(t.createdAt).toLocaleTimeString("en-US", {
                     hour: "numeric",
                     minute: "2-digit",
+                    hour12: true,
                     timeZone: "America/Chicago",
                   })
                 : "—");
