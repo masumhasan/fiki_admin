@@ -541,7 +541,7 @@ function TripRow({ trip, onDelete }: { trip: Trip; onDelete?: (id: string) => vo
           <Link
             aria-label={`View ${trip.id}`}
             className="grid size-8 place-items-center rounded-lg border border-border text-muted-foreground transition hover:border-primary/30 hover:bg-muted hover:text-primary cursor-pointer"
-            href={`/ride-requests/${trip.mongoId || trip.id}`}
+            href={`/trips/${trip.mongoId || trip.id}`}
           >
             <Eye className="size-4" />
           </Link>
@@ -580,7 +580,7 @@ function TripCard({ trip, onDelete }: { trip: Trip; onDelete?: (id: string) => v
       <div className="mt-4 flex gap-2">
         <Link
           className="flex h-9 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-bold text-primary hover:bg-muted"
-          href={`/ride-requests/${trip.mongoId || trip.id}`}
+          href={`/trips/${trip.mongoId || trip.id}`}
         >
           <Eye className="size-3.5" />
           View
