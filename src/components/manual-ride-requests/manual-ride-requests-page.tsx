@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { useRouter } from "next/navigation";
 import { API_BASE_URL } from "@/lib/api";
+import { sanitizePhoneInput } from "@/lib/utils";
 
 // Simple HTML5 Canvas Signature Pad
 function SignaturePad({
@@ -390,10 +391,12 @@ export default function ManualRideRequestsPage({
                 className="w-full rounded-xl border border-[#e1e5ea] px-4 py-2.5 text-sm"
                 value={formData.phoneNumber}
                 onChange={(e) =>
-                  handleInputChange("phoneNumber", e.target.value)
+                  handleInputChange("phoneNumber", sanitizePhoneInput(e.target.value))
                 }
+                placeholder="Phone Number"
                 required
               />
+              <p className="mt-1 text-[0.7rem] text-muted-foreground">Only digits (0-9) and &apos;+&apos; sign allowed (e.g. +13125550123)</p>
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-[#172033]">
@@ -429,10 +432,12 @@ export default function ManualRideRequestsPage({
                 className="w-full rounded-xl border border-[#e1e5ea] px-4 py-2.5 text-sm"
                 value={formData.emergencyContactPhone}
                 onChange={(e) =>
-                  handleInputChange("emergencyContactPhone", e.target.value)
+                  handleInputChange("emergencyContactPhone", sanitizePhoneInput(e.target.value))
                 }
+                placeholder="Phone Number"
                 required
               />
+              <p className="mt-1 text-[0.7rem] text-muted-foreground">Only digits (0-9) and &apos;+&apos; sign allowed (e.g. +13125550123)</p>
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-[#172033]">
@@ -877,9 +882,11 @@ export default function ManualRideRequestsPage({
                 className="w-full rounded-xl border border-[#e1e5ea] px-4 py-2.5 text-sm"
                 value={formData.guardianPhone}
                 onChange={(e) =>
-                  handleInputChange("guardianPhone", e.target.value)
+                  handleInputChange("guardianPhone", sanitizePhoneInput(e.target.value))
                 }
+                placeholder="Phone Number"
               />
+              <p className="mt-1 text-[0.7rem] text-muted-foreground">Only digits (0-9) and &apos;+&apos; sign allowed (e.g. +13125550123)</p>
             </div>
             <div className="sm:col-span-2">
               <label className="mb-1 block text-xs font-semibold text-[#172033]">
@@ -989,9 +996,11 @@ export default function ManualRideRequestsPage({
                 className="w-full rounded-xl border border-[#e1e5ea] px-4 py-2.5 text-sm"
                 value={formData.caseManagerPhone}
                 onChange={(e) =>
-                  handleInputChange("caseManagerPhone", e.target.value)
+                  handleInputChange("caseManagerPhone", sanitizePhoneInput(e.target.value))
                 }
+                placeholder="Phone Number"
               />
+              <p className="mt-1 text-[0.7rem] text-muted-foreground">Only digits (0-9) and &apos;+&apos; sign allowed (e.g. +13125550123)</p>
             </div>
             <div>
               <label className="mb-1 block text-xs font-semibold text-[#172033]">

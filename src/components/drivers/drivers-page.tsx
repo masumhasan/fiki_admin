@@ -20,8 +20,9 @@ import {
   Pencil,
 } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { PageHeader } from "@/components/dashboard/page-header";
+import { sanitizePhoneInput } from "@/lib/utils";
 import {
   getAdminDriversApi,
   deleteDriverApi,
@@ -485,13 +486,15 @@ export function DriversPage({ hideHeader }: { hideHeader?: boolean } = {}) {
                     Phone Number
                   </label>
                   <input
-                    type="text"
+                    type="tel"
                     value={editForm.phone}
                     onChange={(e) =>
-                      setEditForm({ ...editForm, phone: e.target.value })
+                      setEditForm({ ...editForm, phone: sanitizePhoneInput(e.target.value) })
                     }
+                    placeholder="Phone Number"
                     className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm font-semibold outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition"
                   />
+                  <p className="mt-1 text-[0.7rem] text-muted-foreground">Only digits (0-9) and &apos;+&apos; sign allowed (e.g. +13125550123)</p>
                 </div>
 
                 <div className="space-y-1.5 sm:col-span-2">
