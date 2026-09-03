@@ -32,7 +32,7 @@ export default function DashboardPage() {
     if (typeof window !== "undefined") {
       const token = window.localStorage.getItem("fiki_auth_token");
       if (token) {
-        getAdminTripsApi(token).then((res) => {
+        getAdminTripsApi(token, 1, 10, undefined, "live").then((res) => {
           if (res.success && res.data && Array.isArray(res.data.trips)) {
             const mapped = res.data.trips.map((t: any) => {
               const passengerName =
@@ -71,6 +71,7 @@ export default function DashboardPage() {
                     })
                   : "Now",
                 "#2563eb",
+                t.passengerAvatarUrl || t.passengerId?.avatarUrl || "",
               ];
             });
             if (mapped.length > 0) {
@@ -324,6 +325,7 @@ export default function DashboardPage() {
                           status,
                           time,
                           color,
+                          avatarUrl,
                         ],
                         i,
                       ) => (
@@ -336,7 +338,11 @@ export default function DashboardPage() {
                           </td>
                           <td className="px-2.5 py-3">
                             <span className="flex items-center gap-2">
-                              <Avatar small initials={ini} color={color} />
+                              {avatarUrl ? (
+                                <img src={avatarUrl} alt="Avatar" className="size-6 rounded-full object-cover shrink-0 border border-border" />
+                              ) : (
+                                <Avatar small initials={ini} color={color} />
+                              )}
                               {passenger}
                             </span>
                           </td>
@@ -423,13 +429,19 @@ export default function DashboardPage() {
                 const tripId = isArr
                   ? item[6]
                   : item.id || item.rawId || `TRP-${idx}`;
+                
+                const avatarUrl = item.passengerAvatarUrl || item.passengerId?.avatarUrl || "";
 
                 return (
                   <div
                     className="flex items-center gap-3 rounded-xl border p-3"
                     key={tripId || name || idx}
                   >
-                    <Avatar initials={ini} color={color} />
+                    {avatarUrl ? (
+                      <img src={avatarUrl} alt="Avatar" className="size-9 rounded-full object-cover shrink-0 border border-border" />
+                    ) : (
+                      <Avatar initials={ini} color={color} />
+                    )}
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-bold text-[#293246]">{name}</p>
                       <p className="truncate text-xs text-[#8993a5]">{route}</p>
