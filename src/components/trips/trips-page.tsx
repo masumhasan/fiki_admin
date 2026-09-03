@@ -536,7 +536,7 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
 
             <button
               aria-label="Next page"
-              disabled={currentPage === totalPages || totalPages === 0 || filtered.length === 0}
+              disabled={currentPage === totalPages || totalPages === 0 || visibleTrips.length === 0}
               onClick={() =>
                 setCurrentPage((prev) => Math.min(totalPages, prev + 1))
               }
