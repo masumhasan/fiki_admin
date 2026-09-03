@@ -65,11 +65,33 @@ function formatTimeTo12Hour(timeStr?: string): string {
 
 export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
   const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
   const [status, setStatus] =
     useState<(typeof filters)[number]>("All statuses");
   const [pageSize, setPageSize] = useState("10");
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+  const [summaryData, setSummaryData] = useState({
+    totalTrips: 0,
+    onboardNow: 0,
+    needDriver: 0,
+    completedCount: 0,
+  });
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedQuery(query);
+    }, 400);
+    return () => clearTimeout(handler);
+  }, [query]);
+
+  // Reset to page 1 if search, status, or page size changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedQuery, status, pageSize]);
 
   const handleDeleteTrip = async (id: string) => {
     if (!confirm("Are you sure you want to delete this trip? This action is permanent.")) {
@@ -92,9 +114,32 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
       setLoading(false);
       return;
     }
+    setLoading(true);
     try {
-      const res = await getAdminTripsApi(token, 1, 1000, undefined, "trips");
+      let apiStatus = undefined;
+      if (status === "Need driver") apiStatus = "REQUESTED";
+      else if (status === "Scheduled") apiStatus = "ACCEPTED,DRIVER_ARRIVING,DRIVER_ARRIVED";
+      else if (status === "Onboard") apiStatus = "IN_PROGRESS";
+      else if (status === "Completed") apiStatus = "COMPLETED";
+      else if (status === "Cancelled") apiStatus = "CANCELLED";
+
+      const res = await getAdminTripsApi(token, currentPage, Number(pageSize), apiStatus, "trips", debouncedQuery);
       if (res.success && res.data && Array.isArray(res.data.trips)) {
+        
+        if (res.data.summary) {
+          setSummaryData({
+            totalTrips: res.data.summary.totalTrips || 0,
+            onboardNow: res.data.summary.onboardNow || 0,
+            needDriver: res.data.summary.needDriver || 0,
+            completedCount: res.data.summary.completedCount || 0,
+          });
+        }
+        
+        if (res.data.pagination) {
+          setTotalItems(res.data.pagination.total || 0);
+          setTotalPages(res.data.pagination.totalPages || 1);
+        }
+
         const statusMap: Record<string, TripStatus> = {
           REQUESTED: "Need driver",
           ACCEPTED: "Scheduled",
@@ -191,58 +236,29 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
 
   useEffect(() => {
     fetchTrips();
-  }, []);
+  }, [currentPage, pageSize, debouncedQuery, status]);
 
   const summary = [
-    { label: "Total trips", value: trips.length, tone: "text-primary" },
+    { label: "Total trips", value: summaryData.totalTrips, tone: "text-primary" },
     {
       label: "Onboard now",
-      value: trips.filter((t) => t.status === "Onboard").length,
+      value: summaryData.onboardNow,
       tone: "text-emerald-500",
     },
     {
       label: "Need driver",
-      value: trips.filter((t) => t.status === "Need driver").length,
+      value: summaryData.needDriver,
       tone: "text-red-500",
     },
     {
       label: "Completed",
-      value: trips.filter((t) => t.status === "Completed").length,
+      value: summaryData.completedCount,
       tone: "text-blue-500",
     },
   ];
 
-  const filtered = useMemo(() => {
-    const normalized = query.trim().toLowerCase();
-    return trips.filter((trip) => {
-      const matchesStatus = status === "All statuses" || trip.status === status;
-      const matchesQuery =
-        !normalized ||
-        [
-          trip.id,
-          trip.passenger,
-          trip.driver ?? "",
-          trip.pickup,
-          trip.destination,
-        ].some((value) => value.toLowerCase().includes(normalized));
-      return matchesStatus && matchesQuery;
-    });
-  }, [trips, query, status]);
-
-  const [currentPage, setCurrentPage] = useState(1);
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [query, status, pageSize]);
-
-  const pageSizeNum = Number(pageSize);
-  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSizeNum));
-  const startIndex = (currentPage - 1) * pageSizeNum;
-  const endIndex = Math.min(startIndex + pageSizeNum, filtered.length);
-  const visibleTrips = useMemo(
-    () => filtered.slice(startIndex, startIndex + pageSizeNum),
-    [filtered, startIndex, pageSizeNum],
-  );
+  // Since filtering and pagination is server-side now, we just use trips directly
+  const visibleTrips = trips;
 
   function exportTrips() {
     const rows = [
@@ -256,7 +272,7 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
         "Time",
         "Date",
       ],
-      ...filtered.map((trip) => [
+      ...trips.map((trip) => [
         trip.id,
         trip.passenger,
         trip.driver ?? "Unassigned",
@@ -401,16 +417,16 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
               ))}
             </div>
 
-            {filtered.length === 0 && (
+            {visibleTrips.length === 0 && (
               <div className="px-5 py-16 text-center">
                 <Search className="mx-auto size-8 text-brand-soft" />
                 <p className="mt-3 text-sm font-semibold text-foreground">
-                  {trips.length === 0
+                  {totalItems === 0
                     ? "No trips recorded yet"
                     : "No trips match your search"}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {trips.length === 0
+                  {totalItems === 0
                     ? "Ride trips will appear here once passengers request rides."
                     : "Try another search or status filter."}
                 </p>
@@ -438,10 +454,10 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
             <p className="text-xs text-muted-foreground">
               Showing{" "}
               <strong className="text-foreground">
-                {filtered.length === 0 ? 0 : startIndex + 1}
+                {visibleTrips.length === 0 ? 0 : (currentPage - 1) * Number(pageSize) + 1}
               </strong>{" "}
-              to <strong className="text-foreground">{endIndex}</strong> of{" "}
-              <strong className="text-foreground">{filtered.length}</strong>{" "}
+              to <strong className="text-foreground">{Math.min(currentPage * Number(pageSize), totalItems)}</strong> of{" "}
+              <strong className="text-foreground">{totalItems}</strong>{" "}
               trips
             </p>
           </div>
@@ -449,7 +465,7 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
             <button
               aria-label="Previous page"
               disabled={currentPage === 1}
-              onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
               className="grid size-9 place-items-center rounded-lg border border-border text-muted-foreground transition hover:bg-muted hover:text-primary disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-muted-foreground [&_svg]:size-4 cursor-pointer"
               type="button"
             >

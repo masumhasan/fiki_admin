@@ -92,11 +92,12 @@ export async function updateDriverStatusApi(token: string, driverId: string, sta
   }
 }
 
-export async function getAdminTripsApi(token: string, page = 1, limit = 20, status?: string, type?: string) {
+export async function getAdminTripsApi(token: string, page = 1, limit = 20, status?: string, type?: string, search?: string) {
   try {
     const params = new URLSearchParams({ page: String(page), limit: String(limit) });
     if (status) params.append("status", status);
     if (type) params.append("type", type);
+    if (search) params.append("search", search);
 
     const res = await fetch(`${API_BASE_URL}/admin/trips?${params.toString()}`, {
       headers: { Authorization: `Bearer ${token}` },
