@@ -117,6 +117,7 @@ export function WeeklyScheduleModal({
   });
 
   const anyExceeds = scheduleInfo.some((item) => item.exceedsLimit);
+  const totalWeeklyHours = scheduleInfo.reduce((sum, item) => sum + (item.totalHours || 0), 0);
 
   const handleSave = async () => {
     if (anyExceeds) {
@@ -273,21 +274,27 @@ export function WeeklyScheduleModal({
             </div>
           )}
 
-          <div className="flex items-center justify-end gap-3.5">
-            <button
-              onClick={onClose}
-              disabled={saving}
-              className="px-5 py-2.5 text-xs font-bold text-[#52647e] border border-border rounded-xl hover:bg-muted"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving || anyExceeds}
-              className="px-5 py-2.5 text-xs font-bold text-white bg-amber-500 hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-md transition duration-150"
-            >
-              {saving ? "Saving..." : "Save Schedule"}
-            </button>
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2 bg-amber-50/50 border border-amber-100 rounded-xl px-4 py-2">
+              <span className="text-xs font-bold text-[#52647e]">Total Weekly Hours:</span>
+              <span className="text-sm font-extrabold text-amber-600">{totalWeeklyHours.toFixed(1)}h</span>
+            </div>
+            <div className="flex items-center justify-end gap-3.5 w-full sm:w-auto">
+              <button
+                onClick={onClose}
+                disabled={saving}
+                className="px-5 py-2.5 text-xs font-bold text-[#52647e] border border-border rounded-xl hover:bg-muted"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                disabled={saving || anyExceeds}
+                className="px-5 py-2.5 text-xs font-bold text-white bg-amber-500 hover:bg-amber-600 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-md transition duration-150"
+              >
+                {saving ? "Saving..." : "Save Schedule"}
+              </button>
+            </div>
           </div>
         </div>
       </div>
