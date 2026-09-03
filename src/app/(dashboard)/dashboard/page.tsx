@@ -236,7 +236,7 @@ export default function DashboardPage() {
             ) : (
               driverStatusList.map((driver: any) => (
                 <div className="flex items-center gap-3" key={driver.id}>
-                  <Avatar initials={driver.initials} color={driver.color} />
+                  <Avatar initials={driver.initials} color={driver.color} url={driver.avatarUrl} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs font-bold text-[#273044]">
                       {driver.name}
@@ -560,11 +560,22 @@ function Avatar({
   initials,
   color,
   small = false,
+  url,
 }: {
   initials: string;
   color: string;
   small?: boolean;
+  url?: string;
 }) {
+  if (url) {
+    return (
+      <img
+        src={url}
+        alt={initials}
+        className={`object-cover shrink-0 rounded-full ${small ? "size-6" : "size-8"}`}
+      />
+    );
+  }
   return (
     <span
       className={`grid shrink-0 place-items-center rounded-full font-bold text-white ${small ? "size-6 text-[8px]" : "size-8 text-[10px]"}`}
