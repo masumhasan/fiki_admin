@@ -3,7 +3,8 @@
 import { useEffect, useState, useRef } from "react";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { useRouter } from "next/navigation";
-import { API_BASE_URL } from "@/lib/api";
+import { API_BASE_URL, getDriverProfiles } from "@/lib/api";
+import { uploadBase64Image } from "@/lib/uploadBase64";
 import { sanitizePhoneInput } from "@/lib/utils";
 
 // Simple HTML5 Canvas Signature Pad
@@ -292,8 +293,14 @@ export default function ManualRideRequestsPage({
 
       if (token) {
         try {
+          let signatureUrl = formData.signature;
+          if (signatureUrl && signatureUrl.startsWith("data:image/")) {
+            signatureUrl = await uploadBase64Image(signatureUrl, "signatures", token);
+          }
+
           const payload = {
             ...formData,
+            signature: signatureUrl,
             startDate: sDate,
             endDate: eDate,
             pickupDate: sDate,
