@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { useRouter } from "next/navigation";
-import { API_BASE_URL, getDriverProfiles } from "@/lib/api";
+import { API_BASE_URL } from "@/lib/api";
 import { uploadBase64Image } from "@/lib/uploadBase64";
 import { sanitizePhoneInput } from "@/lib/utils";
 
