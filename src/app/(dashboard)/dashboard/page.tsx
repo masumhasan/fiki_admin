@@ -430,7 +430,9 @@ export default function DashboardPage() {
                   ? item[6]
                   : item.id || item.rawId || `TRP-${idx}`;
                 
-                const avatarUrl = item.passengerAvatarUrl || item.passengerId?.avatarUrl || "";
+                const avatarUrl = isArr 
+                  ? item[7] 
+                  : item.passengerAvatarUrl || item.passengerId?.avatarUrl || "";
 
                 return (
                   <div
