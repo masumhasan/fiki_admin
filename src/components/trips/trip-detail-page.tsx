@@ -269,11 +269,13 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
   const passengerPhone = trip.phoneNumber || trip.passengerId?.phone || "—";
   const passengerEmail = trip.email || trip.passengerId?.email || "—";
   const passengerInitials = getInitials(passengerName);
+  const passengerAvatarUrl = trip.passengerAvatarUrl || trip.passengerId?.avatarUrl;
 
   const driverObj = trip.driverId;
   const driverName = driverObj?.name || "Unassigned Driver";
   const driverPhone = driverObj?.phone || "—";
   const driverInitials = driverObj ? getInitials(driverName) : "—";
+  const driverAvatarUrl = driverObj?.photoUrl || driverObj?.avatarUrl;
   const driverProfile = trip.driverProfile;
   const driverAvailability = driverProfile?.availabilityStatus || "Active";
 
@@ -524,6 +526,7 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
         {/* Passenger Card */}
         <PersonCard
           avatar={passengerInitials}
+          avatarUrl={passengerAvatarUrl}
           label="Passenger"
           name={passengerName}
         >
@@ -534,6 +537,7 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
         {/* Driver Card */}
         <PersonCard
           avatar={driverInitials}
+          avatarUrl={driverAvatarUrl}
           dark
           label="Driver"
           name={driverName}
@@ -830,12 +834,14 @@ const titleClass = "text-base font-bold tracking-[-0.02em] text-foreground";
 
 function PersonCard({
   avatar,
+  avatarUrl,
   children,
   dark = false,
   label,
   name,
 }: {
   avatar: string;
+  avatarUrl?: string;
   children: React.ReactNode;
   dark?: boolean;
   label: string;
@@ -846,9 +852,13 @@ function PersonCard({
       <p className={eyebrowClass}>{label}</p>
       <div className="mt-4 flex items-center gap-3">
         <span
-          className={`grid size-12 shrink-0 place-items-center rounded-full text-sm font-bold text-white ${dark ? "bg-primary" : "bg-violet-600"}`}
+          className={`grid size-12 shrink-0 place-items-center rounded-full text-sm font-bold text-white overflow-hidden ${dark ? "bg-primary" : "bg-violet-600"}`}
         >
-          {avatar}
+          {avatarUrl ? (
+            <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+          ) : (
+            avatar
+          )}
         </span>
         <div>
           <h2 className="font-bold text-foreground">{name}</h2>

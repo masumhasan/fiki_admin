@@ -29,6 +29,7 @@ type Trip = {
   passenger: string;
   initials: string;
   avatar: string;
+  passengerAvatarUrl?: string;
   driver?: string;
   pickup: string;
   destination: string;
@@ -165,6 +166,7 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
             passenger: passName,
             initials,
             avatar: "bg-violet-600",
+            passengerAvatarUrl: t.passengerAvatarUrl || t.passengerId?.avatarUrl,
             driver: driverName,
             pickup: t.pickupLocation?.address || "—",
             destination: t.dropoffLocation?.address || "—",
@@ -624,9 +626,13 @@ function Passenger({ trip }: { trip: Trip }) {
   return (
     <div className="flex items-center gap-2.5">
       <span
-        className={`grid size-9 shrink-0 place-items-center rounded-full text-[11px] font-bold text-white ${trip.avatar}`}
+        className={`grid size-9 shrink-0 place-items-center rounded-full text-[11px] font-bold text-white overflow-hidden ${trip.avatar}`}
       >
-        {trip.initials}
+        {trip.passengerAvatarUrl ? (
+          <img src={trip.passengerAvatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+        ) : (
+          trip.initials
+        )}
       </span>
       <span className="truncate text-[13px] font-semibold text-foreground">
         {trip.passenger}

@@ -26,7 +26,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { approveRideRequestApi, assignDriverApi, deleteTripApi, getAdminDriversApi, getAdminTripDetailApi, regenerateTripsApi, rejectRideRequestApi, respondToCounterOfferApi, updateTripApi } from "@/lib/api";
 
 const card =
@@ -106,6 +106,49 @@ export default function RideRequestDetails({
   // Regeneration state
   const [regenerating, setRegenerating] = useState(false);
   const [regenerateFeedback, setRegenerateFeedback] = useState<{ ok: boolean; text: string } | null>(null);
+
+  // Avatar Upload State
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingAvatar(true);
+    const uploadData = new FormData();
+    uploadData.append("image", file);
+    uploadData.append("category", "passenger-avatars");
+
+    try {
+      const token = window.localStorage.getItem("fiki_auth_token");
+      if (!token) throw new Error("No token");
+      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+      const res = await fetch(`${API_BASE_URL}/upload/image`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: uploadData,
+      });
+      const data = await res.json();
+      if (data.success && data.data?.url) {
+        // Update trip with new avatar
+        const updateRes = await updateTripApi(token, id, { passengerAvatarUrl: data.data.url });
+        if (updateRes.success && updateRes.data) {
+          setTrip(updateRes.data);
+        } else {
+          alert(updateRes.error?.message || "Failed to update trip with new avatar");
+        }
+      } else {
+        alert(data.error?.message || "Upload failed");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Failed to upload image.");
+    } finally {
+      setIsUploadingAvatar(false);
+    }
+  };
 
   const handleDeleteRequest = async () => {
     if (!confirm("Are you sure you want to delete this ride request and all associated recurring trips? This action is permanent and will remove it from all financial accounting.")) {
@@ -477,6 +520,39 @@ export default function RideRequestDetails({
               <article className={card}>
                 <CardHead icon={<UserRound />} title="Passenger Information" subtitle="Passenger personal and contact details" />
                 <div className="grid gap-x-8 gap-y-4 p-4 sm:grid-cols-2">
+                  <div className="sm:col-span-2 mb-2 flex items-center gap-4">
+                    <div 
+                      className="relative h-20 w-20 overflow-hidden rounded-full border-2 border-dashed border-[#e1e5ea] bg-slate-50 cursor-pointer flex items-center justify-center group"
+                      onClick={() => trip?.passengerAvatarUrl ? setAvatarModalOpen(true) : fileInputRef.current?.click()}
+                    >
+                      {trip?.passengerAvatarUrl ? (
+                        <img src={trip.passengerAvatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="text-xs text-slate-400 font-medium group-hover:text-slate-600">No Photo</span>
+                      )}
+                      {isUploadingAvatar && (
+                        <div className="absolute inset-0 bg-white/50 flex items-center justify-center">
+                          <span className="text-[10px] font-bold text-[#173d76]">...</span>
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <button 
+                        onClick={() => fileInputRef.current?.click()} 
+                        disabled={isUploadingAvatar}
+                        className="text-xs font-semibold text-[#173d76] hover:underline"
+                      >
+                        {trip?.passengerAvatarUrl ? "Update Avatar" : "Upload Avatar"}
+                      </button>
+                    </div>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      className="hidden" 
+                      ref={fileInputRef} 
+                      onChange={handleAvatarUpload} 
+                    />
+                  </div>
                   <Label label="Full name" value={passengerName} />
                   <Label label="Phone number" value={passengerPhone} />
                   <Label label="Email address" value={passengerEmail} />
@@ -815,7 +891,7 @@ export default function RideRequestDetails({
                                     } else {
                                       setMobilityForm({
                                         ...mobilityForm,
-                                        mobilityOptions: mobilityForm.mobilityOptions.filter((o: string) => o !== val),
+                                        mobilityOptions: mobilityForm.mobilityOptions.filter((d: string) => d !== val),
                                       });
                                     }
                                   }}
@@ -1311,6 +1387,21 @@ export default function RideRequestDetails({
             </div>
           </footer>
         </>
+      )}
+
+      {/* Avatar Modal */}
+      {avatarModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm" onClick={() => setAvatarModalOpen(false)}>
+          <div className="relative max-w-2xl max-h-[90vh] rounded-xl bg-white shadow-xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <button 
+              className="absolute top-4 right-4 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-black shadow hover:bg-white"
+              onClick={() => setAvatarModalOpen(false)}
+            >
+              <X className="h-5 w-5" />
+            </button>
+            <img src={trip?.passengerAvatarUrl} alt="Passenger Full" className="w-full h-auto max-h-[90vh] object-contain" />
+          </div>
+        </div>
       )}
     </div>
   );

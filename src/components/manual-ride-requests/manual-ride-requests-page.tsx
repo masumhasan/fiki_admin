@@ -125,11 +125,44 @@ export default function ManualRideRequestsPage({
 }) {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [errorMsg, setErrorMsg] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const uploadData = new FormData();
+    uploadData.append("image", file);
+    uploadData.append("category", "passenger-avatars");
+
+    try {
+      const token = window.localStorage.getItem("fiki_auth_token");
+      const res = await fetch(`${API_BASE_URL}/upload/image`, {
+        method: "POST",
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        body: uploadData,
+      });
+      const data = await res.json();
+      if (data.success && data.data?.url) {
+        setFormData((prev) => ({ ...prev, passengerAvatarUrl: data.data.url }));
+      } else {
+        setErrorMsg(data.error?.message || "Upload failed");
+      }
+    } catch (err) {
+      console.error(err);
+      setErrorMsg("Failed to upload image.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
   // Form State
   const [formData, setFormData] = useState({
+    passengerAvatarUrl: "",
     fullName: "",
     dateOfBirth: "",
     phoneNumber: "",
@@ -355,6 +388,36 @@ export default function ManualRideRequestsPage({
               Passenger Information
             </h2>
           </div>
+          
+          <div className="mb-6 flex items-center gap-4">
+            <div 
+              className="relative h-20 w-20 overflow-hidden rounded-full border-2 border-dashed border-[#e1e5ea] bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer flex items-center justify-center group"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {formData.passengerAvatarUrl ? (
+                <img src={formData.passengerAvatarUrl} alt="Avatar" className="h-full w-full object-cover" />
+              ) : (
+                <span className="text-xs text-slate-400 font-medium group-hover:text-slate-600">Upload</span>
+              )}
+              {isUploading && (
+                <div className="absolute inset-0 bg-white/50 flex items-center justify-center">
+                  <span className="text-[10px] font-bold text-[#173d76]">...</span>
+                </div>
+              )}
+            </div>
+            <div>
+              <h4 className="text-sm font-semibold text-[#172033]">Passenger Avatar (Optional)</h4>
+              <p className="text-xs text-slate-500 mt-1">Upload a clear photo of the passenger.</p>
+            </div>
+            <input 
+              type="file" 
+              accept="image/*" 
+              className="hidden" 
+              ref={fileInputRef} 
+              onChange={handleFileChange} 
+            />
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs font-semibold text-[#172033]">

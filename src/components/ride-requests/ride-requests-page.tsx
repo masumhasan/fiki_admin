@@ -37,6 +37,7 @@ type RideRequest = {
   phone: string;
   initials: string;
   avatar: string;
+  passengerAvatarUrl?: string;
   pickup: string;
   destination: string;
   date: string;
@@ -160,6 +161,7 @@ export function RideRequestsPage({ hideHeader }: { hideHeader?: boolean }) {
                 .toUpperCase()
                 .substring(0, 2) || "PA",
             avatar: "bg-violet-600",
+            passengerAvatarUrl: t.passengerAvatarUrl,
             pickup: t.pickupLocation?.address || "—",
             destination: t.dropoffLocation?.address || "—",
             date: t.scheduledTime
@@ -665,9 +667,13 @@ function Passenger({ request }: { request: RideRequest }) {
   return (
     <div className="flex items-center gap-2.5">
       <span
-        className={`grid size-9 shrink-0 place-items-center rounded-full text-[11px] font-bold text-white ${request.avatar}`}
+        className={`grid size-9 shrink-0 place-items-center rounded-full text-[11px] font-bold text-white overflow-hidden ${request.avatar}`}
       >
-        {request.initials}
+        {request.passengerAvatarUrl ? (
+          <img src={request.passengerAvatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+        ) : (
+          request.initials
+        )}
       </span>
       <span className="min-w-0">
         <strong className="block truncate text-[13px] text-foreground">
