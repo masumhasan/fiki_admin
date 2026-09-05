@@ -1347,33 +1347,6 @@ export default function RideRequestDetails({
                 </button>
               </article>
 
-              <article className={card}>
-                <div className="bg-[#173d76] px-4 py-3 text-sm font-bold text-white">Quick Summary</div>
-                <div className="space-y-3 p-4">
-                  {[
-                    ["Passenger", passengerName],
-                    ["Phone", passengerPhone],
-                    ["Trip Type", isRecurring ? "Recurring" : isRoundTrip ? "Round Trip" : "One-Way"],
-                    ["Start Date", startDateStr],
-                    ...(isRoundTrip || isRecurring ? [["End Date", endDateStr]] : []),
-                    ["Pickup Time", pickupTimeStr],
-                    ...(isRoundTrip ? [["Return Pickup Time", returnPickupTimeStr]] : []),
-                    ...(isRecurring && recurringDaysList.length > 0 ? [["Recurring Days", recurringDaysList.join(", ")]] : []),
-                    ["Pickup", pickup],
-                    ["Destination", dropoff],
-                    ["Driver", trip.driverId?.name || "Unassigned"],
-                    ["Fare", displayFare],
-                    ["Quoted Fare", trip.quotedFare ? `$${trip.quotedFare.toFixed(2)}` : "—"],
-                    ["Counter Offer", trip.counterOffer ? `$${trip.counterOffer.toFixed(2)}` : "—"],
-                  ].map(([a, b]) => (
-                    <Label label={a as string} value={b as string} key={a as string} />
-                  ))}
-                </div>
-                <div className={`border-t px-4 py-3 text-[11px] font-bold ${colorMap[statusColor] || "text-amber-600"}`}>
-                  • {statusText}
-                </div>
-              </article>
-
               <article className={`${card} p-4`}>
                 <p className="text-[11px] font-bold uppercase text-[#8190a5]">Submitted by</p>
                 <p className="mt-2 text-sm font-bold">{passengerName}</p>
