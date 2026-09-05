@@ -563,6 +563,7 @@ export function SchedulePage() {
     const res = await deleteOneTimeChangeApi(token, change.driverId, change._id);
     if (res.success) {
       await loadDrivers();
+      fetchScheduleOverview(currentWeekMonday);
     } else {
       alert(res.error?.message || "Failed to delete change.");
     }
@@ -773,7 +774,7 @@ export function SchedulePage() {
                     {(driver.shifts || []).map((shiftItem: any, index: number) => (
                       <ShiftCell key={displayDays[index]?.day || index} shift={shiftItem} />
                     ))}
-                    <strong className="text-center text-xs">{driver.total}</strong>
+                    <strong className="text-center text-xs">{getDriverWeeklyTotal(driver)}</strong>
                   </div>
                 ))}
                 <div className="flex flex-wrap gap-5 px-6 py-4 text-[10px] text-muted-foreground font-medium">
@@ -859,7 +860,10 @@ export function SchedulePage() {
           driverName={selected ? selected.name : ""}
           driverDisplayId={selected ? selected.id : ""}
           initialSchedule={selected ? (selected as any).weeklySchedule || [] : []}
-          onSaveSuccess={loadDrivers}
+          onSaveSuccess={() => {
+            loadDrivers();
+            fetchScheduleOverview(currentWeekMonday);
+          }}
         />
 
         <OneTimeChangeModal
@@ -868,14 +872,22 @@ export function SchedulePage() {
           driverId={selected ? (selected as any).mongoId || selected.id : ""}
           driverName={selected ? selected.name : ""}
           driverDisplayId={selected ? selected.id : ""}
-          onSaveSuccess={loadDrivers}
+          onSaveSuccess={() => {
+            loadDrivers();
+            fetchScheduleOverview(currentWeekMonday);
+          }}
         />
 
         <EditOneTimeChangeModal
           open={editChangeModalOpen}
           onClose={() => { setEditChangeModalOpen(false); setEditingChange(null); }}
           change={editingChange}
-          onSaveSuccess={() => { setEditChangeModalOpen(false); setEditingChange(null); loadDrivers(); }}
+          onSaveSuccess={() => {
+            setEditChangeModalOpen(false);
+            setEditingChange(null);
+            loadDrivers();
+            fetchScheduleOverview(currentWeekMonday);
+          }}
         />
 
         {/* ── Upcoming one-time changes ── */}
@@ -936,6 +948,42 @@ function Metric({
   );
 }
 
+function getDriverWeeklyTotal(driver: any): string {
+  if (Array.isArray(driver.shifts) && driver.shifts.length > 0) {
+    let totalMins = 0;
+    let hasCalculatedShift = false;
+
+    for (const shiftItem of driver.shifts) {
+      if (!shiftItem || shiftItem === "off" || shiftItem?.status === "DAY_OFF") continue;
+
+      if (typeof shiftItem === "string") {
+        const [start, end] = shiftItem.split("|");
+        if (start && end) {
+          const { hours } = calculateHours(start, end);
+          totalMins += Math.round(hours * 60);
+          hasCalculatedShift = true;
+        }
+      } else if (typeof shiftItem === "object") {
+        const start = shiftItem.startTime;
+        const end = shiftItem.endTime;
+        if (start && end) {
+          const { hours } = calculateHours(start, end);
+          totalMins += Math.round(hours * 60);
+          hasCalculatedShift = true;
+        }
+      }
+    }
+
+    if (hasCalculatedShift) {
+      const h = Math.floor(totalMins / 60);
+      const m = totalMins % 60;
+      return `${h}h ${String(m).padStart(2, "0")}m`;
+    }
+  }
+
+  return driver.total || "0h 00m";
+}
+
 function ShiftCell({ shift }: { shift: any }) {
   if (shift === "off" || shift?.status === "DAY_OFF") {
     return (
@@ -950,6 +998,7 @@ function ShiftCell({ shift }: { shift: any }) {
 
   if (typeof shift === "string") {
     const [start, end] = shift.split("|");
+    const durationText = calculateHours(start, end).text;
     return (
       <div className="h-20 flex flex-col justify-between rounded-xl border border-amber-300 bg-amber-100 p-2 text-[10px] text-amber-800">
         <div className="flex items-center justify-between">
@@ -957,7 +1006,7 @@ function ShiftCell({ shift }: { shift: any }) {
           <span className="rounded-full px-1.5 py-0.5 text-[9px] font-extrabold uppercase bg-white/70">Scheduled</span>
         </div>
         <span className="block font-medium">{end}</span>
-        <b className="block text-[10px]">8h 00m</b>
+        <b className="block text-[10px]">{durationText !== "-" ? durationText : "8h 00m"}</b>
       </div>
     );
   }
@@ -965,6 +1014,10 @@ function ShiftCell({ shift }: { shift: any }) {
   const status = shift?.status || "SCHEDULED";
   const label = shift?.label || "Scheduled";
   const toneClass = shift?.toneClass || "bg-amber-100 border-amber-300 text-amber-800";
+  const durationText =
+    shift?.startTime && shift?.endTime
+      ? calculateHours(shift.startTime, shift.endTime).text
+      : shift?.workDuration || "8h 00m";
 
   return (
     <div className={`h-20 flex flex-col justify-between rounded-xl border p-2 text-[10px] leading-tight ${toneClass}`}>
@@ -975,7 +1028,7 @@ function ShiftCell({ shift }: { shift: any }) {
         </span>
       </div>
       <span className="block font-medium">{shift?.endTime || "4:00 PM"}</span>
-      <b className="block text-[10px] opacity-90">{shift?.workDuration || "8h 00m"}</b>
+      <b className="block text-[10px] opacity-90">{durationText}</b>
     </div>
   );
 }
