@@ -493,6 +493,31 @@ export async function updateDispatchNumberApi(token: string, dispatchNumber: str
   }
 }
 
+export async function getCrmContentApi() {
+  try {
+    const res = await fetch(`${API_BASE_URL}/settings/crm-content`);
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to fetch CRM content" } };
+  }
+}
+
+export async function updateCrmContentApi(token: string, crmContent: any) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/settings/crm-content`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ crmContent }),
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to update CRM content" } };
+  }
+}
+
 export async function getScheduleOverviewApi(token: string, weekStart?: string) {
   try {
     const url = weekStart

@@ -12,7 +12,7 @@ import {
   Send,
   UsersRound,
   X,
-  PhoneCall,
+  Phone,
   PlusCircle,
   DollarSign,
 } from "lucide-react";
@@ -36,9 +36,9 @@ const navigation = [
   },
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
   {
-    label: "Dispatch Number",
-    href: "/dispatch-management",
-    icon: PhoneCall,
+    href: "/crm",
+    icon: Phone,
+    label: "CRM",
   },
 ];
 
