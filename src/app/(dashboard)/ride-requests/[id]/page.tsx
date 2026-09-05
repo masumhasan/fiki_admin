@@ -103,6 +103,20 @@ export default function RideRequestDetails({
     specialInstructions: "",
   });
 
+  // Editing state for Passenger Info
+  const [isEditingPassengerInfo, setIsEditingPassengerInfo] = useState(false);
+  const [savingPassengerInfo, setSavingPassengerInfo] = useState(false);
+  const [passengerInfoForm, setPassengerInfoForm] = useState<any>({
+    fullName: "",
+    phoneNumber: "",
+    email: "",
+    dateOfBirth: "",
+    emergencyContactName: "",
+    emergencyContactPhone: "",
+    relationship: "",
+  });
+
+
   // Regeneration state
   const [regenerating, setRegenerating] = useState(false);
   const [regenerateFeedback, setRegenerateFeedback] = useState<{ ok: boolean; text: string } | null>(null);
@@ -252,8 +266,32 @@ export default function RideRequestDetails({
         driverNotes: trip.driverNotes || "",
         specialInstructions: trip.specialInstructions || trip.accessInformation || "",
       });
+
+      setPassengerInfoForm({
+        fullName: trip.fullName || trip.passengerId?.name || "",
+        phoneNumber: trip.phoneNumber || trip.passengerId?.phoneNumber || "",
+        email: trip.email || trip.passengerId?.email || "",
+        dateOfBirth: trip.dateOfBirth || "",
+        emergencyContactName: trip.emergencyContactName || "",
+        emergencyContactPhone: trip.emergencyContactPhone || "",
+        relationship: trip.relationship || "",
+      });
     }
   }, [trip]);
+
+  const handleSavePassengerInfo = async () => {
+    const token = window.localStorage.getItem("fiki_auth_token");
+    if (!token) return;
+    setSavingPassengerInfo(true);
+    const res = await updateTripApi(token, id, passengerInfoForm);
+    if (res.success && res.data) {
+      setTrip(res.data);
+      setIsEditingPassengerInfo(false);
+    } else {
+      alert(res.error?.message || "Failed to update passenger info");
+    }
+    setSavingPassengerInfo(false);
+  };
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -518,7 +556,21 @@ export default function RideRequestDetails({
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
             <main className="space-y-4">
               <article className={card}>
-                <CardHead icon={<UserRound />} title="Passenger Information" subtitle="Passenger personal and contact details" />
+                <CardHead 
+                  icon={<UserRound />} 
+                  title="Passenger Information" 
+                  subtitle="Passenger personal and contact details"
+                  action={
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingPassengerInfo(!isEditingPassengerInfo)}
+                      className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 transition hover:bg-blue-100"
+                    >
+                      <Pencil className="size-3.5" />
+                      {isEditingPassengerInfo ? "Cancel" : "Edit"}
+                    </button>
+                  }
+                />
                 <div className="grid gap-x-8 gap-y-4 p-4 sm:grid-cols-2">
                   <div className="sm:col-span-2 mb-2 flex items-center gap-4">
                     <div 
@@ -553,10 +605,96 @@ export default function RideRequestDetails({
                       onChange={handleAvatarUpload} 
                     />
                   </div>
-                  <Label label="Full name" value={passengerName} />
-                  <Label label="Phone number" value={passengerPhone} />
-                  <Label label="Email address" value={passengerEmail} />
-                  <Label label="Passenger ID" value={trip.passengerId?._id || trip.passengerId || "—"} />
+                  {isEditingPassengerInfo ? (
+                    <div className="sm:col-span-2 space-y-4">
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div>
+                           <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">Full Name</label>
+                           <input
+                             type="text"
+                             value={passengerInfoForm.fullName}
+                             onChange={(e) => setPassengerInfoForm({ ...passengerInfoForm, fullName: e.target.value })}
+                             className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-[#173d76]"
+                           />
+                        </div>
+                        <div>
+                           <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">Date of Birth</label>
+                           <input
+                             type="date"
+                             value={passengerInfoForm.dateOfBirth}
+                             onChange={(e) => setPassengerInfoForm({ ...passengerInfoForm, dateOfBirth: e.target.value })}
+                             className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-[#173d76]"
+                           />
+                        </div>
+                        <div>
+                           <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">Phone Number</label>
+                           <input
+                             type="tel"
+                             value={passengerInfoForm.phoneNumber}
+                             onChange={(e) => setPassengerInfoForm({ ...passengerInfoForm, phoneNumber: e.target.value })}
+                             className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-[#173d76]"
+                           />
+                        </div>
+                        <div>
+                           <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">Email Address</label>
+                           <input
+                             type="email"
+                             value={passengerInfoForm.email}
+                             onChange={(e) => setPassengerInfoForm({ ...passengerInfoForm, email: e.target.value })}
+                             className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-[#173d76]"
+                           />
+                        </div>
+                        <div>
+                           <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">Emergency Contact Name</label>
+                           <input
+                             type="text"
+                             value={passengerInfoForm.emergencyContactName}
+                             onChange={(e) => setPassengerInfoForm({ ...passengerInfoForm, emergencyContactName: e.target.value })}
+                             className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-[#173d76]"
+                           />
+                        </div>
+                        <div>
+                           <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">Emergency Contact Phone</label>
+                           <input
+                             type="tel"
+                             value={passengerInfoForm.emergencyContactPhone}
+                             onChange={(e) => setPassengerInfoForm({ ...passengerInfoForm, emergencyContactPhone: e.target.value })}
+                             className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-[#173d76]"
+                           />
+                        </div>
+                        <div>
+                           <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">Relationship</label>
+                           <input
+                             type="text"
+                             value={passengerInfoForm.relationship}
+                             onChange={(e) => setPassengerInfoForm({ ...passengerInfoForm, relationship: e.target.value })}
+                             className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-[#173d76]"
+                           />
+                        </div>
+                      </div>
+                      <div className="flex justify-end pt-2 border-t border-slate-100">
+                         <button
+                           type="button"
+                           onClick={handleSavePassengerInfo}
+                           disabled={savingPassengerInfo}
+                           className="flex h-9 items-center gap-2 rounded-lg bg-[#173d76] px-5 text-xs font-bold text-white transition hover:bg-[#122b54] disabled:opacity-50"
+                         >
+                           {savingPassengerInfo ? "Saving..." : "Save Changes"}
+                         </button>
+                       </div>
+                    </div>
+                  ) : (
+                    <>
+                      <Label label="Full name" value={passengerName} />
+                      <Label label="Date of birth" value={trip.dateOfBirth || "—"} />
+                      <Label label="Phone number" value={passengerPhone} />
+                      <Label label="Email address" value={passengerEmail} />
+                      <Label label="Emergency contact name" value={trip.emergencyContactName || "—"} />
+                      <Label label="Emergency contact phone" value={trip.emergencyContactPhone || "—"} />
+                      <Label label="Relationship" value={trip.relationship || "—"} />
+                      <Label label="Passenger ID" value={trip.passengerId?._id || trip.passengerId || "—"} />
+                    </>
+                  )}
                 </div>
               </article>
 
