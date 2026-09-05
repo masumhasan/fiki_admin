@@ -53,16 +53,15 @@ type RideRequest = {
 };
 
 const tabs = [
-  "All",
-  "Pending",
   "Approved",
+  "Pending",
   "Need driver",
   "Completed",
   "Rejected",
 ] as const;
 
 export function RideRequestsPage({ hideHeader }: { hideHeader?: boolean }) {
-  const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>("All");
+  const [activeTab, setActiveTab] = useState<(typeof tabs)[number]>("Approved");
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
@@ -115,18 +114,19 @@ export function RideRequestsPage({ hideHeader }: { hideHeader?: boolean }) {
           if (t.status === "COMPLETED") statusStr = "Completed";
           else if (t.status === "CANCELLED" || t.status === "QUOTE_DENIED")
             statusStr = "Rejected";
-          else if (t.status === "QUOTE_SENT") statusStr = "Approved";
           else if (
             t.status === "ACCEPTED" ||
             t.status === "DRIVER_ARRIVING" ||
-            t.status === "DRIVER_ARRIVED"
+            t.status === "DRIVER_ARRIVED" ||
+            t.status === "IN_PROGRESS"
           )
-            statusStr = "Approved";
-          else if (t.status === "IN_PROGRESS") statusStr = "Scheduled";
-          else if (t.status === "QUOTE_COUNTERED") statusStr = "Pending";
-          else if (t.status === "QUOTE_ACCEPTED") statusStr = "Need driver";
-          else if (t.status === "REQUESTED")
             statusStr = driverName ? "Approved" : "Need driver";
+          else if (t.status === "QUOTE_ACCEPTED")
+            statusStr = driverName ? "Approved" : "Need driver";
+          else if (t.status === "QUOTE_SENT")
+            statusStr = driverName ? "Approved" : "Pending";
+          else if (t.status === "REQUESTED" || t.status === "QUOTE_COUNTERED")
+            statusStr = "Pending";
 
           const isRecurring =
             t.schedule === "recurring" ||
@@ -249,7 +249,7 @@ export function RideRequestsPage({ hideHeader }: { hideHeader?: boolean }) {
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
     return tripsWithHandler.filter((request) => {
-      const matchesTab = activeTab === "All" || request.status === activeTab;
+      const matchesTab = request.status === activeTab;
       const matchesQuery =
         !normalized ||
         [
@@ -282,10 +282,7 @@ export function RideRequestsPage({ hideHeader }: { hideHeader?: boolean }) {
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap gap-1">
               {tabs.map((tab) => {
-                const count =
-                  tab === "All"
-                    ? trips.length
-                    : trips.filter((r) => r.status === tab).length;
+                const count = trips.filter((r) => r.status === tab).length;
                 return (
                   <button
                     className={`relative -mb-px flex h-10 items-center gap-2 border-b-2 px-3 text-sm font-semibold transition-colors ${activeTab === tab ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground"}`}

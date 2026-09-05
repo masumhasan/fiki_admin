@@ -1,9 +1,9 @@
 "use client";
 
-import { ArrowLeft, CarFront, DollarSign, Send, Tag } from "lucide-react";
+import { ArrowLeft, CarFront, Check, DollarSign, Send, Tag } from "lucide-react";
 import Link from "next/link";
-import { use, useState } from "react";
-import { sendQuoteApi } from "@/lib/api";
+import { use, useEffect, useState } from "react";
+import { getAdminTripDetailApi, sendQuoteApi } from "@/lib/api";
 
 export default function QuotationPage({
   params,
@@ -16,15 +16,35 @@ export default function QuotationPage({
   const [rate, setRate] = useState(3.5);
   const [assist, setAssist] = useState(0);
   const [discount, setDiscount] = useState(0);
+  const [tax, setTax] = useState(8.5);
   const [quoteNote, setQuoteNote] = useState("");
   const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
   const [notice, setNotice] = useState<{ text: string; ok: boolean } | null>(null);
-  const tax = 8.5;
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const token = window.localStorage.getItem("fiki_auth_token");
+    if (!token) return;
+    getAdminTripDetailApi(token, id).then((res) => {
+      if (res.success && res.data) {
+        if (res.data.status === "QUOTE_SENT" || (res.data.quotedFare && res.data.status !== "REQUESTED")) {
+          setSent(true);
+        }
+        if (res.data.quoteNote) {
+          setQuoteNote(res.data.quoteNote);
+        }
+      }
+    });
+  }, [id]);
+
   const subtotal = base + miles * rate + assist;
-  const total = (subtotal - discount) * (1 + tax / 100);
+  const taxAmount = ((subtotal - discount) * (tax || 0)) / 100;
+  const total = Math.max(0, subtotal - discount + taxAmount);
   const money = (v: number) => `$${v.toFixed(2)}`;
 
   const handleSendQuote = async () => {
+    if (sent) return;
     if (typeof window === "undefined") return;
     const token = window.localStorage.getItem("fiki_auth_token");
     if (!token) {
@@ -35,6 +55,7 @@ export default function QuotationPage({
     const res = await sendQuoteApi(token, id, total, quoteNote || undefined);
     setSending(false);
     if (res.success) {
+      setSent(true);
       setNotice({ text: `Quotation of ${money(total)} per single trip sent to passenger for review.`, ok: true });
     } else {
       setNotice({ text: res.error?.message || "Failed to send quotation.", ok: false });
@@ -50,8 +71,14 @@ export default function QuotationPage({
               <h1 className="text-2xl font-bold tracking-[-.03em] text-[#16345e]">
                 Create Quotation (Per Single Trip)
               </h1>
-              <span className="rounded-full border border-amber-300 bg-amber-50 px-3 py-1.5 text-[11px] font-bold text-amber-600">
-                Pending Review
+              <span
+                className={`rounded-full border px-3 py-1.5 text-[11px] font-bold ${
+                  sent
+                    ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+                    : "border-amber-300 bg-amber-50 text-amber-600"
+                }`}
+              >
+                {sent ? "Quotation Sent" : "Pending Review"}
               </span>
             </div>
             <p className="mt-1 max-w-2xl text-[13px] text-[#72829a]">
@@ -84,7 +111,7 @@ export default function QuotationPage({
                 <Field label="Rate per mile" value={rate} setValue={setRate} suffix="/ mi" />
                 <Field label="Extra Services" value={assist} setValue={setAssist} prefix="$" />
                 <Field label="Discount" value={discount} setValue={setDiscount} prefix="$" />
-                <Field label="Tax (%)" value={tax} readOnly suffix="%" />
+                <Field label="Tax (%)" value={tax} setValue={setTax} suffix="%" />
                 <div className="md:col-span-3 rounded-xl border border-[#cdddf6] bg-[#eef5ff] p-5">
                   <div className="flex items-center gap-2 text-blue-700">
                     <Tag className="size-5" />
@@ -99,7 +126,7 @@ export default function QuotationPage({
                     <div>
                       <p>Subtotal <b className="float-right text-lg text-[#172033]">{money(subtotal)}</b></p>
                       <p className="mt-3">Discount <b className="float-right text-red-500">− {money(discount)}</b></p>
-                      <p className="mt-3">Tax ({tax}%) <b className="float-right text-[#172033]">{money(((subtotal - discount) * tax) / 100)}</b></p>
+                      <p className="mt-3">Tax ({tax}%) <b className="float-right text-[#172033]">{money(taxAmount)}</b></p>
                     </div>
                   </div>
                   <div className="mt-5 border-t border-blue-200 pt-4">
@@ -151,7 +178,7 @@ export default function QuotationPage({
               <div className="mt-6 space-y-3 border-t border-white/20 pt-5 text-sm">
                 <p>Subtotal <span className="float-right">{money(subtotal)}</span></p>
                 <p>Discount <span className="float-right text-cyan-200">− {money(discount)}</span></p>
-                <p>Tax ({tax}%) <span className="float-right">{money(((subtotal - discount) * tax) / 100)}</span></p>
+                <p>Tax ({tax}%) <span className="float-right">{money(taxAmount)}</span></p>
               </div>
             </article>
           </aside>
@@ -167,18 +194,34 @@ export default function QuotationPage({
           <button
             className="h-9 rounded-lg border px-4 text-xs font-bold text-[#58677d] transition hover:border-[#173d76]/30 hover:bg-[#173d76]/5 disabled:opacity-50"
             onClick={() => setNotice({ text: "Quotation saved as a draft.", ok: true })}
-            disabled={sending}
+            disabled={sending || sent}
             type="button"
           >
             Save as Draft
           </button>
           <button
-            className="flex h-9 items-center gap-1.5 rounded-lg bg-[#173d76] px-4 text-xs font-bold text-white shadow-md shadow-[#173d76]/20 transition hover:bg-[#0d2c58] disabled:opacity-60"
+            className={`flex h-9 items-center gap-1.5 rounded-lg px-4 text-xs font-bold shadow-md transition ${
+              sent
+                ? "bg-emerald-600 text-white shadow-emerald-600/20 cursor-not-allowed disabled:opacity-90"
+                : "bg-[#173d76] text-white shadow-[#173d76]/20 hover:bg-[#0d2c58] disabled:opacity-60"
+            }`}
             onClick={handleSendQuote}
-            disabled={sending}
+            disabled={sending || sent}
             type="button"
           >
-            <Send className="size-4" /> {sending ? "Sending…" : "Send Quotation"}
+            {sent ? (
+              <>
+                <Check className="size-4" /> Quotation Sent
+              </>
+            ) : sending ? (
+              <>
+                <Send className="size-4 animate-pulse" /> Sending…
+              </>
+            ) : (
+              <>
+                <Send className="size-4" /> Send Quotation
+              </>
+            )}
           </button>
         </div>
       </footer>
@@ -209,11 +252,14 @@ function Field({
         <input
           className={`h-10 w-full rounded-lg border border-[#dce5f0] bg-white text-[13px] font-semibold text-[#27344a] outline-none focus:border-[#173d76] focus:ring-4 focus:ring-[#173d76]/10 ${prefix ? "pl-8 pr-3" : suffix ? "pl-3 pr-16" : "px-3"}`}
           min="0"
-          onChange={setValue ? (e) => setValue(Number(e.target.value)) : undefined}
+          onChange={setValue ? (e) => {
+            const val = e.target.value;
+            setValue(val === "" ? 0 : Number(val));
+          } : undefined}
           readOnly={readOnly}
           step="0.01"
           type="number"
-          value={value}
+          value={value === 0 && !readOnly ? 0 : value}
         />
         {suffix && (
           <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#8493a8]">{suffix}</span>
