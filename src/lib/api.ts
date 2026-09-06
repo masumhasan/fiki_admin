@@ -535,7 +535,7 @@ export async function getScheduleOverviewApi(token: string, weekStart?: string) 
 export async function updateDriverEarningsApi(
   token: string,
   driverId: string,
-  data: { hourlyRate?: number; approvedHours?: number; tripBonusRate?: number; payrollStatus?: string; periodId?: string }
+  data: { hourlyRate?: number; approvedHours?: number; clockedHours?: number; tripBonusRate?: number; payrollStatus?: string; periodId?: string }
 ) {
   try {
     const res = await fetch(`${API_BASE_URL}/admin/earnings/${driverId}`, {
@@ -646,3 +646,74 @@ export async function rejectRideRequestApi(token: string, tripId: string, reason
     return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to reject ride request" } };
   }
 }
+
+export interface AdminUserItem {
+  _id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  role: "ADMIN" | "DRIVER" | "USER";
+  accountStatus: string;
+  avatarUrl?: string;
+  createdAt: string;
+}
+
+export interface GetAdminUsersParams {
+  search?: string;
+  role?: string;
+  page?: number;
+  limit?: number;
+}
+
+export async function getAdminUsersApi(token: string, params?: GetAdminUsersParams) {
+  try {
+    const query = new URLSearchParams();
+    if (params?.search) query.append("search", params.search);
+    if (params?.role && params.role !== "ALL") query.append("role", params.role);
+    if (params?.page) query.append("page", String(params.page));
+    if (params?.limit) query.append("limit", String(params.limit));
+
+    const url = `${API_BASE_URL}/admin/users${query.toString() ? `?${query.toString()}` : ""}`;
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to fetch users list" } };
+  }
+}
+
+export async function updateAdminUserApi(
+  token: string,
+  userId: string,
+  data: { name?: string; email?: string; phone?: string; role?: string; accountStatus?: string }
+) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(data),
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to update user" } };
+  }
+}
+
+export async function deleteAdminUserApi(token: string, userId: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/users/${userId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to delete user" } };
+  }
+}
+

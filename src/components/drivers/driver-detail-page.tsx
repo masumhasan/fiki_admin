@@ -591,7 +591,7 @@ function EarningsTab({
       </section>
 
       {/* Summary Metrics */}
-      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-5">
         <EarningMetric
           icon={CarFront}
           label="Total trips"
@@ -601,6 +601,11 @@ function EarningsTab({
           icon={Check}
           label="Completed trips"
           value={String(stats.completedTrips)}
+        />
+        <EarningMetric
+          icon={Clock3}
+          label="Clocked Hours"
+          value={`${earnings?.clockedHours ?? 0} hrs`}
         />
         <EarningMetric
           icon={DollarSign}
@@ -690,8 +695,7 @@ function EarningsTab({
       <aside className="flex gap-3 rounded-xl border border-blue-200 bg-blue-50 p-4 text-xs leading-5 text-blue-700">
         <Info className="size-4 shrink-0 mt-0.5" />
         <p>
-          <strong>Earnings note:</strong> Fare totals are based on trip records
-          for the selected pay period (<strong>{payPeriodRange}</strong>). Changing the payroll status updates the driver portal view for this fortnight.
+          <strong>Salary Formula:</strong> (Hourly Rate × Driver Clocked Hours) + (Trips × Trip Bonus Rate). Calculated for the selected pay period (<strong>{payPeriodRange}</strong>) using shift logs ({earnings?.clockedHours ?? 0} hrs). Changing the payroll status updates the driver portal view for this fortnight.
         </p>
       </aside>
     </div>

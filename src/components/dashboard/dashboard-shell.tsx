@@ -11,6 +11,7 @@ import {
   Menu,
   Send,
   UsersRound,
+  Users,
   X,
   Phone,
   PlusCircle,
@@ -29,6 +30,7 @@ const navigation = [
   { label: "Schedule", href: "/schedule", icon: CalendarDays },
   { label: "Drivers", href: "/drivers", icon: UsersRound },
   { label: "Vehicles", href: "/vehicles", icon: CarFront },
+  { label: "Users", href: "/users", icon: Users },
   {
     label: "Payroll",
     href: "/earning-management",
