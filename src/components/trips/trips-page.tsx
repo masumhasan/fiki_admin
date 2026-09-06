@@ -63,11 +63,21 @@ function formatTimeTo12Hour(timeStr?: string): string {
   return `${hours}:${minutes} ${ampm}`;
 }
 
+export type TripTab = "today" | "nextDay" | "completed" | "missed" | "all";
+
 export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [status, setStatus] =
     useState<(typeof filters)[number]>("All statuses");
+  const [activeTab, setActiveTab] = useState<TripTab>("today");
+  const [tabCounts, setTabCounts] = useState({
+    today: 0,
+    nextDay: 0,
+    completed: 0,
+    missed: 0,
+    all: 0,
+  });
   const [pageSize, setPageSize] = useState("10");
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loading, setLoading] = useState(true);
@@ -88,10 +98,10 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
     return () => clearTimeout(handler);
   }, [query]);
 
-  // Reset to page 1 if search, status, or page size changes
+  // Reset to page 1 if search, status, page size, or active tab changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedQuery, status, pageSize]);
+  }, [debouncedQuery, status, pageSize, activeTab]);
 
   const handleDeleteTrip = async (id: string) => {
     if (!confirm("Are you sure you want to delete this trip? This action is permanent.")) {
@@ -123,7 +133,15 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
       else if (status === "Completed") apiStatus = "COMPLETED";
       else if (status === "Cancelled") apiStatus = "CANCELLED";
 
-      const res = await getAdminTripsApi(token, currentPage, Number(pageSize), apiStatus, "trips", debouncedQuery);
+      const res = await getAdminTripsApi(
+        token,
+        currentPage,
+        Number(pageSize),
+        apiStatus,
+        "trips",
+        debouncedQuery,
+        activeTab
+      );
       if (res.success && res.data && Array.isArray(res.data.trips)) {
         
         if (res.data.summary) {
@@ -132,6 +150,17 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
             onboardNow: res.data.summary.onboardNow || 0,
             needDriver: res.data.summary.needDriver || 0,
             completedCount: res.data.summary.completedCount || 0,
+          });
+        }
+
+        const countsObj = res.data.counts || res.data.summary?.tabCounts;
+        if (countsObj) {
+          setTabCounts({
+            today: countsObj.today ?? 0,
+            nextDay: countsObj.nextDay ?? countsObj.upcoming ?? 0,
+            completed: countsObj.completed ?? 0,
+            missed: countsObj.missed ?? 0,
+            all: countsObj.all ?? res.data.summary?.totalTrips ?? 0,
           });
         }
         
@@ -236,7 +265,7 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
 
   useEffect(() => {
     fetchTrips();
-  }, [currentPage, pageSize, debouncedQuery, status]);
+  }, [currentPage, pageSize, debouncedQuery, status, activeTab]);
 
   const summary = [
     { label: "Total trips", value: summaryData.totalTrips, tone: "text-primary" },
@@ -351,9 +380,10 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
       </section>
 
       <section className="overflow-hidden rounded-xl border border-[#e1e6ee] bg-card shadow-[0_4px_14px_rgba(15,37,74,.04)]">
-        <header className="flex flex-col gap-3 border-b border-border px-5 py-3.5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex flex-1 flex-col gap-2.5 sm:flex-row sm:items-center">
-            <div className="relative sm:mr-auto sm:w-72">
+        <header className="flex flex-col gap-3 border-b border-border px-5 py-2.5 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex flex-1 flex-col gap-3 lg:flex-row lg:items-center">
+            {/* Search Input */}
+            <div className="relative w-full lg:w-64 shrink-0">
               <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-brand-icon" />
               <input
                 className="h-10 w-full rounded-lg border border-input bg-muted pl-11 pr-4 text-sm outline-none placeholder:text-brand-placeholder focus:border-primary focus:bg-card focus:ring-2 focus:ring-primary/10"
@@ -363,22 +393,63 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
                 value={query}
               />
             </div>
-            <div className="relative">
-              <CalendarDays className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-brand-icon" />
-              <select
-                aria-label="Filter trips by status"
-                className="h-10 w-full appearance-none rounded-lg border border-input bg-card pl-11 pr-9 text-sm font-medium text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 sm:w-44"
-                onChange={(event) =>
-                  setStatus(event.target.value as (typeof filters)[number])
-                }
-                value={status}
-              >
-                {filters.map((filter) => (
-                  <option key={filter}>{filter}</option>
-                ))}
-              </select>
-              <ChevronDownIcon />
+
+            {/* Horizontal Filter Tabs: Today's Trips, Next Day's Trips, Completed Trips, Missed Trips, All Trips */}
+            <div className="flex items-center gap-1 overflow-x-auto border-b border-border lg:border-b-0 py-1 lg:py-0">
+              {[
+                { id: "today" as const, label: "Today's Trips", count: tabCounts.today },
+                { id: "nextDay" as const, label: "Next Day's Trips", count: tabCounts.nextDay },
+                { id: "completed" as const, label: "Completed Trips", count: tabCounts.completed },
+                { id: "missed" as const, label: "Missed Trips", count: tabCounts.missed },
+                { id: "all" as const, label: "All Trips", count: tabCounts.all },
+              ].map((tab) => {
+                const isActive = activeTab === tab.id;
+                const isMissed = tab.id === "missed";
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setActiveTab(tab.id)}
+                    className={cn(
+                      "relative px-3.5 py-2.5 text-xs font-bold transition-colors whitespace-nowrap cursor-pointer",
+                      isActive
+                        ? isMissed
+                          ? "text-red-600 font-extrabold"
+                          : "text-primary"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {tab.label} ({tab.count})
+                    {isActive && (
+                      <span
+                        className={cn(
+                          "absolute inset-x-2 bottom-0 h-0.5 rounded-full",
+                          isMissed ? "bg-red-600" : "bg-primary",
+                        )}
+                      />
+                    )}
+                  </button>
+                );
+              })}
             </div>
+          </div>
+
+          {/* Status Dropdown */}
+          <div className="relative shrink-0">
+            <CalendarDays className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-brand-icon" />
+            <select
+              aria-label="Filter trips by status"
+              className="h-10 w-full appearance-none rounded-lg border border-input bg-card pl-11 pr-9 text-sm font-medium text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 sm:w-44 cursor-pointer"
+              onChange={(event) =>
+                setStatus(event.target.value as (typeof filters)[number])
+              }
+              value={status}
+            >
+              {filters.map((filter) => (
+                <option key={filter}>{filter}</option>
+              ))}
+            </select>
+            <ChevronDownIcon />
           </div>
         </header>
 
