@@ -22,64 +22,92 @@ const card =
 
 const trips: any[] = [];
 
+function formatTimeTo12Hour(timeStr?: string): string {
+  if (!timeStr) return "—";
+  const trimmed = timeStr.trim();
+  const match = /^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i.exec(trimmed);
+  if (!match) return timeStr;
+  let hours = parseInt(match[1], 10);
+  const minutes = match[2];
+  const ampmParam = match[3] ? match[3].toUpperCase() : null;
+  if (ampmParam) return `${hours}:${minutes} ${ampmParam}`;
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  return `${hours}:${minutes} ${ampm}`;
+}
+
 export default function DashboardPage() {
   const [liveTrips, setLiveTrips] = useState<any[] | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState<any | null>(null);
   const [tripFilter, setTripFilter] = useState("week"); // "week", "month", "year"
   const [driverPerfFilter, setDriverPerfFilter] = useState("week"); // "week", "fortnight", "month", "year"
 
+  const fetchLiveTrips = async () => {
+    if (typeof window === "undefined") return;
+    const token = window.localStorage.getItem("fiki_auth_token");
+    if (!token) return;
+    setRefreshing(true);
+    try {
+      const res = await getAdminTripsApi(token, 1, 10, "IN_PROGRESS", "live");
+      if (res.success && res.data && Array.isArray(res.data.trips)) {
+        const onboardOnly = res.data.trips.filter((t: any) => t.status === "IN_PROGRESS");
+        const mapped = onboardOnly.map((t: any) => {
+          const passengerName =
+            t.fullName ||
+            t.passengerId?.fullName ||
+            t.passengerId?.name ||
+            "Passenger";
+          const driverName = t.driverId?.name || "Unassigned";
+          const ini =
+            passengerName
+              .split(" ")
+              .map((n: string) => n[0])
+              .join("")
+              .toUpperCase()
+              .substring(0, 2) || "PA";
+
+          const timeStr = t.pickupTime
+            ? formatTimeTo12Hour(t.pickupTime)
+            : t.createdAt
+              ? new Date(t.createdAt).toLocaleTimeString("en-US", {
+                  hour: "numeric",
+                  minute: "2-digit",
+                  hour12: true,
+                  timeZone: "America/Chicago",
+                })
+              : "—";
+
+          return [
+            `TRP-${t._id.substring(t._id.length - 4).toUpperCase()}`,
+            ini,
+            passengerName,
+            driverName,
+            t.pickupLocation?.address || "Pickup Address",
+            t.dropoffLocation?.address || "Dropoff Address",
+            "Onboard",
+            timeStr,
+            "#2563eb",
+            t.passengerAvatarUrl || t.passengerId?.avatarUrl || "",
+          ];
+        });
+        setLiveTrips(mapped);
+      } else {
+        setLiveTrips([]);
+      }
+    } catch {
+      setLiveTrips([]);
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
   useEffect(() => {
+    fetchLiveTrips();
     if (typeof window !== "undefined") {
       const token = window.localStorage.getItem("fiki_auth_token");
       if (token) {
-        getAdminTripsApi(token, 1, 10, undefined, "live").then((res) => {
-          if (res.success && res.data && Array.isArray(res.data.trips)) {
-            const mapped = res.data.trips.map((t: any) => {
-              const passengerName =
-                t.fullName ||
-                t.passengerId?.fullName ||
-                t.passengerId?.name ||
-                "Passenger";
-              const driverName = t.driverId?.name || "Unassigned";
-              const ini =
-                passengerName
-                  .split(" ")
-                  .map((n: string) => n[0])
-                  .join("")
-                  .toUpperCase()
-                  .substring(0, 2) || "PA";
-
-              let statusStr = "Scheduled";
-              if (t.status === "COMPLETED") statusStr = "Completed";
-              else if (t.status === "IN_PROGRESS") statusStr = "Onboard";
-              else if (t.status === "REQUESTED") statusStr = "Need Driver";
-
-              return [
-                `T-${t._id.substring(t._id.length - 4).toUpperCase()}`,
-                ini,
-                passengerName,
-                driverName,
-                t.pickupLocation?.address || "Pickup Address",
-                t.dropoffLocation?.address || "Dropoff Address",
-                statusStr,
-                t.createdAt
-                  ? new Date(t.createdAt).toLocaleTimeString("en-US", {
-                      hour: "2-digit",
-                      minute: "2-digit",
-                      hour12: true,
-                      timeZone: "America/Chicago",
-                    })
-                  : "Now",
-                "#2563eb",
-                t.passengerAvatarUrl || t.passengerId?.avatarUrl || "",
-              ];
-            });
-            if (mapped.length > 0) {
-              setLiveTrips(mapped);
-            }
-          }
-        });
-
         getAdminAnalyticsApi(token).then((res) => {
           if (res.success && res.data) {
             setStats(res.data);
@@ -260,13 +288,15 @@ export default function DashboardPage() {
               <h2 className="text-lg font-bold text-[#172033]">
                 Live Dispatch Board
               </h2>
-              <p className="text-xs text-[#8b95a7]">Real-time trip overview</p>
+              <p className="text-xs text-[#8b95a7]">Real-time trip overview (Onboard trips)</p>
             </div>
             <button
               type="button"
-              className="flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs text-[#69758a]"
+              onClick={fetchLiveTrips}
+              disabled={refreshing}
+              className="flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs text-[#69758a] hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50"
             >
-              <RefreshCw className="size-3.5" />
+              <RefreshCw className={`size-3.5 ${refreshing ? "animate-spin text-blue-600" : ""}`} />
               Refresh
             </button>
           </div>
@@ -307,7 +337,7 @@ export default function DashboardPage() {
                       colSpan={7}
                       className="py-10 text-center text-sm text-[#687386]"
                     >
-                      No trips found.
+                      No onboard trips at the moment.
                     </td>
                   </tr>
                 ) : (
