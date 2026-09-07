@@ -138,8 +138,8 @@ export default function RideRequestDetails({
     try {
       const token = window.localStorage.getItem("fiki_auth_token");
       if (!token) throw new Error("No token");
-      const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
-      const res = await fetch(`${API_BASE_URL}/upload/image`, {
+      const API_URL = API_BASE_URL.replace(/\/v1$/, "");
+      const res = await fetch(`${API_URL}/upload/image`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}` },
         body: uploadData,
