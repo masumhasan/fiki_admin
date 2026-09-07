@@ -235,7 +235,7 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
           }
 
           return {
-            id: `TRP-${t._id.substring(t._id.length - 4).toUpperCase()}`,
+            id: `TRP-${t._id.substring(t._id.length - 4).toUpperCase()}${t.isReturnLeg ? "-RET" : ""}`,
             mongoId: t._id,
             passenger: passName,
             initials,
