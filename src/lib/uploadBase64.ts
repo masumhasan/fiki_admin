@@ -29,5 +29,5 @@ export async function uploadBase64Image(base64: string, category: string, token?
   }
   
   console.error("Failed to upload base64 image:", data.error);
-  return base64; // Fallback to base64 if upload fails
+  throw new Error(data.error?.message || "Failed to upload image to S3 storage.");
 }
