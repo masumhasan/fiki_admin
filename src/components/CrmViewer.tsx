@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { getCrmContentApi } from "@/lib/api";
-import { BrandMark } from "@/components/brand-mark";
+import Image from "next/image";
 import Link from "next/link";
+import { getCrmContentApi } from "@/lib/api";
 
 type CrmSection = "privacyPolicy" | "termsOfService" | "helpCenter";
 
@@ -38,32 +38,58 @@ export function CrmViewer({ section, title }: CrmViewerProps) {
     });
   }, [section]);
 
+  const subtitle =
+    section === "privacyPolicy"
+      ? "PRIVACY POLICY"
+      : section === "termsOfService"
+      ? "TERMS OF SERVICE"
+      : "HELP CENTER";
+
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 py-12 md:py-20">
-      {/* Brand Logo Header */}
-      <div className="mb-6 flex items-center gap-3">
-        <Link href="/" className="flex items-center gap-3 transition-opacity hover:opacity-90">
-          <BrandMark className="h-10 w-10 object-contain" />
-          <span className="text-xl font-bold tracking-tight text-[#0b2b58]">FIKI TRANSIT</span>
-        </Link>
-      </div>
+    <div className="min-h-screen bg-[#f4f7fb] py-10 px-4 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-4xl">
+        {/* Centered Brand Header matching sample UI */}
+        <div className="mb-8 flex flex-col items-center justify-center text-center">
+          <Link href="/" className="group flex flex-col items-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-white p-2.5 shadow-[0_4px_20px_rgba(11,43,88,0.06)] border border-slate-100 transition-transform group-hover:scale-105">
+              <Image
+                src="/logo.png"
+                alt="FIKI Transit"
+                width={48}
+                height={48}
+                className="h-11 w-11 object-contain"
+                priority
+              />
+            </div>
+            <span className="mt-3 text-2xl md:text-3xl font-black tracking-wider text-[#0b2b58]">
+              FIKI TRANSIT
+            </span>
+          </Link>
+          <span className="mt-1 text-xs md:text-sm font-bold uppercase tracking-[0.25em] text-[#e5a00d]">
+            {subtitle}
+          </span>
+        </div>
 
-      <h1 className="mb-8 text-3xl font-bold text-[#0b2b58] md:text-4xl">{title}</h1>
-
-      {/* Content */}
-      <div className="rounded-2xl border border-[#e1e5ea] bg-white p-6 md:p-8 shadow-sm min-h-[400px] w-full overflow-hidden">
-        {loading ? (
-          <div className="space-y-4 animate-pulse">
-            <div className="h-4 bg-slate-200 rounded w-3/4"></div>
-            <div className="h-4 bg-slate-200 rounded w-full"></div>
-            <div className="h-4 bg-slate-200 rounded w-5/6"></div>
-          </div>
-        ) : (
-          <div 
-            className="prose prose-slate max-w-none prose-headings:text-[#0b2b58] prose-a:text-[#173d76] prose-p:break-words prose-p:whitespace-pre-wrap break-words w-full overflow-hidden"
-            dangerouslySetInnerHTML={{ __html: content || "<p>No content available for this section.</p>" }}
-          />
-        )}
+        {/* Content Card matching sample UI */}
+        <div className="rounded-[32px] border border-slate-200/80 bg-white p-6 sm:p-10 md:p-12 shadow-[0_8px_30px_rgba(15,35,65,0.04)] min-h-[500px] w-full overflow-hidden">
+          {loading ? (
+            <div className="space-y-4 animate-pulse">
+              <div className="h-4 bg-slate-100 rounded w-3/4"></div>
+              <div className="h-4 bg-slate-100 rounded w-full"></div>
+              <div className="h-4 bg-slate-100 rounded w-5/6"></div>
+              <div className="h-4 bg-slate-100 rounded w-2/3"></div>
+            </div>
+          ) : content ? (
+            <div 
+              className="prose prose-slate max-w-none prose-headings:text-[#0b2b58] prose-a:text-[#173d76] prose-p:break-words prose-p:whitespace-pre-wrap break-words w-full overflow-hidden text-slate-800 leading-relaxed"
+              dangerouslySetInnerHTML={{ __html: content }}
+            />
+          ) : (
+            <div className="flex flex-col items-center justify-center py-20 text-center text-slate-400">
+              <p className="text-sm">No content available for this section.</p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );
