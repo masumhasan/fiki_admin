@@ -1,5 +1,13 @@
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.fikitransit.com/api/v1";
 
+export function normalizeMediaUrl(url?: string): string {
+  if (!url) return "";
+  if (url.includes("localhost:5000") || url.includes("127.0.0.1:5000")) {
+    return url.replace(/https?:\/\/(localhost|127\.0\.0\.1):5000/, "https://api.fikitransit.com");
+  }
+  return url;
+}
+
 export interface LoginResponse {
   success: boolean;
   data?: {

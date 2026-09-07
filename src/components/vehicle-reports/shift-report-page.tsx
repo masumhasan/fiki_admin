@@ -17,7 +17,7 @@ import {
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { getShiftReportByIdApi } from "@/lib/api";
+import { getShiftReportByIdApi, normalizeMediaUrl } from "@/lib/api";
 
 type ShiftDetail = {
   id: string;
@@ -98,9 +98,10 @@ export function ShiftReportPage({ reportId }: { reportId: string }) {
     : "DR";
 
   const previewPhotos = previewState
-    ? previewState.kind === "start"
+    ? (previewState.kind === "start"
       ? (data?.startPhotoUrls && data.startPhotoUrls.length > 0 ? data.startPhotoUrls : data?.startPhotoUrl ? [data.startPhotoUrl] : [])
       : (data?.endPhotoUrls && data.endPhotoUrls.length > 0 ? data.endPhotoUrls : data?.endPhotoUrl ? [data.endPhotoUrl] : [])
+    ).map(normalizeMediaUrl).filter(Boolean)
     : [];
 
   const currentPreviewUrl = previewState && previewPhotos.length > 0
@@ -148,9 +149,12 @@ export function ShiftReportPage({ reportId }: { reportId: string }) {
                 <div className="relative size-16 shrink-0">
                   {data.driverAvatarUrl ? (
                     <img
-                      src={data.driverAvatarUrl}
+                      src={normalizeMediaUrl(data.driverAvatarUrl)}
                       alt={data.driverName}
                       className="size-16 rounded-full object-cover ring-4 ring-secondary"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none";
+                      }}
                     />
                   ) : (
                     <span className="grid size-16 place-items-center rounded-full bg-primary text-lg font-bold text-primary-foreground ring-4 ring-secondary">
@@ -354,9 +358,9 @@ function InspectionCard({
   
   const rawPhotoUrls = start ? data.startPhotoUrls : data.endPhotoUrls;
   const singlePhotoUrl = start ? data.startPhotoUrl : data.endPhotoUrl;
-  const photoList = Array.isArray(rawPhotoUrls) && rawPhotoUrls.length > 0
+  const photoList = (Array.isArray(rawPhotoUrls) && rawPhotoUrls.length > 0
     ? rawPhotoUrls
-    : singlePhotoUrl ? [singlePhotoUrl] : [];
+    : singlePhotoUrl ? [singlePhotoUrl] : []).map(normalizeMediaUrl).filter(Boolean);
 
   const [activePhotoIdx, setActivePhotoIdx] = useState(0);
 
