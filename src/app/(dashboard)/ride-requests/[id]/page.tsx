@@ -367,13 +367,24 @@ export default function RideRequestDetails({
     setActionLoading(false);
   }
 
+  const childTrips: any[] = Array.isArray(trip?.childTrips) ? trip.childTrips : [];
+  const completedChildCount = childTrips.filter((c: any) => c.status === "COMPLETED").length;
+  const activeChildCount = childTrips.filter((c: any) => ["IN_PROGRESS", "DRIVER_ARRIVING", "DRIVER_ARRIVED"].includes(c.status)).length;
+  const hasCompletedLeg = completedChildCount > 0;
+  const hasActiveLeg = activeChildCount > 0;
+  const allChildCompleted = childTrips.length > 0 && completedChildCount === childTrips.length;
+
   async function handleRejectRequest() {
-    if (!confirm("Are you sure you want to reject this ride request?")) return;
+    const confirmMessage = hasCompletedLeg
+      ? "The Outbound ride has already been completed. Proceeding will cancel the remaining return leg while strictly preserving the completed outbound ride and driver earnings. Do you want to proceed?"
+      : "Are you sure you want to reject this ride request?";
+    if (!confirm(confirmMessage)) return;
     if (typeof window === "undefined") return;
     const token = window.localStorage.getItem("fiki_auth_token");
     if (!token) return;
     setActionLoading(true);
-    const res = await rejectRideRequestApi(token, id, "Rejected by admin");
+    const reason = hasCompletedLeg ? "Cancelled remaining return leg by admin" : "Rejected by admin";
+    const res = await rejectRideRequestApi(token, id, reason);
     if (res.success && res.data) {
       setTrip(res.data);
     } else {
@@ -960,6 +971,50 @@ export default function RideRequestDetails({
                           </div>
                         </div>
                       )}
+
+                      {/* Generated Trip Legs & Statuses */}
+                      {childTrips.length > 0 && (
+                        <div className="border-t border-slate-100 pt-4">
+                          <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5] mb-3">
+                            Trip Legs & Real-Time Status
+                          </h4>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            {childTrips.map((leg: any, idx: number) => {
+                              const legTitle = leg.legType === "RETURN" || leg.isReturnLeg ? "Return Leg" : "Outbound Leg";
+                              const legStatus = leg.status || "ACCEPTED";
+                              const isCompleted = legStatus === "COMPLETED";
+                              const isLegActive = ["IN_PROGRESS", "DRIVER_ARRIVING", "DRIVER_ARRIVED"].includes(legStatus);
+                              const isCancelled = legStatus === "CANCELLED" || legStatus === "QUOTE_DENIED";
+                              const badgeBg = isCompleted
+                                ? "bg-emerald-100 text-emerald-800 border-emerald-300"
+                                : isLegActive
+                                ? "bg-blue-100 text-blue-800 border-blue-300 animate-pulse"
+                                : isCancelled
+                                ? "bg-red-100 text-red-800 border-red-300"
+                                : "bg-slate-100 text-slate-800 border-slate-300";
+
+                              const driverName = leg.driverId?.fullName || leg.driverId?.name || "Unassigned";
+
+                              return (
+                                <div key={leg._id || idx} className="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 text-xs">
+                                  <div className="flex items-center justify-between gap-2 mb-2">
+                                    <span className="font-bold text-slate-900">{legTitle}</span>
+                                    <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${badgeBg}`}>
+                                      {legStatus}
+                                    </span>
+                                  </div>
+                                  <div className="space-y-1 text-slate-600">
+                                    <div><span className="font-semibold text-slate-500">Date & Time: </span>{leg.pickupDate || leg.startDate || "—"} {leg.pickupTime ? `at ${leg.pickupTime}` : ""}</div>
+                                    <div><span className="font-semibold text-slate-500">Driver: </span>{driverName}</div>
+                                    {leg.completedAt && <div><span className="font-semibold text-emerald-700">Completed: </span>{new Date(leg.completedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</div>}
+                                    {leg.cancellationReason && <div><span className="font-semibold text-rose-600">Note: </span>{leg.cancellationReason}</div>}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -1441,7 +1496,7 @@ export default function RideRequestDetails({
                 )}
 
                 {/* Approve & Reject Ride Request Buttons */}
-                {status !== "ACCEPTED" && status !== "COMPLETED" && status !== "CANCELLED" && status !== "QUOTE_DENIED" && (
+                {status !== "ACCEPTED" && status !== "COMPLETED" && status !== "CANCELLED" && status !== "QUOTE_DENIED" && !hasCompletedLeg && !allChildCompleted && (
                   <button
                     type="button"
                     onClick={handleApproveRequest}
@@ -1453,15 +1508,20 @@ export default function RideRequestDetails({
                   </button>
                 )}
 
-                {status !== "QUOTE_DENIED" && status !== "CANCELLED" && status !== "COMPLETED" && (
+                {status !== "QUOTE_DENIED" && status !== "CANCELLED" && status !== "COMPLETED" && !allChildCompleted && (
                   <button
                     type="button"
                     onClick={handleRejectRequest}
-                    disabled={actionLoading}
-                    className="flex items-center gap-1.5 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-[11px] font-bold text-red-600 transition hover:bg-red-100 disabled:opacity-50 cursor-pointer"
+                    disabled={actionLoading || hasActiveLeg}
+                    title={hasActiveLeg ? "Cannot cancel while a leg is in progress" : undefined}
+                    className={`flex items-center gap-1.5 rounded-lg border px-4 py-2 text-[11px] font-bold transition disabled:opacity-50 cursor-pointer ${
+                      hasCompletedLeg
+                        ? "border-amber-300 bg-amber-50 text-amber-800 hover:bg-amber-100"
+                        : "border-red-300 bg-red-50 text-red-600 hover:bg-red-100"
+                    }`}
                   >
                     <X className="size-3.5" />
-                    Reject Request
+                    {hasCompletedLeg ? "Cancel Remaining Leg(s)" : "Reject Request"}
                   </button>
                 )}
 
