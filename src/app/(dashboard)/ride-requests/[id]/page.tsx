@@ -27,7 +27,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useRef, useState } from "react";
-import { approveRideRequestApi, assignDriverApi, deleteTripApi, getAdminDriversApi, getAdminTripDetailApi, regenerateTripsApi, rejectRideRequestApi, respondToCounterOfferApi, updateTripApi } from "@/lib/api";
+import { API_BASE_URL, approveRideRequestApi, assignDriverApi, deleteTripApi, getAdminDriversApi, getAdminTripDetailApi, regenerateTripsApi, rejectRideRequestApi, respondToCounterOfferApi, updateTripApi } from "@/lib/api";
 
 const card =
   "overflow-hidden rounded-xl border border-[#e1e6ee] bg-white shadow-[0_4px_14px_rgba(15,37,74,.04)]";
