@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { PageHeader } from "@/components/dashboard/page-header";
 import { getDispatchNumberApi, updateDispatchNumberApi, getCrmContentApi, updateCrmContentApi } from "@/lib/api";
 import dynamic from 'next/dynamic';
@@ -9,7 +9,6 @@ import 'react-quill-new/dist/quill.snow.css';
 const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
 
 type CrmSection = "privacyPolicy" | "termsOfService" | "helpCenter";
-type CrmSubTab = "passengers" | "drivers" | "general";
 
 export default function CrmPage() {
   const [dispatchNumber, setDispatchNumber] = useState("");
@@ -18,14 +17,40 @@ export default function CrmPage() {
   const [message, setMessage] = useState({ type: "", text: "" });
 
   const [activeSection, setActiveSection] = useState<CrmSection>("privacyPolicy");
-  const [activeSubTab, setActiveSubTab] = useState<CrmSubTab>("general");
-  const [crmContent, setCrmContent] = useState({
-    privacyPolicy: { passengers: "", drivers: "", general: "" },
-    termsOfService: { passengers: "", drivers: "", general: "" },
-    helpCenter: { passengers: "", drivers: "", general: "" },
+  const [crmContent, setCrmContent] = useState<Record<CrmSection, string>>({
+    privacyPolicy: "",
+    termsOfService: "",
+    helpCenter: "",
   });
   const [savingCrm, setSavingCrm] = useState(false);
   const [crmMessage, setCrmMessage] = useState({ type: "", text: "" });
+
+  const quillModules = useMemo(
+    () => ({
+      toolbar: [
+        [{ header: [1, 2, 3, 4, 5, 6, false] }],
+        ["bold", "italic", "underline", "strike"],
+        [{ color: [] }, { background: [] }], // Text color & background color picker
+        [{ list: "ordered" }, { list: "bullet" }],
+        [{ align: [] }],
+        ["link", "clean"],
+      ],
+    }),
+    []
+  );
+
+  const normalizeSection = (val: any): string => {
+    if (!val) return "";
+    if (typeof val === "string") return val;
+    if (typeof val === "object") {
+      const parts = [val.general, val.passengers, val.drivers].filter(
+        (p) => p && typeof p === "string" && p.trim() !== ""
+      );
+      if (parts.length === 0) return "";
+      return Array.from(new Set(parts)).join("<br/><br/>");
+    }
+    return "";
+  };
 
   useEffect(() => {
     const token = window.localStorage.getItem("fiki_auth_token");
@@ -38,7 +63,11 @@ export default function CrmPage() {
           setDispatchNumber(dispatchRes.data.dispatchNumber);
         }
         if (crmRes.success && crmRes.data) {
-          setCrmContent(crmRes.data);
+          setCrmContent({
+            privacyPolicy: normalizeSection(crmRes.data.privacyPolicy),
+            termsOfService: normalizeSection(crmRes.data.termsOfService),
+            helpCenter: normalizeSection(crmRes.data.helpCenter),
+          });
         }
         setLoading(false);
       });
@@ -66,10 +95,7 @@ export default function CrmPage() {
   const handleCrmChange = (value: string) => {
     setCrmContent((prev) => ({
       ...prev,
-      [activeSection]: {
-        ...prev[activeSection],
-        [activeSubTab]: value
-      }
+      [activeSection]: value,
     }));
   };
 
@@ -80,7 +106,11 @@ export default function CrmPage() {
     if (token) {
       const res = await updateCrmContentApi(token, crmContent);
       if (res.success && res.data) {
-        setCrmContent(res.data);
+        setCrmContent({
+          privacyPolicy: normalizeSection(res.data.privacyPolicy),
+          termsOfService: normalizeSection(res.data.termsOfService),
+          helpCenter: normalizeSection(res.data.helpCenter),
+        });
         setCrmMessage({ type: "success", text: "Content saved successfully!" });
       } else {
         setCrmMessage({ type: "error", text: res.error?.message || "Failed to save content." });
@@ -141,6 +171,9 @@ export default function CrmPage() {
       {/* Content Management Panel */}
       <div className="rounded-[18px] border border-[#e1e5ea] bg-white p-6 shadow-[0_9px_24px_rgba(15,35,65,0.07)]">
         <h2 className="text-lg font-bold text-[#172033] mb-4">Manage Content</h2>
+        <p className="text-xs text-[#69758a] mb-4">
+          Select a page to edit. General, passengers, and drivers policies are now managed within a single unified page editor.
+        </p>
         
         {/* Sections Tabs */}
         <div className="flex space-x-1 border-b border-slate-200 mb-6">
@@ -163,30 +196,14 @@ export default function CrmPage() {
           ))}
         </div>
 
-        {/* Sub-tabs */}
-        <div className="flex space-x-2 mb-4">
-           {["general", "passengers", "drivers"].map((subTab) => (
-            <button
-              key={subTab}
-              onClick={() => setActiveSubTab(subTab as CrmSubTab)}
-              className={`px-4 py-1.5 text-xs font-semibold rounded-full transition-colors capitalize border ${
-                activeSubTab === subTab
-                  ? "bg-[#173d76] text-white border-[#173d76]"
-                  : "bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100"
-              }`}
-            >
-              {subTab}
-            </button>
-          ))}
-        </div>
-
-        {/* Editor */}
+        {/* Unified Editor with Text Color Picker */}
         <div className="mb-4 bg-white">
           <ReactQuill 
             theme="snow" 
-            value={crmContent[activeSection][activeSubTab] || ""} 
+            modules={quillModules}
+            value={crmContent[activeSection] || ""} 
             onChange={handleCrmChange} 
-            className="h-[300px] mb-12"
+            className="h-[350px] mb-12"
           />
         </div>
 
