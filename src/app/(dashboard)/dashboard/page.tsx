@@ -119,11 +119,12 @@ export default function DashboardPage() {
   }, []);
 
   const activeTripsList = liveTrips || [];
-  const metrics = stats?.metrics || {
+  const metrics = {
     todayTrips: 0,
     pendingRequests: 0,
     activeDrivers: 0,
     completedTrips: 0,
+    ...(stats?.metrics || {}),
   };
   const weeklyTripVolume = stats?.weeklyTripVolume || [];
   const monthlyTripVolume = stats?.monthlyTripVolume || [];
@@ -156,7 +157,7 @@ export default function DashboardPage() {
         <Metric
           icon={<Send />}
           label="Today's Trips"
-          value={metrics.todayTrips.toString()}
+          value={(metrics.todayTrips ?? 0).toString()}
           change=""
           color="#173d76"
           isLoading={stats === null}
@@ -164,7 +165,7 @@ export default function DashboardPage() {
         <Metric
           icon={<CircleAlert />}
           label="Pending Requests"
-          value={metrics.pendingRequests.toString()}
+          value={(metrics.pendingRequests ?? metrics.pendingTrips ?? 0).toString()}
           change=""
           color="#f39200"
           isLoading={stats === null}
@@ -172,7 +173,7 @@ export default function DashboardPage() {
         <Metric
           icon={<UserRoundCheck />}
           label="Active Drivers"
-          value={metrics.activeDrivers.toString()}
+          value={(metrics.activeDrivers ?? 0).toString()}
           change=""
           color="#10ac7b"
           isLoading={stats === null}
@@ -180,7 +181,7 @@ export default function DashboardPage() {
         <Metric
           icon={<CheckCircle2 />}
           label="Completed Trips"
-          value={metrics.completedTrips.toString()}
+          value={(metrics.completedTrips ?? 0).toString()}
           change=""
           color="#8345ed"
           isLoading={stats === null}
