@@ -16,12 +16,28 @@ const CRM_STYLES = `
 .crm-rendered-content {
   box-sizing: border-box;
   color: #172033;
-  font-size: 15px;
-  line-height: 1.5;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 14.5px;
+  line-height: 1.65;
   tab-size: 4;
   text-align: left;
   word-wrap: break-word;
   overflow-wrap: break-word;
+}
+
+.crm-rendered-content h1,
+.crm-rendered-content h2,
+.crm-rendered-content h3,
+.crm-rendered-content h4,
+.crm-rendered-content h5,
+.crm-rendered-content h6,
+.crm-rendered-content p,
+.crm-rendered-content span,
+.crm-rendered-content li,
+.crm-rendered-content strong,
+.crm-rendered-content em,
+.crm-rendered-content a {
+  font-family: Helvetica, Arial, sans-serif;
 }
 
 /* Match Quill's exact margin-free spacing */
@@ -99,11 +115,13 @@ const CRM_STYLES = `
 }
 
 /* Quill Fonts */
-.crm-rendered-content .ql-font-serif {
-  font-family: Georgia, Times New Roman, serif;
+.crm-rendered-content .ql-font-serif,
+.crm-rendered-content .ql-font-serif * {
+  font-family: Georgia, Times New Roman, serif !important;
 }
-.crm-rendered-content .ql-font-monospace {
-  font-family: Monaco, Courier New, monospace;
+.crm-rendered-content .ql-font-monospace,
+.crm-rendered-content .ql-font-monospace * {
+  font-family: Monaco, Courier New, monospace !important;
 }
 
 /* Quill Lists */

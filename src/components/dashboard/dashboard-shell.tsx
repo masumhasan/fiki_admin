@@ -13,7 +13,7 @@ import {
   UsersRound,
   Users,
   X,
-  Headset,
+  FileText,
   PlusCircle,
   DollarSign,
 } from "lucide-react";
@@ -39,8 +39,8 @@ const navigation = [
   { label: "Analytics", href: "/analytics", icon: BarChart3 },
   {
     href: "/crm",
-    icon: Headset,
-    label: "CRM",
+    icon: FileText,
+    label: "CMS",
   },
 ];
 

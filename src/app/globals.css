@@ -198,13 +198,15 @@
   border-bottom-right-radius: 14px;
   border-color: #e1e5ea;
   background-color: #ffffff;
-  font-size: 15px;
+  font-family: Helvetica, Arial, sans-serif;
+  font-size: 14.5px;
   min-height: 560px;
   height: calc(100vh - 390px);
 }
 
 .crm-quill-editor .ql-editor {
   min-height: 100%;
+  font-family: Helvetica, Arial, sans-serif;
   font-size: 14.5px;
   line-height: 1.65;
   padding: 20px 24px;
