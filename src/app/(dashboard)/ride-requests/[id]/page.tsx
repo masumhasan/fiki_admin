@@ -424,6 +424,38 @@ export default function RideRequestDetails({
   const isRoundTrip = tripType === "round-trip" || tripType === "round_trip" || trip?.isRoundTrip === true;
   const isRecurring = trip?.schedule === "recurring" || tripType === "recurring" || (Array.isArray(trip?.recurringDays) && trip.recurringDays.length > 0);
 
+  const effectiveFare =
+    typeof trip?.fare === "number" && !isNaN(trip.fare) && trip.fare > 0
+      ? trip.fare
+      : typeof trip?.quotedFare === "number" && !isNaN(trip.quotedFare) && trip.quotedFare > 0
+      ? trip.quotedFare
+      : 0;
+
+  const totalCompletedTrips =
+    typeof trip?.completedTripsCount === "number"
+      ? trip.completedTripsCount
+      : childTrips.length > 0
+      ? completedChildCount
+      : status === "COMPLETED"
+      ? (isRoundTrip ? 2 : 1)
+      : 0;
+
+  const billableFare =
+    typeof trip?.billableFare === "number"
+      ? trip.billableFare
+      : childTrips.length > 0 && completedChildCount > 0
+      ? childTrips
+          .filter((c: any) => c.status === "COMPLETED")
+          .reduce(
+            (sum: number, c: any) =>
+              sum +
+              (typeof c.fare === "number" && !isNaN(c.fare) && c.fare > 0
+                ? c.fare
+                : effectiveFare),
+            0
+          )
+      : totalCompletedTrips * effectiveFare;
+
   const startDateRaw = trip?.startDate || trip?.pickupDate || trip?.recurringStartDate;
   const startDateStr = startDateRaw
     ? (/^\d{4}-\d{2}-\d{2}$/.test(String(startDateRaw).trim())
@@ -512,7 +544,11 @@ export default function RideRequestDetails({
         </div>
       ) : (
         <>
-          <section className={`${card} mb-4 grid gap-4 p-4 sm:grid-cols-3 xl:grid-cols-6`}>
+          <section
+            className={`${card} mb-4 grid gap-4 p-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 ${
+              totalCompletedTrips >= 1 ? "xl:grid-cols-7" : "xl:grid-cols-6"
+            }`}
+          >
             <Status
               icon={<ClipboardCheck />}
               label="Status"
@@ -524,6 +560,14 @@ export default function RideRequestDetails({
             <Status label="Scheduled" value={scheduledAt} />
             <Status label="Fare" value={displayFare} tone={isFareDecided ? "green" : undefined} />
             <Status label="Quoted Fare" value={trip.quotedFare ? `$${trip.quotedFare.toFixed(2)}` : "—"} tone={trip.quotedFare ? "blue" : undefined} />
+            {totalCompletedTrips >= 1 && (
+              <Status
+                label="Billable Fare"
+                value={`$${billableFare.toFixed(2)}`}
+                tone="green"
+                title={`${totalCompletedTrips} completed trip${totalCompletedTrips > 1 ? "s" : ""} × $${effectiveFare.toFixed(2)}`}
+              />
+            )}
           </section>
 
           {trip.status === "QUOTE_COUNTERED" && trip.counterOffer && (
@@ -1593,21 +1637,75 @@ function CardHead({ icon, title, subtitle, action }: { icon: React.ReactNode; ti
   );
 }
 
-function Label({ label, value, pill = false, tone = "blue" }: { label: string; value: string; pill?: boolean; tone?: "blue" | "amber" | "violet" | "green" | "red" }) {
+function Label({
+  label,
+  value,
+  pill = false,
+  tone = "blue",
+}: {
+  label: string;
+  value: string;
+  pill?: boolean;
+  tone?: "blue" | "amber" | "violet" | "green" | "red";
+}) {
   return (
     <div>
       <p className="text-[10px] font-bold uppercase tracking-wide text-[#8a98aa]">{label}</p>
-      <p className={`mt-1 text-[13px] font-semibold text-[#34435a] ${pill ? `inline-block rounded px-2 py-0.5 ${tone === "amber" ? "bg-amber-50 text-amber-700" : tone === "violet" ? "bg-violet-50 text-violet-700" : tone === "green" ? "bg-emerald-50 text-emerald-700" : tone === "red" ? "bg-rose-50 text-rose-700" : "bg-[#eaf1ff] text-[#3560ab]"}` : ""}` }>
+      <p
+        className={`mt-1 text-[13px] font-semibold text-[#34435a] ${
+          pill
+            ? `inline-block rounded px-2 py-0.5 ${
+                tone === "amber"
+                  ? "bg-amber-50 text-amber-700"
+                  : tone === "violet"
+                  ? "bg-violet-50 text-violet-700"
+                  : tone === "green"
+                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200/80 font-bold"
+                  : tone === "red"
+                  ? "bg-rose-50 text-rose-700"
+                  : "bg-[#eaf1ff] text-[#3560ab]"
+              }`
+            : ""
+        }`}
+      >
         {value}
       </p>
     </div>
   );
 }
 
-function Status({ icon, label, value, tone }: { icon?: React.ReactNode; label: string; value: string; tone?: "blue" | "amber" | "violet" | "green" | "red" }) {
+function Status({
+  icon,
+  label,
+  value,
+  tone,
+  title,
+}: {
+  icon?: React.ReactNode;
+  label: string;
+  value: string;
+  tone?: "blue" | "amber" | "violet" | "green" | "red";
+  title?: string;
+}) {
   return (
-    <div className="flex gap-2">
-      <span className={`mt-1 [&_svg]:size-4 ${tone === "amber" ? "text-amber-500" : tone === "violet" ? "text-violet-500" : tone === "green" ? "text-emerald-500" : tone === "red" ? "text-red-500" : "text-blue-500"}`}>{icon}</span>
+    <div className="flex gap-2" title={title}>
+      {icon && (
+        <span
+          className={`mt-1 [&_svg]:size-4 ${
+            tone === "amber"
+              ? "text-amber-500"
+              : tone === "violet"
+              ? "text-violet-500"
+              : tone === "green"
+              ? "text-emerald-500"
+              : tone === "red"
+              ? "text-red-500"
+              : "text-blue-500"
+          }`}
+        >
+          {icon}
+        </span>
+      )}
       <Label label={label} value={value} pill={Boolean(tone)} tone={tone} />
     </div>
   );
