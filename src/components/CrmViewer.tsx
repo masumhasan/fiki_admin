@@ -14,14 +14,69 @@ interface CrmViewerProps {
 
 const CRM_STYLES = `
 .crm-rendered-content {
-  color: #1e293b;
-  font-size: 0.95rem;
-  line-height: 1.7;
+  box-sizing: border-box;
+  color: #172033;
+  font-size: 15px;
+  line-height: 1.5;
+  tab-size: 4;
+  text-align: left;
   word-wrap: break-word;
   overflow-wrap: break-word;
 }
 
-/* Quill Alignments */
+/* Match Quill's exact margin-free spacing */
+.crm-rendered-content p,
+.crm-rendered-content ol,
+.crm-rendered-content ul,
+.crm-rendered-content pre,
+.crm-rendered-content blockquote,
+.crm-rendered-content h1,
+.crm-rendered-content h2,
+.crm-rendered-content h3,
+.crm-rendered-content h4,
+.crm-rendered-content h5,
+.crm-rendered-content h6 {
+  margin: 0;
+  padding: 0;
+}
+
+/* Quill Heading Sizing */
+.crm-rendered-content h1 {
+  font-size: 2em;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.crm-rendered-content h2 {
+  font-size: 1.5em;
+  font-weight: 700;
+  line-height: 1.3;
+}
+.crm-rendered-content h3 {
+  font-size: 1.17em;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.crm-rendered-content h4 {
+  font-size: 1em;
+  font-weight: 600;
+  line-height: 1.4;
+}
+.crm-rendered-content h5 {
+  font-size: 0.83em;
+  font-weight: 600;
+}
+.crm-rendered-content h6 {
+  font-size: 0.67em;
+  font-weight: 600;
+}
+
+/* Empty lines / spacing from Quill editor */
+.crm-rendered-content p:empty,
+.crm-rendered-content p > br:only-child {
+  min-height: 1.5em;
+}
+
+/* Quill Text Alignments */
 .crm-rendered-content .ql-align-center {
   text-align: center;
 }
@@ -34,15 +89,13 @@ const CRM_STYLES = `
 
 /* Quill Font Sizes */
 .crm-rendered-content .ql-size-small {
-  font-size: 0.8rem;
+  font-size: 0.75em;
 }
 .crm-rendered-content .ql-size-large {
-  font-size: 1.35rem;
-  font-weight: 600;
+  font-size: 1.5em;
 }
 .crm-rendered-content .ql-size-huge {
-  font-size: 1.85rem;
-  font-weight: 700;
+  font-size: 2.5em;
 }
 
 /* Quill Fonts */
@@ -53,105 +106,41 @@ const CRM_STYLES = `
   font-family: Monaco, Courier New, monospace;
 }
 
-/* Headings */
-.crm-rendered-content h1 {
-  font-size: 1.85rem;
-  font-weight: 800;
-  margin-top: 1.75rem;
-  margin-bottom: 0.75rem;
-  line-height: 1.3;
-}
-.crm-rendered-content h2 {
-  font-size: 1.4rem;
-  font-weight: 700;
-  margin-top: 1.5rem;
-  margin-bottom: 0.6rem;
-  line-height: 1.35;
-}
-.crm-rendered-content h3 {
-  font-size: 1.2rem;
-  font-weight: 700;
-  margin-top: 1.25rem;
-  margin-bottom: 0.5rem;
-  line-height: 1.4;
-}
-.crm-rendered-content h4 {
-  font-size: 1.05rem;
-  font-weight: 600;
-  margin-top: 1rem;
-  margin-bottom: 0.4rem;
-  line-height: 1.45;
-}
-.crm-rendered-content h5 {
-  font-size: 0.95rem;
-  font-weight: 600;
-  margin-top: 0.85rem;
-  margin-bottom: 0.35rem;
-}
-.crm-rendered-content h6 {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #64748b;
-  margin-top: 0.75rem;
-  margin-bottom: 0.25rem;
-}
-
-/* Paragraphs */
-.crm-rendered-content p {
-  margin-bottom: 0.85rem;
-  line-height: 1.7;
-}
-
-/* Lists */
+/* Quill Lists */
 .crm-rendered-content ol {
   list-style-type: decimal;
-  padding-left: 1.75rem;
-  margin-top: 0.5rem;
-  margin-bottom: 1rem;
+  padding-left: 1.5em;
 }
 .crm-rendered-content ul {
   list-style-type: disc;
-  padding-left: 1.75rem;
-  margin-top: 0.5rem;
-  margin-bottom: 1rem;
+  padding-left: 1.5em;
 }
 .crm-rendered-content li {
-  margin-bottom: 0.35rem;
-  line-height: 1.6;
+  padding-left: 0.25em;
 }
 
-/* Indents */
-.crm-rendered-content .ql-indent-1 { padding-left: 2rem; }
-.crm-rendered-content .ql-indent-2 { padding-left: 4rem; }
-.crm-rendered-content .ql-indent-3 { padding-left: 6rem; }
-.crm-rendered-content .ql-indent-4 { padding-left: 8rem; }
-.crm-rendered-content .ql-indent-5 { padding-left: 10rem; }
-.crm-rendered-content .ql-indent-6 { padding-left: 12rem; }
-.crm-rendered-content .ql-indent-7 { padding-left: 14rem; }
-.crm-rendered-content .ql-indent-8 { padding-left: 16rem; }
+/* Quill Indents */
+.crm-rendered-content .ql-indent-1 { padding-left: 3em; }
+.crm-rendered-content .ql-indent-2 { padding-left: 6em; }
+.crm-rendered-content .ql-indent-3 { padding-left: 9em; }
+.crm-rendered-content .ql-indent-4 { padding-left: 12em; }
+.crm-rendered-content .ql-indent-5 { padding-left: 15em; }
+.crm-rendered-content .ql-indent-6 { padding-left: 18em; }
+.crm-rendered-content .ql-indent-7 { padding-left: 21em; }
+.crm-rendered-content .ql-indent-8 { padding-left: 24em; }
 
-/* Blockquotes */
+/* Quill Blockquotes */
 .crm-rendered-content blockquote {
-  border-left: 4px solid #173d76;
-  padding-left: 1rem;
-  margin: 1rem 0;
-  color: #475569;
+  border-left: 4px solid #cbd5e1;
+  padding-left: 16px;
+  color: #64748b;
   font-style: italic;
 }
 
-/* Links */
+/* Quill Links */
 .crm-rendered-content a {
   color: #173d76;
   text-decoration: underline;
-  transition: opacity 0.2s;
-}
-.crm-rendered-content a:hover {
-  opacity: 0.8;
-}
-
-/* Clean up empty paragraphs that Quill creates as spacers */
-.crm-rendered-content p:empty {
-  min-height: 1rem;
 }
 `;
 
@@ -194,8 +183,8 @@ export function CrmViewer({ section, title }: CrmViewerProps) {
       : "HELP CENTER";
 
   return (
-    <div className="min-h-screen bg-[#f4f7fb] py-10 px-4 sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-4xl">
+    <div className="min-h-screen bg-[#f4f7fb] py-10 px-4 sm:px-6 lg:px-10 xl:px-12">
+      <div className="mx-auto w-full max-w-6xl xl:max-w-7xl 2xl:max-w-[1400px]">
         {/* Centered Brand Header matching sample UI */}
         <div className="mb-8 flex flex-col items-center justify-center text-center">
           <Link href="/" className="group flex flex-col items-center">
@@ -219,7 +208,7 @@ export function CrmViewer({ section, title }: CrmViewerProps) {
         </div>
 
         {/* Content Card matching sample UI */}
-        <div className="rounded-[32px] border border-slate-200/80 bg-white p-6 sm:p-10 md:p-12 shadow-[0_8px_30px_rgba(15,35,65,0.04)] min-h-[500px] w-full overflow-hidden">
+        <div className="rounded-[32px] border border-slate-200/80 bg-white p-6 sm:p-10 md:p-14 lg:p-16 shadow-[0_8px_30px_rgba(15,35,65,0.04)] min-h-[550px] w-full">
           <style dangerouslySetInnerHTML={{ __html: CRM_STYLES }} />
           {loading ? (
             <div className="space-y-4 animate-pulse">
