@@ -412,7 +412,13 @@ export function DriverApplicationPage({
 
           <ReviewSection icon={Signature} title="Digital signature">
             <div className="grid h-24 place-items-center rounded-xl border border-border bg-muted/45 p-2">
-              {liveApp?.signature?.startsWith("data:image/") ? (
+              {liveApp?.signature &&
+              (liveApp.signature.startsWith("data:image/") ||
+                liveApp.signature.startsWith("http://") ||
+                liveApp.signature.startsWith("https://") ||
+                liveApp.signature.startsWith("/uploads/") ||
+                liveApp.signature.includes(".amazonaws.com") ||
+                liveApp.signature.includes("/signatures/")) ? (
                 <img
                   src={liveApp.signature}
                   alt="Digital Signature"

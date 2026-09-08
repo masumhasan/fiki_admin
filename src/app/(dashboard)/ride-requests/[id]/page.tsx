@@ -502,6 +502,24 @@ export default function RideRequestDetails({
     ? (trip.specialInstructions || trip.accessInformation).trim()
     : "No Special instructions";
 
+  const signatureRaw = trip?.signature?.trim() || "";
+  const isSignatureImage = Boolean(
+    signatureRaw &&
+      (signatureRaw.startsWith("data:image/") ||
+        signatureRaw.startsWith("http://") ||
+        signatureRaw.startsWith("https://") ||
+        signatureRaw.startsWith("/uploads/") ||
+        signatureRaw.includes(".amazonaws.com") ||
+        signatureRaw.includes("/signatures/") ||
+        /\.(png|jpe?g|webp|gif|svg)($|\?)/i.test(signatureRaw))
+  );
+
+  const signatureImgSrc = isSignatureImage
+    ? (signatureRaw.startsWith("/uploads/")
+        ? `${API_BASE_URL.replace(/\/api.*$/, "").replace(/\/v1.*$/, "")}${signatureRaw}`
+        : signatureRaw)
+    : "";
+
   return (
     <div className="pb-20">
       <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -1240,11 +1258,11 @@ export default function RideRequestDetails({
                   />
                   <Label
                     label="Authorization Number"
-                    value={trip.authNumber || "AUTH- 2826-78234"}
+                    value={trip.authNumber || (trip.privatePay ? "N/A" : "—")}
                   />
                   <Label
                     label="Member ID"
-                    value={trip.authNumber ? `ACB${id.slice(-8).toUpperCase()}` : "ACB123456789"}
+                    value={trip.authNumber ? `ACB${id.slice(-8).toUpperCase()}` : "—"}
                   />
                 </div>
               </article>
@@ -1257,17 +1275,17 @@ export default function RideRequestDetails({
                   subtitle="Legal guardian or authorized representative"
                 />
                 <div className="grid gap-x-8 gap-y-4 p-5 sm:grid-cols-2">
-                  <Label label="Full Name" value={trip.guardianName || passengerName || "Sarah Mitchell"} />
-                  <Label label="Relationship to Rider" value={trip.relationshipToPassenger || trip.relationship || "Daughter"} />
+                  <Label label="Full Name" value={trip.guardianName || "Not Specified / Self"} />
+                  <Label label="Relationship to Rider" value={trip.relationshipToPassenger || trip.relationship || "Self / Guardian"} />
                   <Label 
                     label="Email Address" 
                     value={
                       (trip.guardianEmail && !(trip.guardianEmail.startsWith("manual_") && trip.guardianEmail.endsWith("@fikitransit.com")))
                         ? trip.guardianEmail
-                        : "No Emails"
+                        : "—"
                     } 
                   />
-                  <Label label="Phone Number" value={trip.guardianPhone || passengerPhone || "(916) 234-5678"} />
+                  <Label label="Phone Number" value={trip.guardianPhone || "—"} />
                 </div>
               </article>
 
@@ -1303,19 +1321,19 @@ export default function RideRequestDetails({
                 </div>
               </article>
 
-              {/* 5. Digital Signature / Case Manager Card */}
-              {trip.caseManagerName ? (
+              {/* 5. Case Manager Card (if provided) */}
+              {trip.caseManagerName && (
                 <article className={card}>
                   <CardHead
                     icon={<UserRound className="size-4 text-[#173d76]" />}
-                    title="Case Manager"
-                    subtitle="Contact information for ride coordination"
+                    title="Case Manager Information"
+                    subtitle="Contact details for ride coordination and authorized facility"
                   />
                   <div className="p-5">
                     <div className="grid gap-4 md:grid-cols-3 text-xs">
                       <div>
                         <p className="text-[10px] font-bold uppercase tracking-wider text-[#8190a5]">
-                          Name
+                          Case Manager Name
                         </p>
                         <p className="mt-0.5 font-bold text-slate-800">{trip.caseManagerName}</p>
                       </div>
@@ -1334,48 +1352,120 @@ export default function RideRequestDetails({
                     </div>
                   </div>
                 </article>
-              ) : (
-                <article className={card}>
-                  <CardHead
-                    icon={<PenTool />}
-                    title="Digital Signature"
-                    subtitle="Electronically captured at time of submission"
-                  />
-                  <div className="p-5">
-                    <div className="grid gap-4 md:grid-cols-[1.8fr_1fr]">
-                      <div className="flex min-h-24 items-center justify-center rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-                        {trip.signature && trip.signature.startsWith("data:image") ? (
-                          <img
-                            src={trip.signature}
-                            alt="Digital Signature"
-                            className="h-16 max-w-full object-contain"
-                          />
-                        ) : (
-                          <span className="font-serif italic text-2xl font-bold tracking-wide text-[#2b4c7e]">
-                            {trip.printedName || trip.signature || passengerName || "Sarah Mitchell"}
-                          </span>
+              )}
+
+              {/* 6. Digital Signature Card */}
+              <article className={card}>
+                <CardHead
+                  icon={<PenTool />}
+                  title="Digital Signature & Authorization"
+                  subtitle="Electronically captured at time of ride request submission"
+                  action={
+                    isSignatureImage ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-semibold text-emerald-700 border border-emerald-200/80">
+                        <CheckCircle2 className="size-3.5 text-emerald-600" />
+                        Verified Digital Signature
+                      </span>
+                    ) : trip.signature ? (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700 border border-blue-200/80">
+                        <CheckCircle2 className="size-3.5 text-blue-600" />
+                        Electronic Attestation
+                      </span>
+                    ) : null
+                  }
+                />
+                <div className="p-5">
+                  <div className="grid gap-5 md:grid-cols-[1.5fr_1fr]">
+                    {/* Left: Signature Canvas Preview */}
+                    <div className="flex flex-col justify-between rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                      <div className="flex items-center justify-between border-b border-slate-100 pb-2 text-[11px] text-[#8190a5]">
+                        <span className="font-bold uppercase tracking-wider flex items-center gap-1.5 text-slate-600">
+                          <PenTool className="size-3 text-[#173d76]" />
+                          Captured Signature
+                        </span>
+                        {isSignatureImage && signatureImgSrc.startsWith("http") && (
+                          <a
+                            href={signatureImgSrc}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-medium text-[#173d76] hover:underline"
+                          >
+                            Open Full Image ↗
+                          </a>
                         )}
                       </div>
-                      <div className="flex flex-col justify-center space-y-3 rounded-xl border border-slate-100 bg-slate-50/50 p-4 text-xs">
-                        <div>
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-[#8190a5]">
-                            Signed Date
-                          </p>
-                          <p className="mt-0.5 font-bold text-slate-800">{submittedAt}</p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-[#8190a5]">
-                            Relationship
-                          </p>
-                          <p className="mt-0.5 font-bold text-slate-800">
-                            {trip.relationshipToPassenger || trip.relationship || "Daughter / Legal Guardian"}
-                          </p>
-                        </div>
+
+                      <div className="flex min-h-28 items-center justify-center py-3">
+                        {isSignatureImage ? (
+                          <img
+                            src={signatureImgSrc}
+                            alt="Digital Signature"
+                            className="max-h-24 max-w-full object-contain filter contrast-125"
+                          />
+                        ) : trip.signature ? (
+                          <span className="font-serif italic text-2xl font-bold tracking-wide text-[#2b4c7e]">
+                            {trip.signature}
+                          </span>
+                        ) : (
+                          <div className="flex flex-col items-center justify-center py-2 text-center text-slate-400">
+                            <PenTool className="mb-1 size-5 opacity-40" />
+                            <p className="text-xs italic">No digital signature recorded</p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-between border-t border-dashed border-slate-200 pt-2 text-[11px] text-slate-500">
+                        <span className="truncate max-w-[200px]">
+                          Signee: <strong className="text-slate-800">{trip.printedName || trip.fullName || passengerName || "—"}</strong>
+                        </span>
+                        <span className="text-[10px] text-slate-400">
+                          {trip.signatureDate ? `Date: ${trip.signatureDate}` : `Captured: ${submittedDateShort}`}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Right: Signature Details */}
+                    <div className="flex flex-col justify-between space-y-3 rounded-xl border border-slate-100 bg-slate-50/70 p-4 text-xs">
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-[#8190a5]">
+                          Printed Name
+                        </p>
+                        <p className="mt-0.5 text-sm font-bold text-slate-800">
+                          {trip.printedName || trip.fullName || passengerName || "—"}
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-[#8190a5]">
+                          Relationship to Passenger
+                        </p>
+                        <p className="mt-0.5 font-bold text-slate-800">
+                          {trip.relationshipToPassenger?.trim() || trip.relationship?.trim() || "Self (Passenger)"}
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-[#8190a5]">
+                          Signed Date & Time
+                        </p>
+                        <p className="mt-0.5 font-bold text-slate-800">
+                          {trip.signatureDate || submittedAt}
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-[10px] font-bold uppercase tracking-wider text-[#8190a5]">
+                          Legal Acknowledgment
+                        </p>
+                        <p className="mt-0.5 flex items-center gap-1.5 font-semibold text-emerald-700">
+                          <CheckCircle2 className="size-3.5 text-emerald-600 shrink-0" />
+                          Electronic signature consent verified
+                        </p>
                       </div>
                     </div>
                   </div>
-                </article>
-              )}
+                </div>
+              </article>
 
               <article className={card}>
                 <CardHead icon={<Route />} title="Activity Timeline" subtitle="End-to-end request lifecycle" />
