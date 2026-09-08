@@ -7,6 +7,7 @@ import {
   ArrowRight,
   CheckCircle2,
   CircleAlert,
+  MapPin,
   RefreshCw,
   Send,
   TrendingUp,
@@ -135,7 +136,7 @@ export default function DashboardPage() {
         : yearlyTripVolume;
 
   const driverStatusList = stats?.driverStatus || [];
-  const activityFeedList = stats?.activityFeed || [];
+  const pendingRideRequestsList = stats?.pendingRideRequests || [];
   const recentRideRequests = stats?.recentRideRequests || [];
 
   const driverPerformance = stats?.driverPerformance || {};
@@ -401,7 +402,11 @@ export default function DashboardPage() {
             View all trips <ArrowRight className="size-3.5" />
           </Link>
         </article>
-        <ActivityFeed items={activityFeedList} isLoading={stats === null} />
+        <PendingRideRequestsCard
+          items={pendingRideRequestsList}
+          isLoading={stats === null}
+          totalCount={metrics.pendingRequests}
+        />
       </section>
 
       <section className="grid gap-5 xl:grid-cols-2">
@@ -588,12 +593,12 @@ function Metric({
 }
 function Avatar({
   initials,
-  color,
+  color = "#173d76",
   small = false,
   url,
 }: {
   initials: string;
-  color: string;
+  color?: string;
   small?: boolean;
   url?: string;
 }) {
@@ -637,53 +642,171 @@ function Badge({ status }: { status: string }) {
     </span>
   );
 }
-function ActivityFeed({
+function PendingRideRequestsCard({
   items = [],
   isLoading = false,
+  totalCount = 0,
 }: {
-  items?: { title: string; time: string; color: string }[];
+  items?: any[];
   isLoading?: boolean;
+  totalCount?: number;
 }) {
+  const displayCount = totalCount || items.length;
+
   return (
-    <article className={`${card} p-5`}>
-      <h2 className="text-lg font-bold text-[#172033]">Activity Feed</h2>
-      <p className="text-xs text-[#8b95a7]">Latest updates</p>
-      <div className="mt-5 space-y-4">
+    <article className={`${card} flex flex-col p-5`}>
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-bold text-[#172033]">
+              Pending Ride Request
+            </h2>
+            {displayCount > 0 && (
+              <span className="rounded-full bg-amber-50 border border-amber-200/80 px-2 py-0.5 text-[11px] font-bold text-amber-700">
+                {displayCount}
+              </span>
+            )}
+          </div>
+          <p className="mt-0.5 text-xs text-[#8b95a7]">
+            Requests awaiting review & approval
+          </p>
+        </div>
+        <Link
+          href="/ride-requests"
+          className="shrink-0 flex items-center gap-1 text-xs font-bold text-[#173d76] hover:underline"
+        >
+          View all <ArrowRight className="size-3" />
+        </Link>
+      </div>
+
+      <div className="mt-4 flex-1 space-y-3">
         {isLoading ? (
-          [...Array(5)].map((_, i) => (
-            <div className="relative flex gap-3 animate-pulse" key={i}>
-              <div className="size-5 rounded-full bg-slate-200 shrink-0" />
-              <div className="flex-1 space-y-2 pt-1">
-                <div className="h-3 w-3/4 rounded bg-slate-200" />
-                <div className="h-2 w-1/4 rounded bg-slate-200" />
+          [...Array(3)].map((_, i) => (
+            <div
+              key={i}
+              className="rounded-xl border border-slate-100 bg-slate-50/50 p-3.5 space-y-2.5 animate-pulse"
+            >
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2">
+                  <div className="size-7 rounded-full bg-slate-200" />
+                  <div className="space-y-1">
+                    <div className="h-3 w-24 rounded bg-slate-200" />
+                    <div className="h-2.5 w-16 rounded bg-slate-200" />
+                  </div>
+                </div>
+                <div className="h-4 w-16 rounded-full bg-slate-200" />
               </div>
+              <div className="space-y-1.5 pt-1">
+                <div className="h-2.5 w-3/4 rounded bg-slate-200" />
+                <div className="h-2.5 w-2/3 rounded bg-slate-200" />
+              </div>
+              <div className="h-7 w-full rounded-lg bg-slate-200 pt-1" />
             </div>
           ))
         ) : items.length === 0 ? (
-          <p className="text-xs text-[#8b95a7]">No recent activity.</p>
-        ) : (
-          items.map(({ title, time, color }, i) => (
-            <div className="relative flex gap-3" key={i}>
-              {i < items.length - 1 && (
-                <span className="absolute left-[9px] top-4 h-9 w-px bg-[#e4e8ee]" />
-              )}
-              <span
-                className="relative mt-0.5 size-5 shrink-0 rounded-full border-2 bg-white"
-                style={{ borderColor: color }}
-              >
-                <i
-                  className="absolute left-1/2 top-1/2 size-1 -translate-x-1/2 -translate-y-1/2 rounded-full"
-                  style={{ backgroundColor: color }}
-                />
-              </span>
-              <div>
-                <p className="text-xs text-[#343c4d]">{title}</p>
-                <p className="mt-1 text-[11px] text-[#a0a9b7]">{time}</p>
-              </div>
+          <div className="flex flex-col items-center justify-center py-12 px-4 text-center">
+            <div className="size-12 rounded-full bg-emerald-50 border border-emerald-100 flex items-center justify-center text-emerald-600 mb-3 shadow-xs">
+              <CheckCircle2 className="size-6" />
             </div>
-          ))
+            <p className="text-sm font-bold text-[#172033]">
+              No Pending Requests
+            </p>
+            <p className="mt-1 text-xs text-[#8b95a7] max-w-[220px]">
+              All passenger ride requests have been confirmed or processed.
+            </p>
+            <Link
+              href="/ride-requests"
+              className="mt-4 inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-[#52647e] transition-colors hover:bg-slate-50 hover:text-[#173d76]"
+            >
+              Go to Ride Requests <ArrowRight className="size-3" />
+            </Link>
+          </div>
+        ) : (
+          items.slice(0, 5).map((item) => {
+            const statusTone =
+              item.status === "QUOTE_COUNTERED"
+                ? "bg-violet-50 text-violet-700 border-violet-200/60"
+                : item.status === "QUOTE_SENT"
+                ? "bg-blue-50 text-blue-700 border-blue-200/60"
+                : "bg-amber-50 text-amber-700 border-amber-200/60";
+
+            return (
+              <div
+                key={item.id}
+                className="group relative rounded-xl border border-slate-200/80 bg-slate-50/40 p-3 transition-all duration-200 hover:border-[#173d76]/30 hover:bg-white hover:shadow-[0_4px_16px_rgba(15,35,65,0.06)]"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Avatar
+                      url={item.avatarUrl}
+                      initials={item.initials}
+                      small
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-bold text-[#16345e] group-hover:text-[#173d76] transition-colors">
+                        {item.passenger}
+                      </p>
+                      <p className="text-[10px] font-semibold text-[#8b95a7]">
+                        #{item.shortId}
+                      </p>
+                    </div>
+                  </div>
+                  <span
+                    className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-bold ${statusTone}`}
+                  >
+                    {item.statusLabel || "Pending"}
+                  </span>
+                </div>
+
+                <div className="mt-2.5 space-y-1 text-xs">
+                  <div className="flex items-start gap-1.5 text-[#52647e]">
+                    <MapPin className="size-3 text-amber-500 shrink-0 mt-0.5" />
+                    <span className="truncate text-[11px] font-medium leading-tight">
+                      {item.pickup}
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-1.5 text-[#52647e]">
+                    <MapPin className="size-3 text-blue-500 shrink-0 mt-0.5" />
+                    <span className="truncate text-[11px] font-medium leading-tight">
+                      {item.destination}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-2.5 flex items-center justify-between border-t border-slate-100 pt-2 text-[11px] text-[#8b95a7]">
+                  <div className="flex items-center gap-1.5">
+                    <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-slate-600">
+                      {item.tripType}
+                    </span>
+                    {item.fareStr && (
+                      <span className="font-bold text-emerald-700">
+                        {item.fareStr}
+                      </span>
+                    )}
+                  </div>
+                  <Link
+                    href={`/ride-requests/${item.id}`}
+                    className="inline-flex items-center gap-1 rounded-md border border-[#173d76]/20 bg-[#173d76]/5 px-2.5 py-1 text-[11px] font-bold text-[#173d76] transition-all hover:bg-[#173d76] hover:text-white shadow-2xs active:scale-95"
+                  >
+                    View Request <ArrowRight className="size-3" />
+                  </Link>
+                </div>
+              </div>
+            );
+          })
         )}
       </div>
+
+      {items.length > 5 && (
+        <div className="mt-3 pt-2 border-t border-slate-100 text-center">
+          <Link
+            href="/ride-requests"
+            className="text-xs font-bold text-[#173d76] hover:underline"
+          >
+            View all {displayCount} pending requests →
+          </Link>
+        </div>
+      )}
     </article>
   );
 }
