@@ -174,3 +174,43 @@
     -webkit-tap-highlight-color: transparent;
   }
 }
+
+/* CRM Rich Text Editor Full-Size Styling */
+.crm-quill-editor {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.crm-quill-editor .ql-toolbar.ql-snow {
+  border-top-left-radius: 14px;
+  border-top-right-radius: 14px;
+  border-color: #e1e5ea;
+  background-color: #f8fafc;
+  padding: 10px 14px;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.crm-quill-editor .ql-container.ql-snow {
+  border-bottom-left-radius: 14px;
+  border-bottom-right-radius: 14px;
+  border-color: #e1e5ea;
+  background-color: #ffffff;
+  font-size: 15px;
+  min-height: 560px;
+  height: calc(100vh - 390px);
+}
+
+.crm-quill-editor .ql-editor {
+  min-height: 100%;
+  font-size: 14.5px;
+  line-height: 1.65;
+  padding: 20px 24px;
+  color: #172033;
+}
+
+.crm-quill-editor .ql-editor p {
+  margin-bottom: 0.75rem;
+}

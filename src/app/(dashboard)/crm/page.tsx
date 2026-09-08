@@ -122,14 +122,25 @@ export default function CrmPage() {
   };
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title="CRM & Dispatch Management"
-        description="Manage the global dispatch number and application legal/help contents."
-      />
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <PageHeader
+          title="CRM & Dispatch Management"
+          description="Manage the global dispatch number and application legal/help contents."
+        />
+        {activeTab !== "dispatchNumber" && (
+          <button
+            onClick={handleSaveCrm}
+            disabled={savingCrm}
+            className="self-start sm:self-auto rounded-full bg-[#173d76] px-7 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#122b54] disabled:opacity-50 shadow-sm whitespace-nowrap"
+          >
+            {savingCrm ? "Saving..." : "Save Content"}
+          </button>
+        )}
+      </div>
 
       {/* Content & Dispatch Management Panel */}
-      <div className="rounded-[18px] border border-[#e1e5ea] bg-white p-6 shadow-[0_9px_24px_rgba(15,35,65,0.07)]">
+      <div className="rounded-[18px] border border-[#e1e5ea] bg-white p-5 sm:p-6 shadow-[0_9px_24px_rgba(15,35,65,0.07)]">
         <h2 className="text-lg font-bold text-[#172033] mb-2">Manage Content</h2>
         <p className="text-xs text-[#69758a] mb-5">
           Select a tab to edit content or manage dispatch settings. General, passengers, and drivers policies are now managed within a single unified page editor.
@@ -159,7 +170,7 @@ export default function CrmPage() {
 
         {activeTab === "dispatchNumber" ? (
           /* Manage Dispatch Number Tab Content */
-          <div className="max-w-2xl">
+          <div className="max-w-2xl py-2">
             <p className="text-sm text-[#69758a] mb-6">
               This number will be displayed on the driver and passenger portals for emergency contact and general dispatch.
             </p>
@@ -200,30 +211,32 @@ export default function CrmPage() {
           </div>
         ) : (
           /* Legal/Help Content Tab Content */
-          <div>
-            <div className="mb-4 bg-white">
+          <div className="space-y-4">
+            <div className="crm-quill-editor bg-white">
               <ReactQuill 
                 theme="snow" 
                 modules={quillModules}
                 value={crmContent[activeTab] || ""} 
                 onChange={handleCrmChange} 
-                className="h-[350px] mb-12"
+                className="w-full"
               />
             </div>
 
             {crmMessage.text && (
-              <div className={`mb-4 rounded-xl p-3 text-sm ${crmMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+              <div className={`rounded-xl p-3 text-sm ${crmMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
                 {crmMessage.text}
               </div>
             )}
 
-            <button
-              onClick={handleSaveCrm}
-              disabled={savingCrm}
-              className="rounded-full bg-[#173d76] px-6 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#122b54] disabled:opacity-50"
-            >
-              {savingCrm ? "Saving..." : "Save Content"}
-            </button>
+            <div className="flex items-center justify-between pt-2">
+              <button
+                onClick={handleSaveCrm}
+                disabled={savingCrm}
+                className="rounded-full bg-[#173d76] px-8 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#122b54] disabled:opacity-50 shadow-sm"
+              >
+                {savingCrm ? "Saving..." : "Save Content"}
+              </button>
+            </div>
           </div>
         )}
       </div>
