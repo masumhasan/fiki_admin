@@ -1619,16 +1619,6 @@ export default function RideRequestDetails({
                 Request <strong className="text-[#173d76]">{id.slice(-8).toUpperCase()}</strong> — {statusText}
               </span>
               <div className="flex flex-wrap items-center gap-2">
-                {status !== "COMPLETED" && status !== "CANCELLED" && (
-                  <Link
-                    className="flex items-center gap-1.5 rounded-lg bg-[#173d76] px-4 py-2 text-[11px] font-bold text-white transition hover:bg-[#0d2c58] shadow cursor-pointer"
-                    href={`/ride-requests/${id}/quotation`}
-                  >
-                    <DollarSign className="size-3.5" />
-                    {trip?.quotedFare ? `Update Quote ($${trip.quotedFare.toFixed(2)}/trip)` : "Send Fare Quote (Per Trip)"}
-                  </Link>
-                )}
-
                 {/* Approve & Reject Ride Request Buttons */}
                 {status !== "ACCEPTED" && status !== "COMPLETED" && status !== "CANCELLED" && status !== "QUOTE_DENIED" && !hasCompletedLeg && !allChildCompleted && (
                   <button
