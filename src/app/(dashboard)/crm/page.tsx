@@ -9,6 +9,7 @@ import 'react-quill-new/dist/quill.snow.css';
 const ReactQuill = dynamic(() => import('react-quill-new'), { ssr: false });
 
 type CrmSection = "privacyPolicy" | "termsOfService" | "helpCenter";
+type CrmTab = CrmSection | "dispatchNumber";
 
 export default function CrmPage() {
   const [dispatchNumber, setDispatchNumber] = useState("");
@@ -16,7 +17,7 @@ export default function CrmPage() {
   const [savingDispatch, setSavingDispatch] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
 
-  const [activeSection, setActiveSection] = useState<CrmSection>("privacyPolicy");
+  const [activeTab, setActiveTab] = useState<CrmTab>("privacyPolicy");
   const [crmContent, setCrmContent] = useState<Record<CrmSection, string>>({
     privacyPolicy: "",
     termsOfService: "",
@@ -93,9 +94,10 @@ export default function CrmPage() {
   };
 
   const handleCrmChange = (value: string) => {
+    if (activeTab === "dispatchNumber") return;
     setCrmContent((prev) => ({
       ...prev,
-      [activeSection]: value,
+      [activeTab]: value,
     }));
   };
 
@@ -125,68 +127,27 @@ export default function CrmPage() {
         title="CRM & Dispatch Management"
         description="Manage the global dispatch number and application legal/help contents."
       />
-      
-      {/* Dispatch Number Panel */}
-      <div className="rounded-[18px] border border-[#e1e5ea] bg-white p-6 shadow-[0_9px_24px_rgba(15,35,65,0.07)] max-w-2xl">
-        <h2 className="text-lg font-bold text-[#172033] mb-4">Manage Dispatch Number</h2>
-        <p className="text-sm text-[#69758a] mb-6">
-          This number will be displayed on the driver and passenger portals for emergency contact and general dispatch.
-        </p>
 
-        {loading ? (
-          <div className="h-10 w-full animate-pulse rounded bg-slate-100" />
-        ) : (
-          <div className="space-y-4">
-            <div>
-              <label htmlFor="dispatchNumber" className="mb-1.5 block text-xs font-semibold text-[#172033]">
-                Dispatch Phone Number
-              </label>
-              <input
-                id="dispatchNumber"
-                type="text"
-                className="w-full rounded-xl border border-[#e1e5ea] bg-white px-4 py-3 text-sm text-[#172033] placeholder:text-[#9aa3b2] focus:border-[#0b2b58] focus:outline-none focus:ring-1 focus:ring-[#0b2b58]"
-                placeholder="e.g. +1 800 345 4825"
-                value={dispatchNumber}
-                onChange={(e) => setDispatchNumber(e.target.value)}
-              />
-            </div>
-            
-            {message.text && (
-              <div className={`rounded-xl p-3 text-sm ${message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-                {message.text}
-              </div>
-            )}
-
-            <button
-              onClick={handleSaveDispatch}
-              disabled={savingDispatch || !dispatchNumber.trim()}
-              className="rounded-full bg-[#f9b310] px-6 py-2.5 text-sm font-bold text-[#0b2b58] transition-colors hover:bg-[#e6a50c] disabled:opacity-50"
-            >
-              {savingDispatch ? "Saving..." : "Save Changes"}
-            </button>
-          </div>
-        )}
-      </div>
-
-      {/* Content Management Panel */}
+      {/* Content & Dispatch Management Panel */}
       <div className="rounded-[18px] border border-[#e1e5ea] bg-white p-6 shadow-[0_9px_24px_rgba(15,35,65,0.07)]">
-        <h2 className="text-lg font-bold text-[#172033] mb-4">Manage Content</h2>
-        <p className="text-xs text-[#69758a] mb-4">
-          Select a page to edit. General, passengers, and drivers policies are now managed within a single unified page editor.
+        <h2 className="text-lg font-bold text-[#172033] mb-2">Manage Content</h2>
+        <p className="text-xs text-[#69758a] mb-5">
+          Select a tab to edit content or manage dispatch settings. General, passengers, and drivers policies are now managed within a single unified page editor.
         </p>
         
         {/* Sections Tabs */}
-        <div className="flex space-x-1 border-b border-slate-200 mb-6">
+        <div className="flex space-x-1 border-b border-slate-200 mb-6 overflow-x-auto">
           {[
             { id: "privacyPolicy", label: "Privacy Policy" },
             { id: "termsOfService", label: "Terms of Service" },
             { id: "helpCenter", label: "Help Center" },
+            { id: "dispatchNumber", label: "Manage Dispatch Number" },
           ].map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveSection(tab.id as CrmSection)}
-              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                activeSection === tab.id
+              onClick={() => setActiveTab(tab.id as CrmTab)}
+              className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                activeTab === tab.id
                   ? "border-[#173d76] text-[#173d76]"
                   : "border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300"
               }`}
@@ -196,32 +157,76 @@ export default function CrmPage() {
           ))}
         </div>
 
-        {/* Unified Editor with Text Color Picker */}
-        <div className="mb-4 bg-white">
-          <ReactQuill 
-            theme="snow" 
-            modules={quillModules}
-            value={crmContent[activeSection] || ""} 
-            onChange={handleCrmChange} 
-            className="h-[350px] mb-12"
-          />
-        </div>
+        {activeTab === "dispatchNumber" ? (
+          /* Manage Dispatch Number Tab Content */
+          <div className="max-w-2xl">
+            <p className="text-sm text-[#69758a] mb-6">
+              This number will be displayed on the driver and passenger portals for emergency contact and general dispatch.
+            </p>
 
-        {crmMessage.text && (
-          <div className={`mb-4 rounded-xl p-3 text-sm ${crmMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
-            {crmMessage.text}
+            {loading ? (
+              <div className="h-10 w-full animate-pulse rounded bg-slate-100" />
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="dispatchNumber" className="mb-1.5 block text-xs font-semibold text-[#172033]">
+                    Dispatch Phone Number
+                  </label>
+                  <input
+                    id="dispatchNumber"
+                    type="text"
+                    className="w-full rounded-xl border border-[#e1e5ea] bg-white px-4 py-3 text-sm text-[#172033] placeholder:text-[#9aa3b2] focus:border-[#0b2b58] focus:outline-none focus:ring-1 focus:ring-[#0b2b58]"
+                    placeholder="e.g. +1 800 345 4825"
+                    value={dispatchNumber}
+                    onChange={(e) => setDispatchNumber(e.target.value)}
+                  />
+                </div>
+                
+                {message.text && (
+                  <div className={`rounded-xl p-3 text-sm ${message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                    {message.text}
+                  </div>
+                )}
+
+                <button
+                  onClick={handleSaveDispatch}
+                  disabled={savingDispatch || !dispatchNumber.trim()}
+                  className="rounded-full bg-[#f9b310] px-6 py-2.5 text-sm font-bold text-[#0b2b58] transition-colors hover:bg-[#e6a50c] disabled:opacity-50"
+                >
+                  {savingDispatch ? "Saving..." : "Save Changes"}
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Legal/Help Content Tab Content */
+          <div>
+            <div className="mb-4 bg-white">
+              <ReactQuill 
+                theme="snow" 
+                modules={quillModules}
+                value={crmContent[activeTab] || ""} 
+                onChange={handleCrmChange} 
+                className="h-[350px] mb-12"
+              />
+            </div>
+
+            {crmMessage.text && (
+              <div className={`mb-4 rounded-xl p-3 text-sm ${crmMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                {crmMessage.text}
+              </div>
+            )}
+
+            <button
+              onClick={handleSaveCrm}
+              disabled={savingCrm}
+              className="rounded-full bg-[#173d76] px-6 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#122b54] disabled:opacity-50"
+            >
+              {savingCrm ? "Saving..." : "Save Content"}
+            </button>
           </div>
         )}
-
-        <button
-          onClick={handleSaveCrm}
-          disabled={savingCrm}
-          className="rounded-full bg-[#173d76] px-6 py-2.5 text-sm font-bold text-white transition-colors hover:bg-[#122b54] disabled:opacity-50"
-        >
-          {savingCrm ? "Saving..." : "Save Content"}
-        </button>
       </div>
-
     </div>
   );
 }
