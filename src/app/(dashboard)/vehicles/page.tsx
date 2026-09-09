@@ -30,6 +30,7 @@ interface VehicleItem {
   fleetId: string;
   status: string;
   plateExpirationDate?: string;
+  imageUrl?: string;
   createdAt: string;
 }
 
@@ -39,6 +40,8 @@ export default function VehiclesPage() {
   const [vinNumber, setVinNumber] = useState("");
   const [year, setYear] = useState("");
   const [plateExpirationDate, setPlateExpirationDate] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
@@ -97,6 +100,7 @@ export default function VehiclesPage() {
             vin: vinNumber,
             year: yearNum,
             plateExpirationDate,
+            imageUrl,
           });
         } else {
           res = await createVehicleApi(token, {
@@ -105,6 +109,7 @@ export default function VehiclesPage() {
             vin: vinNumber,
             year: yearNum,
             plateExpirationDate,
+            imageUrl,
           });
         }
 
@@ -127,6 +132,7 @@ export default function VehiclesPage() {
     setVinNumber(v.vin);
     setYear(String(v.year));
     setPlateExpirationDate(v.plateExpirationDate || "");
+    setImageUrl(v.imageUrl || "");
     setErrorMsg("");
     setSuccessMsg("");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -157,8 +163,44 @@ export default function VehiclesPage() {
     setVinNumber("");
     setYear("");
     setPlateExpirationDate("");
+    setImageUrl("");
     setErrorMsg("");
     setSuccessMsg("");
+  };
+
+  const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setUploadingImage(true);
+      setErrorMsg("");
+      try {
+        const formData = new FormData();
+        formData.append("image", file);
+        formData.append("category", "vehicles");
+
+        const token = window.localStorage.getItem("fiki_auth_token");
+        // Using dynamic API_BASE_URL resolution to match the api.ts setup
+        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.fikitransit.com/api/v1";
+        
+        const res = await fetch(`${API_BASE_URL}/upload/image`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        const data = await res.json();
+        if (data.success && data.data && data.data.url) {
+          setImageUrl(data.data.url);
+        } else {
+          setErrorMsg(data.error?.message || "Failed to upload image.");
+        }
+      } catch (err) {
+        setErrorMsg("Failed to upload image. Please try again.");
+      }
+      setUploadingImage(false);
+    }
   };
 
   return (
@@ -278,6 +320,28 @@ export default function VehiclesPage() {
                 Select plate expiration date.
               </p>
             </div>
+
+            {/* Image Upload */}
+            <div className="md:col-span-2">
+              <label className="block text-xs font-bold text-foreground">Vehicle Image</label>
+              <div className="mt-2 flex items-center gap-4">
+                {imageUrl && (
+                  <div className="relative h-16 w-24 overflow-hidden rounded-xl border border-border">
+                    <img src={imageUrl} alt="Vehicle" className="h-full w-full object-cover" />
+                  </div>
+                )}
+                <label className="flex h-11 cursor-pointer items-center justify-center rounded-xl border border-dashed border-border bg-card px-4 text-sm font-semibold text-muted-foreground transition hover:border-amber-500 hover:text-amber-600">
+                  {uploadingImage ? "Uploading..." : imageUrl ? "Change Image" : "Upload Image"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleImageChange}
+                    disabled={uploadingImage}
+                  />
+                </label>
+              </div>
+            </div>
           </div>
 
           <div className="flex flex-col gap-3 border-t border-border/60 pt-5 sm:flex-row sm:items-center sm:justify-between">
@@ -315,9 +379,15 @@ export default function VehiclesPage() {
           >
             <div className="flex items-start justify-between">
               <div className="flex items-center gap-3">
-                <div className="grid size-12 place-items-center rounded-xl bg-amber-100 text-amber-600">
-                  <Car className="size-6" />
-                </div>
+                {v.imageUrl ? (
+                  <div className="h-12 w-16 overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+                    <img src={v.imageUrl} alt={v.modelName} className="h-full w-full object-cover" />
+                  </div>
+                ) : (
+                  <div className="grid size-12 place-items-center rounded-xl bg-amber-100 text-amber-600">
+                    <Car className="size-6" />
+                  </div>
+                )}
                 <div>
                   <h3 className="text-base font-bold text-foreground">{v.modelName}</h3>
                   <p className="text-xs font-semibold text-emerald-600">

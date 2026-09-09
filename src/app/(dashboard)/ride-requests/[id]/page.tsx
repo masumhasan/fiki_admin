@@ -544,6 +544,12 @@ export default function RideRequestDetails({
           </button>
           <Link
             className="flex h-9 items-center gap-2 rounded-lg border border-[#dce4ed] bg-white px-3 text-xs font-semibold text-[#52647e] transition hover:border-[#173d76]/30 hover:bg-[#f3f6fa] hover:text-[#173d76]"
+            href={`/ride-requests/${id}/trip-legs`}
+          >
+            Trip Legs & Real-Time Status
+          </Link>
+          <Link
+            className="flex h-9 items-center gap-2 rounded-lg border border-[#dce4ed] bg-white px-3 text-xs font-semibold text-[#52647e] transition hover:border-[#173d76]/30 hover:bg-[#f3f6fa] hover:text-[#173d76]"
             href="/ride-requests"
           >
             <ArrowLeft className="size-3.5" /> Back to Ride Requests
@@ -1034,49 +1040,6 @@ export default function RideRequestDetails({
                         </div>
                       )}
 
-                      {/* Generated Trip Legs & Statuses */}
-                      {childTrips.length > 0 && (
-                        <div className="border-t border-slate-100 pt-4">
-                          <h4 className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5] mb-3">
-                            Trip Legs & Real-Time Status
-                          </h4>
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            {childTrips.map((leg: any, idx: number) => {
-                              const legTitle = leg.legType === "RETURN" || leg.isReturnLeg ? "Return Leg" : "Outbound Leg";
-                              const legStatus = leg.status || "ACCEPTED";
-                              const isCompleted = legStatus === "COMPLETED";
-                              const isLegActive = ["IN_PROGRESS", "DRIVER_ARRIVING", "DRIVER_ARRIVED"].includes(legStatus);
-                              const isCancelled = legStatus === "CANCELLED" || legStatus === "QUOTE_DENIED";
-                              const badgeBg = isCompleted
-                                ? "bg-emerald-100 text-emerald-800 border-emerald-300"
-                                : isLegActive
-                                ? "bg-blue-100 text-blue-800 border-blue-300 animate-pulse"
-                                : isCancelled
-                                ? "bg-red-100 text-red-800 border-red-300"
-                                : "bg-slate-100 text-slate-800 border-slate-300";
-
-                              const driverName = leg.driverId?.fullName || leg.driverId?.name || "Unassigned";
-
-                              return (
-                                <div key={leg._id || idx} className="rounded-xl border border-slate-200 bg-slate-50/70 p-3.5 text-xs">
-                                  <div className="flex items-center justify-between gap-2 mb-2">
-                                    <span className="font-bold text-slate-900">{legTitle}</span>
-                                    <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider ${badgeBg}`}>
-                                      {legStatus}
-                                    </span>
-                                  </div>
-                                  <div className="space-y-1 text-slate-600">
-                                    <div><span className="font-semibold text-slate-500">Date & Time: </span>{leg.pickupDate || leg.startDate || "—"} {leg.pickupTime ? `at ${leg.pickupTime}` : ""}</div>
-                                    <div><span className="font-semibold text-slate-500">Driver: </span>{driverName}</div>
-                                    {leg.completedAt && <div><span className="font-semibold text-emerald-700">Completed: </span>{new Date(leg.completedAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}</div>}
-                                    {leg.cancellationReason && <div><span className="font-semibold text-rose-600">Note: </span>{leg.cancellationReason}</div>}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      )}
                     </>
                   )}
                 </div>
