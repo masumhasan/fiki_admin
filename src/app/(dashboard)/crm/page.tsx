@@ -214,6 +214,7 @@ export default function CrmPage() {
           <div className="space-y-4">
             <div className="crm-quill-editor bg-white">
               <ReactQuill 
+                key={activeTab}
                 theme="snow" 
                 modules={quillModules}
                 value={crmContent[activeTab] || ""} 
