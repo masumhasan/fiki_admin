@@ -251,7 +251,24 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
           };
         });
 
-        mapped.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        mapped.sort((a, b) => {
+          const tA = a.timestamp || 0;
+          const tB = b.timestamp || 0;
+          
+          if (activeTab === 'today' || activeTab === 'nextDay') {
+            return tA - tB; // Chronological order
+          } else if (activeTab === 'missed') {
+            // Same day: ascending time. Different day: descending date.
+            const dateA = new Date(tA).setHours(0, 0, 0, 0);
+            const dateB = new Date(tB).setHours(0, 0, 0, 0);
+            if (dateB !== dateA) {
+              return dateB - dateA;
+            }
+            return tA - tB;
+          }
+          
+          return tB - tA; // Default reverse chronological
+        });
         setTrips(mapped);
       } else {
         setTrips([]);
