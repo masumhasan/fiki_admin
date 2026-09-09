@@ -33,9 +33,41 @@ export default function TripLegsPage({
   }, [id]);
 
   const childTrips: any[] = Array.isArray(trip?.childTrips) ? trip.childTrips : [];
-  const totalCompletedTrips = trip?.totalCompletedTrips || 0;
-  const effectiveFare = trip?.quotedFare ?? trip?.fare ?? 0;
-  const billableFare = totalCompletedTrips * effectiveFare;
+  const completedChildCount = childTrips.filter((c: any) => c.status === "COMPLETED").length;
+  const status = trip?.status;
+  const isRoundTrip = trip?.tripType === "round-trip";
+
+  const effectiveFare =
+    typeof trip?.fare === "number" && !isNaN(trip.fare) && trip.fare > 0
+      ? trip.fare
+      : typeof trip?.quotedFare === "number" && !isNaN(trip.quotedFare) && trip.quotedFare > 0
+      ? trip.quotedFare
+      : 0;
+
+  const totalCompletedTrips =
+    typeof trip?.completedTripsCount === "number"
+      ? trip.completedTripsCount
+      : childTrips.length > 0
+      ? completedChildCount
+      : status === "COMPLETED"
+      ? (isRoundTrip ? 2 : 1)
+      : 0;
+
+  const billableFare =
+    typeof trip?.billableFare === "number"
+      ? trip.billableFare
+      : childTrips.length > 0 && completedChildCount > 0
+      ? childTrips
+          .filter((c: any) => c.status === "COMPLETED")
+          .reduce(
+            (sum: number, c: any) =>
+              sum +
+              (typeof c.fare === "number" && !isNaN(c.fare) && c.fare > 0
+                ? c.fare
+                : effectiveFare),
+            0
+          )
+      : totalCompletedTrips * effectiveFare;
 
   return (
     <div className="pb-20">
