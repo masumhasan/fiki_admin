@@ -64,8 +64,8 @@ export function LoginForm() {
         </div>
       </div>
       <div>
-        <div className="flex items-center justify-between">
-          <label className={labelClass} htmlFor="password">
+        <div className="mb-2 flex items-center justify-between">
+          <label className="text-xs font-bold text-brand-label" htmlFor="password">
             Password
           </label>
           <Link className={inlineLinkClass} href="/forgot-password">
@@ -117,6 +117,6 @@ const inputWrapClass =
 const inputClass =
   "h-full min-w-0 flex-1 bg-transparent text-sm text-brand-navy outline-none placeholder:text-brand-placeholder/80";
 const inlineLinkClass =
-  "font-bold text-brand-navy transition hover:text-brand-yellow-hover focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
+  "text-xs font-normal text-brand-navy transition hover:text-brand-yellow-hover focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-navy";
 const primaryButtonClass =
   "flex h-12 w-full items-center justify-center gap-2 rounded-full bg-secondary px-5 text-sm font-bold text-secondary-foreground transition-colors hover:bg-secondary/90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50";
