@@ -18,6 +18,8 @@ import {
   IdCard,
   CalendarDays,
   Pencil,
+  Camera,
+  Upload,
 } from "lucide-react";
 import Link from "next/link";
 import { useState, useEffect, useMemo } from "react";
@@ -27,9 +29,20 @@ import {
   getAdminDriversApi,
   deleteDriverApi,
   updateDriverProfileApi,
+  getVehiclesApi,
 } from "@/lib/api";
+import { uploadBase64Image } from "@/lib/uploadBase64";
 
 type DriverStatus = "Active" | "On trip" | "Off duty";
+
+type SystemVehicle = {
+  _id: string;
+  modelName: string;
+  licensePlate: string;
+  year?: number;
+  status?: string;
+  assignedDriverId?: string;
+};
 
 type Driver = {
   id: string;
@@ -42,6 +55,7 @@ type Driver = {
   joined: string;
   status: DriverStatus;
   vehicle: string;
+  vehicleId?: string;
   plate: string;
   phone: string;
   trips: number;
@@ -55,7 +69,22 @@ export function DriversPage({ hideHeader }: { hideHeader?: boolean } = {}) {
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"All" | DriverStatus>("All");
   const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [vehicles, setVehicles] = useState<SystemVehicle[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const fetchVehicles = async () => {
+    if (typeof window === "undefined") return;
+    const token = window.localStorage.getItem("fiki_auth_token");
+    if (!token) return;
+    try {
+      const res = await getVehiclesApi(token);
+      if (res.success && Array.isArray(res.data)) {
+        setVehicles(res.data);
+      }
+    } catch {
+      // ignore
+    }
+  };
 
   const fetchDrivers = async () => {
     if (typeof window === "undefined") return;
@@ -85,10 +114,18 @@ export function DriversPage({ hideHeader }: { hideHeader?: boolean } = {}) {
             const status = statusMap[profile.availabilityStatus] ?? "Off duty";
 
             const vehicleMake = profile.vehicle?.make?.trim() || "";
-            const vehicleModel = profile.vehicle?.model?.trim() || "";
+            const vehicleModel =
+              profile.vehicle?.model?.trim() ||
+              profile.vehicle?.modelName?.trim() ||
+              "";
             const vehicleStr =
-              [vehicleMake, vehicleModel].filter(Boolean).join(" ") || "—";
+              vehicleMake &&
+              vehicleModel &&
+              vehicleModel.toLowerCase().includes(vehicleMake.toLowerCase())
+                ? vehicleModel
+                : [vehicleMake, vehicleModel].filter(Boolean).join(" ") || "—";
             const plateStr = profile.vehicle?.licensePlate?.trim() || "—";
+            const vehicleId = profile.vehicleId || profile.vehicle?._id || "";
 
             const nameParts = (d.name || "Driver").split(" ");
             const initials =
@@ -128,6 +165,7 @@ export function DriversPage({ hideHeader }: { hideHeader?: boolean } = {}) {
                 : "—",
               status,
               vehicle: vehicleStr,
+              vehicleId,
               plate: plateStr,
               phone: d.phone?.trim() || "—",
               trips: profile.completedTripsCount || 0,
@@ -150,6 +188,7 @@ export function DriversPage({ hideHeader }: { hideHeader?: boolean } = {}) {
 
   useEffect(() => {
     fetchDrivers();
+    fetchVehicles();
   }, []);
 
   const [driverToDelete, setDriverToDelete] = useState<Driver | null>(null);
@@ -187,20 +226,58 @@ export function DriversPage({ hideHeader }: { hideHeader?: boolean } = {}) {
     email: "",
     licenseNumber: "",
     licenseExpirationDate: "",
+    vehicleId: "",
+    avatarUrl: "",
   });
+  const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [updating, setUpdating] = useState(false);
   const [updateError, setUpdateError] = useState("");
 
   const handleOpenEditModal = (driver: Driver) => {
     setDriverToEdit(driver);
+    const matchedVehicle = vehicles.find(
+      (v) =>
+        (driver.vehicleId && v._id === driver.vehicleId) ||
+        (v.assignedDriverId && v.assignedDriverId === driver.mongoId) ||
+        (driver.plate &&
+          driver.plate !== "—" &&
+          v.licensePlate.toLowerCase().trim() === driver.plate.toLowerCase().trim()),
+    );
+
     setEditForm({
       name: driver.name,
       phone: driver.phone === "—" ? "" : driver.phone,
       email: driver.email,
       licenseNumber: driver.licenseNumber === "—" ? "" : driver.licenseNumber,
       licenseExpirationDate: driver.rawLicenseExpirationDate,
+      vehicleId: matchedVehicle ? matchedVehicle._id : (driver.vehicleId || ""),
+      avatarUrl: driver.avatarUrl || "",
     });
+    setAvatarPreview(driver.avatarUrl || "");
     setUpdateError("");
+  };
+
+  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setUpdateError("Please select a valid image file.");
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setUpdateError("Image file size must be under 10MB.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      setAvatarPreview(result);
+      setEditForm((prev) => ({ ...prev, avatarUrl: result }));
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleConfirmEdit = async (e: React.FormEvent) => {
@@ -216,14 +293,27 @@ export function DriversPage({ hideHeader }: { hideHeader?: boolean } = {}) {
       return;
     }
 
+    let finalAvatarUrl = editForm.avatarUrl;
+    if (finalAvatarUrl && finalAvatarUrl.startsWith("data:image/")) {
+      try {
+        finalAvatarUrl = await uploadBase64Image(finalAvatarUrl, "user-avatars", token);
+      } catch (err) {
+        console.warn("Direct upload fallback to backend safety net:", err);
+      }
+    }
+
     const res = await updateDriverProfileApi(
       token,
       driverToEdit.mongoId,
-      editForm,
+      {
+        ...editForm,
+        avatarUrl: finalAvatarUrl,
+        vehicleId: editForm.vehicleId || null,
+      },
     );
     if (res.success) {
       setDriverToEdit(null);
-      await fetchDrivers();
+      await Promise.all([fetchDrivers(), fetchVehicles()]);
     } else {
       setUpdateError(res.error?.message || "Failed to update driver profile.");
     }
@@ -465,6 +555,63 @@ export function DriversPage({ hideHeader }: { hideHeader?: boolean } = {}) {
                 </div>
               )}
 
+              {/* Avatar Upload & Preview */}
+              <div className="flex items-center gap-4 rounded-xl border border-border/80 bg-muted/20 p-3.5">
+                <div className="relative group shrink-0">
+                  <div className="size-16 overflow-hidden rounded-full border-2 border-primary/20 bg-primary/10 shadow-xs flex items-center justify-center">
+                    {avatarPreview ? (
+                      <img
+                        src={avatarPreview}
+                        alt={editForm.name || "Driver avatar"}
+                        className="size-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-lg font-bold text-primary">
+                        {driverToEdit.initials}
+                      </span>
+                    )}
+                  </div>
+                  <label className="absolute -bottom-1 -right-1 grid size-6 place-items-center rounded-full bg-primary text-primary-foreground shadow-md hover:bg-primary/90 cursor-pointer transition">
+                    <Camera className="size-3" />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleAvatarFileChange}
+                    />
+                  </label>
+                </div>
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <label className="cursor-pointer inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition shadow-2xs">
+                      <Upload className="size-3.5 text-muted-foreground" />
+                      <span>{avatarPreview ? "Change Avatar" : "Upload Avatar"}</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        onChange={handleAvatarFileChange}
+                      />
+                    </label>
+                    {avatarPreview && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAvatarPreview("");
+                          setEditForm((prev) => ({ ...prev, avatarUrl: "" }));
+                        }}
+                        className="rounded-lg border border-destructive/20 bg-destructive/5 px-2.5 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10 transition"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">
+                    Update driver profile picture. Supported formats: JPG, PNG, WEBP.
+                  </p>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <label className="text-xs font-bold text-foreground">
@@ -545,6 +692,42 @@ export function DriversPage({ hideHeader }: { hideHeader?: boolean } = {}) {
                     className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm font-semibold outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition animate-none"
                   />
                 </div>
+
+                {/* Assigned Vehicle Selection */}
+                <div className="space-y-1.5 sm:col-span-2">
+                  <label className="flex items-center gap-1.5 text-xs font-bold text-foreground">
+                    <CarFront className="size-3.5 text-primary" />
+                    <span>Assigned Vehicle</span>
+                  </label>
+                  <select
+                    value={editForm.vehicleId}
+                    onChange={(e) =>
+                      setEditForm({ ...editForm, vehicleId: e.target.value })
+                    }
+                    className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm font-semibold outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition"
+                  >
+                    <option value="">— No Vehicle Assigned —</option>
+                    {vehicles.map((v) => {
+                      const isAssignedToThisDriver =
+                        v.assignedDriverId === driverToEdit.mongoId ||
+                        v._id === editForm.vehicleId;
+                      const isAssignedToOther =
+                        v.assignedDriverId &&
+                        v.assignedDriverId !== driverToEdit.mongoId &&
+                        v._id !== editForm.vehicleId;
+                      return (
+                        <option key={v._id} value={v._id}>
+                          {v.modelName} ({v.licensePlate})
+                          {v.year ? ` · ${v.year}` : ""}
+                          {isAssignedToThisDriver ? " (Currently Assigned)" : isAssignedToOther ? " (Assigned to another driver)" : ""}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <p className="text-[0.7rem] text-muted-foreground">
+                    Select a vehicle from the fleet to assign to this driver. Driver cards will display the vehicle name and license plate.
+                  </p>
+                </div>
               </div>
 
               <div className="flex justify-end gap-3 border-t border-border pt-4 mt-6">
@@ -618,10 +801,17 @@ function DriverCard({
     <article className="rounded-xl border border-[#e1e6ee] bg-card p-5 shadow-[0_4px_14px_rgba(15,37,74,.04)]">
       <div className="flex items-start justify-between">
         <span
-          className={`grid size-14 place-items-center overflow-hidden rounded-full text-lg font-bold text-white ${driver.avatar}`}
+          className={`grid size-14 place-items-center overflow-hidden rounded-full text-lg font-bold text-white ${driver.avatar} ring-2 ring-border/50`}
         >
           {driver.avatarUrl ? (
-            <img src={driver.avatarUrl} alt={driver.name} className="size-full object-cover" />
+            <img
+              src={driver.avatarUrl}
+              alt={driver.name}
+              className="size-full object-cover"
+              onError={(e) => {
+                (e.currentTarget as HTMLElement).style.display = "none";
+              }}
+            />
           ) : (
             driver.initials
           )}

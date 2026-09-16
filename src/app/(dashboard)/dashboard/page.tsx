@@ -2,13 +2,12 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { getAdminTripsApi, getAdminAnalyticsApi } from "@/lib/api";
+import { getAdminAnalyticsApi } from "@/lib/api";
 import {
   ArrowRight,
   CheckCircle2,
   CircleAlert,
   MapPin,
-  RefreshCw,
   Send,
   TrendingUp,
   UserRoundCheck,
@@ -17,11 +16,10 @@ import {
   DriverPerformanceChart,
   WeeklyTripChart,
 } from "@/components/dashboard/dashboard-charts";
+import { TripsPage } from "@/components/trips/trips-page";
 
 const card =
   "rounded-[18px] border border-[#e1e5ea] bg-white shadow-[0_9px_24px_rgba(15,35,65,0.07)]";
-
-const trips: any[] = [];
 
 function formatTimeTo12Hour(timeStr?: string): string {
   if (!timeStr) return "—";
@@ -39,73 +37,11 @@ function formatTimeTo12Hour(timeStr?: string): string {
 }
 
 export default function DashboardPage() {
-  const [liveTrips, setLiveTrips] = useState<any[] | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState<any | null>(null);
   const [tripFilter, setTripFilter] = useState("week"); // "week", "month", "year"
   const [driverPerfFilter, setDriverPerfFilter] = useState("week"); // "week", "fortnight", "month", "year"
 
-  const fetchLiveTrips = async () => {
-    if (typeof window === "undefined") return;
-    const token = window.localStorage.getItem("fiki_auth_token");
-    if (!token) return;
-    setRefreshing(true);
-    try {
-      const res = await getAdminTripsApi(token, 1, 10, "IN_PROGRESS", "live");
-      if (res.success && res.data && Array.isArray(res.data.trips)) {
-        const onboardOnly = res.data.trips.filter((t: any) => t.status === "IN_PROGRESS");
-        const mapped = onboardOnly.map((t: any) => {
-          const passengerName =
-            t.fullName ||
-            t.passengerId?.fullName ||
-            t.passengerId?.name ||
-            "Passenger";
-          const driverName = t.driverId?.name || "Unassigned";
-          const ini =
-            passengerName
-              .split(" ")
-              .map((n: string) => n[0])
-              .join("")
-              .toUpperCase()
-              .substring(0, 2) || "PA";
-
-          const timeStr = t.pickupTime
-            ? formatTimeTo12Hour(t.pickupTime)
-            : t.createdAt
-              ? new Date(t.createdAt).toLocaleTimeString("en-US", {
-                  hour: "numeric",
-                  minute: "2-digit",
-                  hour12: true,
-                  timeZone: "America/Chicago",
-                })
-              : "—";
-
-          return [
-            `TRP-${t._id.substring(t._id.length - 4).toUpperCase()}`,
-            ini,
-            passengerName,
-            driverName,
-            t.pickupLocation?.address || "Pickup Address",
-            t.dropoffLocation?.address || "Dropoff Address",
-            "Onboard",
-            timeStr,
-            "#2563eb",
-            t.passengerAvatarUrl || t.passengerId?.avatarUrl || "",
-          ];
-        });
-        setLiveTrips(mapped);
-      } else {
-        setLiveTrips([]);
-      }
-    } catch {
-      setLiveTrips([]);
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
   useEffect(() => {
-    fetchLiveTrips();
     if (typeof window !== "undefined") {
       const token = window.localStorage.getItem("fiki_auth_token");
       if (token) {
@@ -118,7 +54,6 @@ export default function DashboardPage() {
     }
   }, []);
 
-  const activeTripsList = liveTrips || [];
   const metrics = {
     todayTrips: 0,
     pendingRequests: 0,
@@ -284,125 +219,9 @@ export default function DashboardPage() {
       </section>
 
       <section className="grid gap-5 xl:grid-cols-[minmax(0,2.65fr)_minmax(270px,1fr)]">
-        <article className={`${card} min-w-0 overflow-hidden p-6`}>
-          <div className="flex items-start justify-between">
-            <div>
-              <h2 className="text-lg font-bold text-[#172033]">
-                Live Dispatch Board
-              </h2>
-              <p className="text-xs text-[#8b95a7]">Real-time trip overview (Onboard trips)</p>
-            </div>
-            <button
-              type="button"
-              onClick={fetchLiveTrips}
-              disabled={refreshing}
-              className="flex items-center gap-1.5 rounded-lg border px-3 py-2 text-xs text-[#69758a] hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50"
-            >
-              <RefreshCw className={`size-3.5 ${refreshing ? "animate-spin text-blue-600" : ""}`} />
-              Refresh
-            </button>
-          </div>
-          <div className="mt-5 overflow-x-auto">
-            <table className="w-full min-w-[770px] text-left text-xs">
-              <thead className="border-b text-[#687386]">
-                <tr>
-                  {[
-                    "Trip ID",
-                    "Passenger",
-                    "Driver",
-                    "Pickup",
-                    "Destination",
-                    "Status",
-                    "Time",
-                  ].map((x) => (
-                    <th className="px-2.5 py-3 font-semibold" key={x}>
-                      {x}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {liveTrips === null ? (
-                  [...Array(5)].map((_, i) => (
-                    <tr
-                      className={`border-b ${i % 2 ? "bg-[#fafafa]" : ""}`}
-                      key={i}
-                    >
-                      <td colSpan={7} className="px-2.5 py-3">
-                        <div className="h-5 w-full animate-pulse rounded bg-slate-100" />
-                      </td>
-                    </tr>
-                  ))
-                ) : activeTripsList.length === 0 ? (
-                  <tr>
-                    <td
-                      colSpan={7}
-                      className="py-10 text-center text-sm text-[#687386]"
-                    >
-                      No onboard trips at the moment.
-                    </td>
-                  </tr>
-                ) : (
-                  activeTripsList
-                    .slice(0, 5)
-                    .map(
-                      (
-                        [
-                          id,
-                          ini,
-                          passenger,
-                          driver,
-                          pickup,
-                          destination,
-                          status,
-                          time,
-                          color,
-                          avatarUrl,
-                        ],
-                        i,
-                      ) => (
-                        <tr
-                          className={`border-b ${i % 2 ? "bg-[#fafafa]" : ""}`}
-                          key={id}
-                        >
-                          <td className="px-2.5 py-3 font-bold text-[#16345e]">
-                            {id}
-                          </td>
-                          <td className="px-2.5 py-3">
-                            <span className="flex items-center gap-2">
-                              {avatarUrl ? (
-                                <img src={avatarUrl} alt="Avatar" className="size-6 rounded-full object-cover shrink-0 border border-border" />
-                              ) : (
-                                <Avatar small initials={ini} color={color} />
-                              )}
-                              {passenger}
-                            </span>
-                          </td>
-                          <td className="px-2.5 py-3">{driver}</td>
-                          <td className="px-2.5 py-3 text-[#7d8799]">
-                            {pickup}
-                          </td>
-                          <td className="px-2.5 py-3 text-[#7d8799]">
-                            {destination}
-                          </td>
-                          <td className="px-2.5 py-3">
-                            <Badge status={status} />
-                          </td>
-                          <td className="px-2.5 py-3 text-[#7d8799]">{time}</td>
-                        </tr>
-                      ),
-                    )
-                )}
-              </tbody>
-            </table>
-          </div>
-          <Link
-            href="/ride-requests?tab=trips"
-            className="mt-4 inline-flex items-center gap-1 text-xs font-bold text-[#16345e] hover:underline"
-          >
-            View all trips <ArrowRight className="size-3.5" />
-          </Link>
-        </article>
+        <div className="min-w-0">
+          <TripsPage hideHeader hideSummary hideExport className="space-y-0" />
+        </div>
         <PendingRideRequestsCard
           items={pendingRideRequestsList}
           isLoading={stats === null}

@@ -77,7 +77,17 @@ function formatTimeTo12Hour(timeStr?: string): string {
 
 export type TripTab = "today" | "nextDay" | "completed" | "missed" | "all";
 
-export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
+export function TripsPage({
+  hideHeader,
+  hideSummary,
+  hideExport,
+  className,
+}: {
+  hideHeader?: boolean;
+  hideSummary?: boolean;
+  hideExport?: boolean;
+  className?: string;
+}) {
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [status, setStatus] =
@@ -410,26 +420,28 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
   }
 
   return (
-    <div className="space-y-5">
+    <div className={cn("space-y-5", className)}>
       {!hideHeader ? (
         <PageHeader
           title="Trips"
           description="Monitor active trips, schedules, driver assignments and ride outcomes."
           action={
-            <button
-              className="h-9 rounded-lg bg-primary px-4 text-xs font-bold text-primary-foreground"
-              onClick={exportTrips}
-              type="button"
-            >
-              <Download className="mr-1.5 inline size-3.5" />
-              Export trips
-            </button>
+            !hideExport && (
+              <button
+                className="h-9 rounded-lg bg-primary px-4 text-xs font-bold text-primary-foreground cursor-pointer"
+                onClick={exportTrips}
+                type="button"
+              >
+                <Download className="mr-1.5 inline size-3.5" />
+                Export trips
+              </button>
+            )
           }
         />
-      ) : (
+      ) : !hideExport ? (
         <div className="flex justify-end">
           <button
-            className="h-9 rounded-lg bg-primary px-4 text-xs font-bold text-primary-foreground"
+            className="h-9 rounded-lg bg-primary px-4 text-xs font-bold text-primary-foreground cursor-pointer"
             onClick={exportTrips}
             type="button"
           >
@@ -437,35 +449,38 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
             Export trips
           </button>
         </div>
-      )}
-      <section
-        className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4"
-        aria-label="Trip summary"
-      >
-        {summary.map((item) => (
-          <article
-            className="rounded-xl border border-[#e1e6ee] bg-card p-4 shadow-[0_4px_14px_rgba(15,37,74,.04)] sm:p-5"
-            key={item.label}
-          >
-            <p className="text-xs font-semibold text-muted-foreground sm:text-sm">
-              {item.label}
-            </p>
-            <p
-              className={`mt-2 text-3xl font-bold leading-none tracking-[-0.04em] sm:text-4xl ${item.tone}`}
+      ) : null}
+
+      {!hideSummary && (
+        <section
+          className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4"
+          aria-label="Trip summary"
+        >
+          {summary.map((item) => (
+            <article
+              className="rounded-xl border border-[#e1e6ee] bg-card p-4 shadow-[0_4px_14px_rgba(15,37,74,.04)] sm:p-5"
+              key={item.label}
             >
-              {loading ? (
-                <span className="inline-block h-9 w-8 animate-pulse rounded bg-muted" />
-              ) : (
-                item.value
-              )}
-            </p>
-          </article>
-        ))}
-      </section>
+              <p className="text-xs font-semibold text-muted-foreground sm:text-sm">
+                {item.label}
+              </p>
+              <p
+                className={`mt-2 text-3xl font-bold leading-none tracking-[-0.04em] sm:text-4xl ${item.tone}`}
+              >
+                {loading ? (
+                  <span className="inline-block h-9 w-8 animate-pulse rounded bg-muted" />
+                ) : (
+                  item.value
+                )}
+              </p>
+            </article>
+          ))}
+        </section>
+      )}
 
       <section className="overflow-hidden rounded-xl border border-[#e1e6ee] bg-card shadow-[0_4px_14px_rgba(15,37,74,.04)]">
         <header className="flex flex-col gap-3 border-b border-border px-5 py-2.5 xl:flex-row xl:items-center xl:justify-between">
-          <div className="flex flex-1 flex-col gap-3 lg:flex-row lg:items-center">
+          <div className="flex flex-1 flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-center">
             {/* Search Input */}
             <div className="relative w-full lg:w-64 shrink-0">
               <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-brand-icon" />

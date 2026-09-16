@@ -583,6 +583,8 @@ export async function updateDriverProfileApi(
     email?: string;
     licenseNumber?: string;
     licenseExpirationDate?: string;
+    vehicleId?: string | null;
+    avatarUrl?: string;
   }
 ) {
   try {
