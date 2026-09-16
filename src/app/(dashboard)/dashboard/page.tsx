@@ -38,6 +38,7 @@ function formatTimeTo12Hour(timeStr?: string): string {
 
 export default function DashboardPage() {
   const [stats, setStats] = useState<any | null>(null);
+  const [cardPeriod, setCardPeriod] = useState<"today" | "week" | "fortnight" | "month" | "year">("today");
   const [tripFilter, setTripFilter] = useState("week"); // "week", "month", "year"
   const [driverPerfFilter, setDriverPerfFilter] = useState("week"); // "week", "fortnight", "month", "year"
 
@@ -61,6 +62,60 @@ export default function DashboardPage() {
     completedTrips: 0,
     ...(stats?.metrics || {}),
   };
+
+  const periodMetricsMap = stats?.metrics?.periodMetrics || stats?.periodMetrics;
+  const currentPeriodData = periodMetricsMap?.[cardPeriod];
+
+  // Top card values dynamically based on cardPeriod
+  const cardTripCount = currentPeriodData
+    ? currentPeriodData.totalTrips
+    : cardPeriod === "today"
+      ? (metrics.todayTrips ?? 0)
+      : (metrics.totalTrips ?? 0);
+
+  const cardPendingCount = currentPeriodData
+    ? currentPeriodData.pendingRequests
+    : (metrics.pendingRequests ?? metrics.pendingTrips ?? 0);
+
+  const cardActiveDriversCount = currentPeriodData
+    ? currentPeriodData.activeDrivers
+    : (metrics.activeDrivers ?? 0);
+
+  const cardCompletedCount = currentPeriodData
+    ? currentPeriodData.completedTrips
+    : (cardPeriod === "today" ? 0 : (metrics.completedTrips ?? 0));
+
+  const cardTripLabel =
+    cardPeriod === "today"
+      ? "Today's Trips"
+      : cardPeriod === "week"
+        ? "Weekly Trips"
+        : cardPeriod === "fortnight"
+          ? "Fortnightly Trips"
+          : cardPeriod === "month"
+            ? "Monthly Trips"
+            : "Yearly Trips";
+
+  const cardDateLabel =
+    currentPeriodData?.dateRangeLabel ||
+    (cardPeriod === "today"
+      ? "Today"
+      : cardPeriod === "week"
+        ? "Weekly"
+        : cardPeriod === "fortnight"
+          ? "Fortnightly"
+          : cardPeriod === "month"
+            ? "Monthly"
+            : "Yearly");
+
+  const periodTabs = [
+    { id: "today" as const, label: "Today" },
+    { id: "week" as const, label: "Weekly" },
+    { id: "fortnight" as const, label: "Fortnightly" },
+    { id: "month" as const, label: "Monthly" },
+    { id: "year" as const, label: "Yearly" },
+  ];
+
   const weeklyTripVolume = stats?.weeklyTripVolume || [];
   const monthlyTripVolume = stats?.monthlyTripVolume || [];
   const yearlyTripVolume = stats?.yearlyTripVolume || [];
@@ -88,40 +143,73 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-5">
+      {/* Overview Header with Top Cards Period Filter */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight text-[#172033]">
+            Overview
+          </h1>
+          <p className="text-xs text-[#8b95a7]">
+            Operational metrics for{" "}
+            <span className="font-semibold text-[#173d76]">
+              {cardDateLabel}
+            </span>
+          </p>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-1 rounded-xl border border-[#e1e5ea] bg-white p-1 shadow-xs">
+          {periodTabs.map((tab) => (
+            <button
+              key={tab.id}
+              type="button"
+              onClick={() => setCardPeriod(tab.id)}
+              className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-all cursor-pointer ${
+                cardPeriod === tab.id
+                  ? "bg-[#0b2b58] text-white shadow-xs"
+                  : "text-[#69758a] hover:bg-[#f0f4f9] hover:text-[#172033]"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Metric
           icon={<Send />}
-          label="Today's Trips"
-          value={(metrics.todayTrips ?? 0).toString()}
-          change=""
+          label={cardTripLabel}
+          value={(cardTripCount ?? 0).toString()}
+          change={cardDateLabel}
           color="#173d76"
           isLoading={stats === null}
         />
         <Metric
           icon={<CircleAlert />}
           label="Pending Requests"
-          value={(metrics.pendingRequests ?? metrics.pendingTrips ?? 0).toString()}
-          change=""
+          value={(cardPendingCount ?? 0).toString()}
+          change={cardDateLabel}
           color="#f39200"
           isLoading={stats === null}
         />
         <Metric
           icon={<UserRoundCheck />}
           label="Active Drivers"
-          value={(metrics.activeDrivers ?? 0).toString()}
-          change=""
+          value={(cardActiveDriversCount ?? 0).toString()}
+          change={cardDateLabel}
           color="#10ac7b"
           isLoading={stats === null}
         />
         <Metric
           icon={<CheckCircle2 />}
           label="Completed Trips"
-          value={(metrics.completedTrips ?? 0).toString()}
-          change=""
+          value={(cardCompletedCount ?? 0).toString()}
+          change={cardDateLabel}
           color="#8345ed"
           isLoading={stats === null}
         />
       </section>
+
 
       <section className="grid gap-5 xl:grid-cols-[minmax(0,2.65fr)_minmax(270px,1fr)]">
         <article className={`${card} min-w-0 p-6`}>
@@ -377,7 +465,7 @@ function Metric({
   icon: React.ReactNode;
   label: string;
   value: string;
-  change: string;
+  change?: string;
   color: string;
   isLoading?: boolean;
 }) {
@@ -397,15 +485,16 @@ function Metric({
     >
       <div className="absolute -right-5 -top-9 size-28 rounded-full bg-white/6" />
       <div className="absolute -bottom-8 right-0 size-20 rounded-full bg-white/5" />
-      <div className="relative flex justify-between">
+      <div className="relative flex justify-between items-start">
         <span className="grid size-11 place-items-center rounded-xl bg-white/18 [&_svg]:size-5">
           {icon}
         </span>
-        <span className="flex h-7 items-center gap-1 rounded-full bg-white/15 px-2.5 text-[11px] font-bold">
+        <span className="flex h-7 items-center gap-1.5 rounded-full bg-white/15 px-2.5 text-[11px] font-bold">
           <TrendingUp className="size-3" />
-          {change}
+          {change ? <span>{change}</span> : null}
         </span>
       </div>
+
       <p className="relative mt-4 text-sm text-white/80">{label}</p>
       <p className="relative mt-1 text-3xl font-bold">{value}</p>
     </article>
