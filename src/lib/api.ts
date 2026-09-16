@@ -346,7 +346,20 @@ export async function approveDriverApplicationApi(token: string, id: string, veh
   }
 }
 
-export async function sendQuoteApi(token: string, tripId: string, quotedFare: number, quoteNote?: string) {
+export async function sendQuoteApi(
+  token: string,
+  tripId: string,
+  quotedFare: number,
+  quoteNote?: string,
+  quoteBreakdown?: {
+    baseFare?: number;
+    distance?: number;
+    ratePerMile?: number;
+    extraServices?: number;
+    discount?: number;
+    taxPercent?: number;
+  }
+) {
   try {
     const res = await fetch(`${API_BASE_URL}/admin/trips/${tripId}/quote`, {
       method: "PATCH",
@@ -354,7 +367,7 @@ export async function sendQuoteApi(token: string, tripId: string, quotedFare: nu
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ quotedFare, quoteNote }),
+      body: JSON.stringify({ quotedFare, quoteNote, quoteBreakdown }),
     });
     return await res.json();
   } catch (error) {

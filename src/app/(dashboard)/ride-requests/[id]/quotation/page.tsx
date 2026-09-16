@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, CarFront, Check, DollarSign, Send, Tag } from "lucide-react";
+import { ArrowLeft, CarFront, Check, DollarSign, Info, Send, Tag } from "lucide-react";
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import { getAdminTripDetailApi, sendQuoteApi } from "@/lib/api";
@@ -11,6 +11,7 @@ export default function QuotationPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = use(params);
+  const [tripData, setTripData] = useState<any>(null);
   const [base, setBase] = useState(65);
   const [miles, setMiles] = useState(18.5);
   const [rate, setRate] = useState(3.5);
@@ -28,11 +29,38 @@ export default function QuotationPage({
     if (!token) return;
     getAdminTripDetailApi(token, id).then((res) => {
       if (res.success && res.data) {
-        if (res.data.status === "QUOTE_SENT" || (res.data.quotedFare && res.data.status !== "REQUESTED")) {
+        setTripData(res.data);
+        const hasExisting =
+          res.data.status === "QUOTE_SENT" ||
+          res.data.status === "QUOTE_ACCEPTED" ||
+          (typeof res.data.quotedFare === "number" && res.data.quotedFare > 0);
+        if (hasExisting) {
           setSent(true);
         }
         if (res.data.quoteNote) {
           setQuoteNote(res.data.quoteNote);
+        }
+
+        // Restore saved breakdown if present
+        if (res.data.quoteBreakdown) {
+          const qb = res.data.quoteBreakdown;
+          if (typeof qb.baseFare === "number") setBase(qb.baseFare);
+          if (typeof qb.distance === "number") setMiles(qb.distance);
+          if (typeof qb.ratePerMile === "number") setRate(qb.ratePerMile);
+          if (typeof qb.extraServices === "number") setAssist(qb.extraServices);
+          if (typeof qb.discount === "number") setDiscount(qb.discount);
+          if (typeof qb.taxPercent === "number") setTax(qb.taxPercent);
+        } else if (typeof res.data.quotedFare === "number" && res.data.quotedFare > 0) {
+          // If no breakdown was saved, check if default calculation matches quotedFare
+          const defaultTotal = Math.max(0, 65 + 18.5 * 3.5 + 0 + ((65 + 18.5 * 3.5) * 8.5) / 100);
+          if (Math.abs(defaultTotal - res.data.quotedFare) > 0.05) {
+            setBase(res.data.quotedFare);
+            setMiles(0);
+            setRate(0);
+            setAssist(0);
+            setDiscount(0);
+            setTax(0);
+          }
         }
       }
     });
@@ -43,8 +71,16 @@ export default function QuotationPage({
   const total = Math.max(0, subtotal - discount + taxAmount);
   const money = (v: number) => `$${v.toFixed(2)}`;
 
+  const childTrips: any[] = tripData?.childTrips || [];
+  const completedTrips = childTrips.filter((c: any) => c.status === "COMPLETED");
+  const futureTrips = childTrips.filter((c: any) => c.status !== "COMPLETED" && c.status !== "CANCELLED");
+  const hasExistingQuote =
+    sent ||
+    (typeof tripData?.quotedFare === "number" && tripData.quotedFare > 0) ||
+    tripData?.status === "QUOTE_SENT" ||
+    tripData?.status === "QUOTE_ACCEPTED";
+
   const handleSendQuote = async () => {
-    if (sent) return;
     if (typeof window === "undefined") return;
     const token = window.localStorage.getItem("fiki_auth_token");
     if (!token) {
@@ -52,13 +88,41 @@ export default function QuotationPage({
       return;
     }
     setSending(true);
-    const res = await sendQuoteApi(token, id, total, quoteNote || undefined);
+    const breakdown = {
+      baseFare: base,
+      distance: miles,
+      ratePerMile: rate,
+      extraServices: assist,
+      discount,
+      taxPercent: tax,
+    };
+    const res = await sendQuoteApi(token, id, total, quoteNote || undefined, breakdown);
     setSending(false);
     if (res.success) {
       setSent(true);
-      setNotice({ text: `Quotation of ${money(total)} per single trip sent to passenger for review.`, ok: true });
+      setTripData((prev: any) => (prev ? {
+        ...prev,
+        quotedFare: total,
+        quoteNote: quoteNote || undefined,
+        quoteBreakdown: breakdown,
+      } : prev));
+
+      const updatedCount = res.data?.updatedFutureTripsCount;
+      const compCount = res.data?.completedTripsCount;
+      let msg = hasExistingQuote
+        ? `Quotation updated to ${money(total)} per single trip.`
+        : `Quotation of ${money(total)} per single trip sent to passenger for review.`;
+
+      if (typeof updatedCount === "number" && updatedCount > 0) {
+        msg += ` ${updatedCount} future trip${updatedCount > 1 ? "s" : ""} updated.`;
+      }
+      if (typeof compCount === "number" && compCount > 0) {
+        msg += ` (${compCount} completed trip${compCount > 1 ? "s" : ""} kept original fare).`;
+      }
+
+      setNotice({ text: msg, ok: true });
     } else {
-      setNotice({ text: res.error?.message || "Failed to send quotation.", ok: false });
+      setNotice({ text: res.error?.message || "Failed to update quotation.", ok: false });
     }
   };
 
@@ -73,13 +137,18 @@ export default function QuotationPage({
               </h1>
               <span
                 className={`rounded-full border px-3 py-1.5 text-[11px] font-bold ${
-                  sent
+                  hasExistingQuote
                     ? "border-emerald-300 bg-emerald-50 text-emerald-700"
                     : "border-amber-300 bg-amber-50 text-amber-600"
                 }`}
               >
-                {sent ? "Quotation Sent" : "Pending Review"}
+                {hasExistingQuote ? "Quotation Active" : "Pending Review"}
               </span>
+              {completedTrips.length > 0 && (
+                <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
+                  {completedTrips.length} completed / {futureTrips.length} future
+                </span>
+              )}
             </div>
             <p className="mt-1 max-w-2xl text-[13px] text-[#72829a]">
               Calculate transportation cost per single trip leg and send quotation to the passenger.
@@ -94,8 +163,28 @@ export default function QuotationPage({
             </Link>
           </div>
         </div>
+
         <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
           <div className="space-y-4">
+            {/* Informative notice for multi-trip requests with completed legs */}
+            {completedTrips.length > 0 && (
+              <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50/80 p-4 shadow-[0_2px_10px_rgba(20,50,100,.04)]">
+                <div className="grid size-8 shrink-0 place-items-center rounded-lg bg-[#173d76] text-white shadow-sm">
+                  <Info className="size-4" />
+                </div>
+                <div className="text-xs text-[#1e3a6a] leading-relaxed">
+                  <p className="text-sm font-bold text-[#14294c]">
+                    Trip Progress & Future Pricing Notice ({completedTrips.length} Completed / {childTrips.length} Total Legs)
+                  </p>
+                  <p className="mt-1">
+                    This ride request has <strong>{completedTrips.length} completed trip{completedTrips.length > 1 ? "s" : ""}</strong> and <strong>{futureTrips.length} future trip{futureTrips.length > 1 ? "s" : ""}</strong>.
+                    Updating the quotation will apply <strong>only to the {futureTrips.length} future trip{futureTrips.length > 1 ? "s" : ""}</strong>.
+                    Completed trips will strictly retain their original historical fares and will not be altered.
+                  </p>
+                </div>
+              </div>
+            )}
+
             <section className="overflow-hidden rounded-xl border border-[#e1e6ee] bg-white shadow-[0_4px_14px_rgba(15,37,74,.04)]">
               <div className="flex items-center gap-2 border-b px-5 py-3">
                 <span className="grid size-7 place-items-center rounded-full bg-[#edf2fb] text-[#365382]">
@@ -161,16 +250,49 @@ export default function QuotationPage({
                 <CarFront className="mr-2 inline size-5" /> Ride Summary
               </div>
               <div className="space-y-4 p-4">
-                {[
-                  ["Ride ID", id.slice(-8).toUpperCase()],
-                ].map(([label, value]) => (
-                  <div key={label}>
-                    <p className="text-xs font-bold uppercase tracking-wider text-[#95a4b8]">{label}</p>
-                    <p className="mt-1 text-sm font-semibold text-[#2c3950]">{value}</p>
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-[#95a4b8]">Ride ID</p>
+                  <p className="mt-1 text-sm font-semibold text-[#2c3950]">{id.slice(-8).toUpperCase()}</p>
+                </div>
+
+                {tripData?.fullName && (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider text-[#95a4b8]">Passenger</p>
+                    <p className="mt-1 text-sm font-semibold text-[#2c3950]">{tripData.fullName}</p>
                   </div>
-                ))}
+                )}
+
+                {tripData?.schedule && (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wider text-[#95a4b8]">Schedule</p>
+                    <p className="mt-1 text-sm font-semibold capitalize text-[#2c3950]">{tripData.schedule}</p>
+                  </div>
+                )}
+
+                {childTrips.length > 0 && (
+                  <div className="rounded-lg border border-[#e4ebf5] bg-[#f8fafd] p-3 space-y-2">
+                    <p className="text-[11px] font-bold uppercase tracking-wider text-[#73859d]">Trip Legs Overview</p>
+                    <div className="flex items-center justify-between text-xs font-semibold text-[#30415a]">
+                      <span>Total Legs</span>
+                      <span>{childTrips.length}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs font-semibold text-emerald-700">
+                      <span className="flex items-center gap-1.5">
+                        <span className="size-2 rounded-full bg-emerald-500" /> Completed
+                      </span>
+                      <span>{completedTrips.length}</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs font-semibold text-blue-700">
+                      <span className="flex items-center gap-1.5">
+                        <span className="size-2 rounded-full bg-blue-500" /> Future to Update
+                      </span>
+                      <span>{futureTrips.length}</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </article>
+
             <article className="rounded-xl bg-[#173d76] p-5 text-white shadow-[0_4px_14px_rgba(15,37,74,.12)]">
               <p className="text-sm font-semibold uppercase tracking-wider text-blue-100">Quote Total</p>
               <strong className="mt-2 block text-4xl font-bold">{money(total)}</strong>
@@ -187,35 +309,31 @@ export default function QuotationPage({
 
       <footer className="fixed bottom-0 left-0 right-0 z-30 flex items-center justify-between border-t bg-white px-6 py-3 shadow-[0_-4px_20px_rgba(15,37,74,.08)] lg:left-58.75">
         <div>
-          <p className="text-sm text-[#8190a5]">Grand Total</p>
+          <p className="text-sm text-[#8190a5]">Grand Total (Per Single Trip)</p>
           <strong className="text-2xl text-[#172033]">{money(total)}</strong>
         </div>
         <div className="flex gap-3">
           <button
-            className="h-9 rounded-lg border px-4 text-xs font-bold text-[#58677d] transition hover:border-[#173d76]/30 hover:bg-[#173d76]/5 disabled:opacity-50"
+            className="h-9 rounded-lg border px-4 text-xs font-bold text-[#58677d] transition hover:border-[#173d76]/30 hover:bg-[#173d76]/5 disabled:opacity-50 cursor-pointer"
             onClick={() => setNotice({ text: "Quotation saved as a draft.", ok: true })}
-            disabled={sending || sent}
+            disabled={sending}
             type="button"
           >
             Save as Draft
           </button>
           <button
-            className={`flex h-9 items-center gap-1.5 rounded-lg px-4 text-xs font-bold shadow-md transition ${
-              sent
-                ? "bg-emerald-600 text-white shadow-emerald-600/20 cursor-not-allowed disabled:opacity-90"
-                : "bg-[#173d76] text-white shadow-[#173d76]/20 hover:bg-[#0d2c58] disabled:opacity-60"
-            }`}
+            className="flex h-9 items-center gap-1.5 rounded-lg bg-[#173d76] px-4 text-xs font-bold text-white shadow-md shadow-[#173d76]/20 transition hover:bg-[#0d2c58] disabled:opacity-60 cursor-pointer"
             onClick={handleSendQuote}
-            disabled={sending || sent}
+            disabled={sending}
             type="button"
           >
-            {sent ? (
+            {sending ? (
               <>
-                <Check className="size-4" /> Quotation Sent
+                <Send className="size-4 animate-pulse" /> {hasExistingQuote ? "Updating Quote…" : "Sending…"}
               </>
-            ) : sending ? (
+            ) : hasExistingQuote ? (
               <>
-                <Send className="size-4 animate-pulse" /> Sending…
+                <Check className="size-4" /> Update Quotation
               </>
             ) : (
               <>
@@ -228,7 +346,9 @@ export default function QuotationPage({
 
       {notice ? (
         <div
-          className={`fixed bottom-18 right-5 z-40 rounded-lg px-4 py-3 text-sm font-semibold text-white shadow-lg cursor-pointer ${notice.ok ? "bg-[#173d76]" : "bg-red-600"}`}
+          className={`fixed bottom-18 right-5 z-40 max-w-md rounded-lg px-4 py-3 text-sm font-semibold text-white shadow-lg cursor-pointer ${
+            notice.ok ? "bg-[#173d76]" : "bg-red-600"
+          }`}
           onClick={() => setNotice(null)}
         >
           {notice.text}
@@ -239,10 +359,19 @@ export default function QuotationPage({
 }
 
 function Field({
-  label, value, setValue, prefix, suffix, readOnly = false,
+  label,
+  value,
+  setValue,
+  prefix,
+  suffix,
+  readOnly = false,
 }: {
-  label: string; value: number; setValue?: (value: number) => void;
-  prefix?: string; suffix?: string; readOnly?: boolean;
+  label: string;
+  value: number;
+  setValue?: (value: number) => void;
+  prefix?: string;
+  suffix?: string;
+  readOnly?: boolean;
 }) {
   return (
     <label className="text-[12px] font-semibold text-[#58677d]">
@@ -252,10 +381,14 @@ function Field({
         <input
           className={`h-10 w-full rounded-lg border border-[#dce5f0] bg-white text-[13px] font-semibold text-[#27344a] outline-none focus:border-[#173d76] focus:ring-4 focus:ring-[#173d76]/10 ${prefix ? "pl-8 pr-3" : suffix ? "pl-3 pr-16" : "px-3"}`}
           min="0"
-          onChange={setValue ? (e) => {
-            const val = e.target.value;
-            setValue(val === "" ? 0 : Number(val));
-          } : undefined}
+          onChange={
+            setValue
+              ? (e) => {
+                  const val = e.target.value;
+                  setValue(val === "" ? 0 : Number(val));
+                }
+              : undefined
+          }
           readOnly={readOnly}
           step="0.01"
           type="number"
