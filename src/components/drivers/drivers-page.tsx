@@ -59,6 +59,8 @@ type Driver = {
   plate: string;
   phone: string;
   trips: number;
+  fortnightTrips?: number;
+  totalTrips?: number;
   rating: string;
   licenseNumber: string;
   licenseExpirationDate: string;
@@ -168,7 +170,12 @@ export function DriversPage({ hideHeader }: { hideHeader?: boolean } = {}) {
               vehicleId,
               plate: plateStr,
               phone: d.phone?.trim() || "—",
-              trips: profile.completedTripsCount || 0,
+              trips:
+                profile.fortnightCompletedTripsCount !== undefined
+                  ? profile.fortnightCompletedTripsCount
+                  : profile.completedTripsCount || 0,
+              fortnightTrips: profile.fortnightCompletedTripsCount || 0,
+              totalTrips: profile.totalCompletedTripsCount || 0,
               rating: profile.rating ? String(profile.rating) : "—",
               licenseNumber: profile.licenseNumber || "—",
               licenseExpirationDate: expiryStr,
@@ -831,7 +838,7 @@ function DriverCard({
         <DriverInfo
           icon={Activity}
           label="Trips"
-          value={`${driver.trips} this week`}
+          value={`${driver.trips} this fortnight`}
         />
         <DriverInfo
           icon={IdCard}
