@@ -24,7 +24,8 @@ type TripStatus =
   | "Completed"
   | "Scheduled"
   | "Need driver"
-  | "Cancelled";
+  | "Cancelled"
+  | "No Show Up";
 
 type Trip = {
   id: string;
@@ -56,6 +57,7 @@ const filters = [
   "Completed",
   "Need driver",
   "Cancelled",
+  "No Show Up",
 ] as const;
 
 function formatTimeTo12Hour(timeStr?: string): string {
@@ -189,6 +191,7 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
       else if (status === "Onboard") apiStatus = "IN_PROGRESS";
       else if (status === "Completed") apiStatus = "COMPLETED";
       else if (status === "Cancelled") apiStatus = "CANCELLED";
+      else if (status === "No Show Up") apiStatus = "NO_SHOW";
 
       const res = await getAdminTripsApi(
         token,
@@ -244,7 +247,13 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
             "Passenger";
           const driverName =
             t.driverId?.name || (t.driverId ? "Assigned Driver" : undefined);
-          const statusVal = statusMap[t.status] ?? "Scheduled";
+          const isNoShow =
+            t.status === "CANCELLED" &&
+            (t.cancellationReason === "No Show Up" ||
+              t.cancellationReason === "NO_SHOW");
+          const statusVal: TripStatus = isNoShow
+            ? "No Show Up"
+            : statusMap[t.status] ?? "Scheduled";
 
           const nameParts = passName.split(" ");
           const initials =
@@ -992,6 +1001,7 @@ function StatusBadge({ status }: { status: TripStatus }) {
     Scheduled: "bg-blue-50 text-blue-600",
     "Need driver": "bg-rose-50 text-rose-600",
     Cancelled: "bg-red-50 text-red-600",
+    "No Show Up": "bg-amber-50 text-amber-800 border border-amber-300 font-bold",
   };
   return (
     <span

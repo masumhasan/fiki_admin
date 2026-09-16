@@ -71,7 +71,16 @@ function formatTime(dateVal?: string | Date): string {
   });
 }
 
-function getStatusBadge(status: string) {
+function getStatusBadge(status: string, cancellationReason?: string) {
+  if (
+    status === "CANCELLED" &&
+    (cancellationReason === "No Show Up" || cancellationReason === "NO_SHOW")
+  ) {
+    return {
+      label: "No Show Up",
+      class: "bg-amber-50 text-amber-800 border border-amber-300 font-bold",
+    };
+  }
   switch (status) {
     case "COMPLETED":
       return { label: "Completed", class: "bg-emerald-50 text-emerald-700" };
@@ -307,7 +316,11 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
     (trip.specialInstructions || trip.accessInformation)?.trim() ||
     "No Special instructions";
 
-  const statusBadge = getStatusBadge(trip.status);
+  const isNoShow =
+    trip.status === "CANCELLED" &&
+    (trip.cancellationReason === "No Show Up" ||
+      trip.cancellationReason === "NO_SHOW");
+  const statusBadge = getStatusBadge(trip.status, trip.cancellationReason);
   const isCancelled = trip.status === "CANCELLED";
   const isCompleted = trip.status === "COMPLETED";
 
@@ -333,11 +346,13 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
       done: Boolean(driverObj),
     },
     {
-      label: isCancelled
-        ? "Trip cancelled"
-        : isCompleted
-          ? "Passenger arrived at destination"
-          : "Driver en route / trip in progress",
+      label: isNoShow
+        ? "Trip cancelled (Passenger No Show Up)"
+        : isCancelled
+          ? "Trip cancelled"
+          : isCompleted
+            ? "Passenger arrived at destination"
+            : "Driver en route / trip in progress",
       time: isCancelled
         ? formatTime(trip.cancelledAt)
         : isCompleted
@@ -436,13 +451,15 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
       current: trip.status === "IN_PROGRESS",
     },
     {
-      label: "Trip completed",
+      label: isNoShow ? "No Show Up (Cancelled)" : "Trip completed",
       time: isCompletedStatus
         ? completedTimeStr || inProgressTimeStr
-        : isCancelled
-          ? `Cancelled (${cancelledTimeStr})`
-          : "Upcoming",
-      done: isCompletedStatus,
+        : isNoShow
+          ? `No Show Up (${cancelledTimeStr})`
+          : isCancelled
+            ? `Cancelled (${cancelledTimeStr})`
+            : "Upcoming",
+      done: isCompletedStatus || isNoShow,
       current: false,
     },
   ];
@@ -499,6 +516,26 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
         </div>
       </div>
 
+      {/* No Show Notice Banner */}
+      {isNoShow && (
+        <div className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-900">
+          <AlertTriangle className="size-5 shrink-0 text-amber-600 mt-0.5" />
+          <div>
+            <h3 className="text-sm font-bold text-amber-900">
+              Passenger No Show Up
+            </h3>
+            <p className="mt-0.5 text-xs text-amber-800 leading-relaxed">
+              This trip was recorded as No Show Up by the driver. The passenger was not charged for this trip ($0.00 fare), Hand to Hand signature verification was waived, and no driver trip bonus was applied.
+              {trip.driverShiftNotes && (
+                <span className="block mt-1 font-semibold italic">
+                  Driver notes: "{trip.driverShiftNotes}"
+                </span>
+              )}
+            </p>
+          </div>
+        </div>
+      )}
+
       {/* Main Overview Box */}
       <section className="rounded-xl border border-[#e1e6ee] bg-card p-5 shadow-[0_4px_14px_rgba(15,37,74,.04)] sm:p-6">
         <div className="flex flex-wrap items-center gap-3">
@@ -510,7 +547,11 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
           >
             {statusBadge.label}
           </span>
-          {trip.fare || trip.quotedFare ? (
+          {isNoShow ? (
+            <span className="rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold text-amber-900 border border-amber-300">
+              $0.00 (Passenger not charged - No Show Up)
+            </span>
+          ) : trip.fare || trip.quotedFare ? (
             <span className="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-extrabold text-emerald-800">
               ${trip.fare || trip.quotedFare}
             </span>
@@ -621,6 +662,10 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
                   <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">
                     Signed & Verified
                   </span>
+                ) : isNoShow ? (
+                  <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-700">
+                    Not Required (No Show Up)
+                  </span>
                 ) : (
                   <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800">
                     Signature Required
@@ -653,7 +698,9 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
                     <p className="mt-0.5 font-bold text-foreground">
                       {trip.receiverSignedAt
                         ? formatStepTimeFull(trip.receiverSignedAt)
-                        : "Pending Drop-off Signature"}
+                        : isNoShow
+                          ? "Waived (Passenger No Show Up)"
+                          : "Pending Drop-off Signature"}
                     </p>
                   </div>
                 </div>
@@ -669,6 +716,10 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
                         alt="Receiver Signature"
                         className="mx-auto max-h-24 object-contain"
                       />
+                    </div>
+                  ) : isNoShow ? (
+                    <div className="flex h-28 items-center justify-center rounded-xl border border-dashed border-amber-300/80 bg-amber-50/50 p-4 text-center text-xs text-amber-800 font-medium">
+                      Signature waived: Passenger did not show up for pickup.
                     </div>
                   ) : (
                     <div className="flex h-28 items-center justify-center rounded-xl border border-dashed border-border bg-slate-50 p-4 text-center text-xs text-muted-foreground">
