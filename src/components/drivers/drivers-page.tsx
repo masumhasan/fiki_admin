@@ -31,7 +31,11 @@ import {
   updateDriverProfileApi,
   getVehiclesApi,
 } from "@/lib/api";
-import { uploadBase64Image } from "@/lib/uploadBase64";
+import {
+  uploadOptimizedFile,
+  ACCEPTED_IMAGE_TYPES,
+  validateImageFile,
+} from "@/lib/imageOptimization";
 
 type DriverStatus = "Active" | "On trip" | "Off duty";
 
@@ -238,6 +242,7 @@ export function DriversPage({ hideHeader }: { hideHeader?: boolean } = {}) {
   });
   const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [updating, setUpdating] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [updateError, setUpdateError] = useState("");
 
   const handleOpenEditModal = (driver: Driver) => {
@@ -264,27 +269,42 @@ export function DriversPage({ hideHeader }: { hideHeader?: boolean } = {}) {
     setUpdateError("");
   };
 
-  const handleAvatarFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleAvatarFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      setUpdateError("Please select a valid image file.");
+    setUpdateError("");
+    const validation = validateImageFile(file);
+    if (!validation.valid) {
+      setUpdateError(validation.error || "Please select a valid image file.");
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
-      setUpdateError("Image file size must be under 10MB.");
+    const token = window.localStorage.getItem("fiki_auth_token");
+    if (!token) {
+      setUpdateError("Authentication token not found.");
       return;
     }
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      const result = reader.result as string;
-      setAvatarPreview(result);
-      setEditForm((prev) => ({ ...prev, avatarUrl: result }));
-    };
-    reader.readAsDataURL(file);
+    setUploadingAvatar(true);
+    const localPreview = URL.createObjectURL(file);
+    setAvatarPreview(localPreview);
+
+    try {
+      const s3Url = await uploadOptimizedFile(file, {
+        category: "user-avatars",
+        preset: "avatar",
+        token,
+      });
+      setAvatarPreview(s3Url);
+      setEditForm((prev) => ({ ...prev, avatarUrl: s3Url }));
+    } catch (err: any) {
+      console.error("Avatar upload failed:", err);
+      setUpdateError(err?.message || "Failed to upload avatar to S3.");
+    } finally {
+      setUploadingAvatar(false);
+      if (e.target) e.target.value = "";
+    }
   };
 
   const handleConfirmEdit = async (e: React.FormEvent) => {
@@ -300,21 +320,11 @@ export function DriversPage({ hideHeader }: { hideHeader?: boolean } = {}) {
       return;
     }
 
-    let finalAvatarUrl = editForm.avatarUrl;
-    if (finalAvatarUrl && finalAvatarUrl.startsWith("data:image/")) {
-      try {
-        finalAvatarUrl = await uploadBase64Image(finalAvatarUrl, "user-avatars", token);
-      } catch (err) {
-        console.warn("Direct upload fallback to backend safety net:", err);
-      }
-    }
-
     const res = await updateDriverProfileApi(
       token,
       driverToEdit.mongoId,
       {
         ...editForm,
-        avatarUrl: finalAvatarUrl,
         vehicleId: editForm.vehicleId || null,
       },
     );
@@ -579,25 +589,37 @@ export function DriversPage({ hideHeader }: { hideHeader?: boolean } = {}) {
                     )}
                   </div>
                   <label className="absolute -bottom-1 -right-1 grid size-6 place-items-center rounded-full bg-primary text-primary-foreground shadow-md hover:bg-primary/90 cursor-pointer transition">
-                    <Camera className="size-3" />
+                    {uploadingAvatar ? <Loader2 className="size-3 animate-spin" /> : <Camera className="size-3" />}
                     <input
                       type="file"
-                      accept="image/*"
+                      accept={ACCEPTED_IMAGE_TYPES}
                       className="hidden"
                       onChange={handleAvatarFileChange}
+                      disabled={uploadingAvatar}
                     />
                   </label>
                 </div>
                 <div className="flex-1 space-y-1">
                   <div className="flex items-center gap-2">
                     <label className="cursor-pointer inline-flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-semibold text-foreground hover:bg-muted transition shadow-2xs">
-                      <Upload className="size-3.5 text-muted-foreground" />
-                      <span>{avatarPreview ? "Change Avatar" : "Upload Avatar"}</span>
+                      {uploadingAvatar ? (
+                        <Loader2 className="size-3.5 animate-spin text-primary" />
+                      ) : (
+                        <Upload className="size-3.5 text-muted-foreground" />
+                      )}
+                      <span>
+                        {uploadingAvatar
+                          ? "Optimizing & Uploading..."
+                          : avatarPreview
+                          ? "Change Avatar"
+                          : "Upload Avatar"}
+                      </span>
                       <input
                         type="file"
-                        accept="image/*"
+                        accept={ACCEPTED_IMAGE_TYPES}
                         className="hidden"
                         onChange={handleAvatarFileChange}
+                        disabled={uploadingAvatar}
                       />
                     </label>
                     {avatarPreview && (

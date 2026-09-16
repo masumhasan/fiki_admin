@@ -20,6 +20,7 @@ import {
   updateVehicleApi,
   deleteVehicleApi,
 } from "@/lib/api";
+import { uploadOptimizedFile, ACCEPTED_IMAGE_TYPES } from "@/lib/imageOptimization";
 
 interface VehicleItem {
   _id: string;
@@ -174,32 +175,19 @@ export default function VehiclesPage() {
       setUploadingImage(true);
       setErrorMsg("");
       try {
-        const formData = new FormData();
-        formData.append("image", file);
-        formData.append("category", "vehicles");
-
-        const token = window.localStorage.getItem("fiki_auth_token");
-        // Using dynamic API_BASE_URL resolution to match the api.ts setup
-        const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "https://api.fikitransit.com/api/v1";
-        
-        const res = await fetch(`${API_BASE_URL}/upload/image`, {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-          body: formData,
+        const token = window.localStorage.getItem("fiki_auth_token") || undefined;
+        const s3Url = await uploadOptimizedFile(file, {
+          category: "vehicles",
+          preset: "vehicle",
+          token,
         });
-
-        const data = await res.json();
-        if (data.success && data.data && data.data.url) {
-          setImageUrl(data.data.url);
-        } else {
-          setErrorMsg(data.error?.message || "Failed to upload image.");
-        }
-      } catch (err) {
-        setErrorMsg("Failed to upload image. Please try again.");
+        setImageUrl(s3Url);
+      } catch (err: any) {
+        setErrorMsg(err?.message || "Failed to upload image. Please try again.");
+      } finally {
+        setUploadingImage(false);
+        if (e.target) e.target.value = "";
       }
-      setUploadingImage(false);
     }
   };
 
@@ -334,7 +322,7 @@ export default function VehiclesPage() {
                   {uploadingImage ? "Uploading..." : imageUrl ? "Change Image" : "Upload Image"}
                   <input
                     type="file"
-                    accept="image/*"
+                    accept={ACCEPTED_IMAGE_TYPES}
                     className="hidden"
                     onChange={handleImageChange}
                     disabled={uploadingImage}

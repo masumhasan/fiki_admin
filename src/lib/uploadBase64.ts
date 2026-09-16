@@ -1,33 +1,23 @@
-import { API_BASE_URL } from "./api";
+import { uploadOptimizedFile } from "./imageOptimization";
 
-export async function uploadBase64Image(base64: string, category: string, token?: string): Promise<string> {
-  if (!base64 || !base64.startsWith("data:image/")) {
-    return base64; // Return as is if it's already a URL or empty
+/**
+ * Uploads a base64 / data URL image to AWS S3 as a binary multipart file.
+ * NOTE: Base64 is converted to a binary Blob client-side and uploaded directly to S3.
+ * No base64 data is ever sent in the request body or stored in the database.
+ */
+export async function uploadBase64Image(
+  base64: string,
+  category: string,
+  token?: string
+): Promise<string> {
+  if (!base64) return base64;
+  if (!base64.startsWith("data:image/")) {
+    return base64; // Already an S3 URL or external URL
   }
 
-  const endpoint = `${API_BASE_URL}/upload/image`;
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
-  
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers,
-    body: JSON.stringify({
-      imageBase64: base64,
-      category,
-    }),
+  return uploadOptimizedFile(base64, {
+    category,
+    token,
+    preset: category === "signatures" ? "signature" : "general",
   });
-
-  const data = await res.json();
-  if (data.success && data.data?.url) {
-    return data.data.url;
-  }
-  
-  console.error("Failed to upload base64 image:", data.error);
-  throw new Error(data.error?.message || "Failed to upload image to S3 storage.");
 }

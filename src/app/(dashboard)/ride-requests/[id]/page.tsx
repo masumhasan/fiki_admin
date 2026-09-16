@@ -28,6 +28,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useRef, useState } from "react";
 import { API_BASE_URL, approveRideRequestApi, deleteTripApi, getAdminTripDetailApi, regenerateTripsApi, rejectRideRequestApi, respondToCounterOfferApi, updateTripApi } from "@/lib/api";
+import { uploadOptimizedFile, ACCEPTED_IMAGE_TYPES } from "@/lib/imageOptimization";
 
 const card =
   "overflow-hidden rounded-xl border border-[#e1e6ee] bg-white shadow-[0_4px_14px_rgba(15,37,74,.04)]";
@@ -127,36 +128,29 @@ export default function RideRequestDetails({
     if (!file) return;
 
     setIsUploadingAvatar(true);
-    const uploadData = new FormData();
-    uploadData.append("image", file);
-    uploadData.append("category", "passenger-avatars");
 
     try {
       const token = window.localStorage.getItem("fiki_auth_token");
       if (!token) throw new Error("No token");
-      const API_URL = API_BASE_URL.replace(/\/v1$/, "");
-      const res = await fetch(`${API_URL}/upload/image`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-        body: uploadData,
+      const s3Url = await uploadOptimizedFile(file, {
+        category: "passenger-avatars",
+        preset: "avatar",
+        token,
       });
-      const data = await res.json();
-      if (data.success && data.data?.url) {
-        // Update trip with new avatar
-        const updateRes = await updateTripApi(token, id, { passengerAvatarUrl: data.data.url });
-        if (updateRes.success && updateRes.data) {
-          setTrip(updateRes.data);
-        } else {
-          alert(updateRes.error?.message || "Failed to update trip with new avatar");
-        }
+
+      // Update trip with new avatar
+      const updateRes = await updateTripApi(token, id, { passengerAvatarUrl: s3Url });
+      if (updateRes.success && updateRes.data) {
+        setTrip(updateRes.data);
       } else {
-        alert(data.error?.message || "Upload failed");
+        alert(updateRes.error?.message || "Failed to update trip with new avatar");
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Failed to upload image.");
+      alert(err?.message || "Failed to upload image.");
     } finally {
       setIsUploadingAvatar(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -641,7 +635,7 @@ export default function RideRequestDetails({
                     </div>
                     <input 
                       type="file" 
-                      accept="image/*" 
+                      accept={ACCEPTED_IMAGE_TYPES} 
                       className="hidden" 
                       ref={fileInputRef} 
                       onChange={handleAvatarUpload} 

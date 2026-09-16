@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/dashboard/page-header";
 import { useRouter } from "next/navigation";
 import { API_BASE_URL } from "@/lib/api";
 import { uploadBase64Image } from "@/lib/uploadBase64";
+import { uploadOptimizedFile, ACCEPTED_IMAGE_TYPES } from "@/lib/imageOptimization";
 import { sanitizePhoneInput } from "@/lib/utils";
 
 // Simple HTML5 Canvas Signature Pad
@@ -39,6 +40,10 @@ function SignaturePad({
         ctx.drawImage(img, 0, 0);
       };
       img.src = value;
+    } else {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
   }, [value]);
 
@@ -52,12 +57,16 @@ function SignaturePad({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.beginPath();
-    const rect = canvas.getBoundingClientRect();
-    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
-    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
-    ctx.moveTo(clientX - rect.left, clientY - rect.top);
     setIsDrawing(true);
+    const rect = canvas.getBoundingClientRect();
+    const x = "touches" in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
+    const y = "touches" in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
+
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.strokeStyle = "#000000";
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
   };
 
   const draw = (
@@ -72,9 +81,10 @@ function SignaturePad({
     if (!ctx) return;
 
     const rect = canvas.getBoundingClientRect();
-    const clientX = "touches" in e ? e.touches[0].clientX : e.clientX;
-    const clientY = "touches" in e ? e.touches[0].clientY : e.clientY;
-    ctx.lineTo(clientX - rect.left, clientY - rect.top);
+    const x = "touches" in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
+    const y = "touches" in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
+
+    ctx.lineTo(x, y);
     ctx.stroke();
   };
 
@@ -82,8 +92,9 @@ function SignaturePad({
     if (!isDrawing) return;
     setIsDrawing(false);
     const canvas = canvasRef.current;
-    if (!canvas) return;
-    onChange?.(canvas.toDataURL());
+    if (canvas && onChange) {
+      onChange(canvas.toDataURL("image/png"));
+    }
   };
 
   const clear = () => {
@@ -92,34 +103,40 @@ function SignaturePad({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    onChange?.("");
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    if (onChange) onChange("");
   };
 
   return (
-    <div className="relative w-full h-32 border border-[#e1e5ea] rounded-xl bg-slate-50 overflow-hidden touch-none">
-      <canvas
-        ref={canvasRef}
-        className="w-full h-full cursor-crosshair"
-        onMouseDown={startDrawing}
-        onMouseMove={draw}
-        onMouseUp={stopDrawing}
-        onMouseLeave={stopDrawing}
-        onTouchStart={startDrawing}
-        onTouchMove={draw}
-        onTouchEnd={stopDrawing}
-      />
+    <div className="space-y-2">
+      <div className="border border-border rounded-xl overflow-hidden bg-white shadow-xs">
+        <canvas
+          ref={canvasRef}
+          width={400}
+          height={150}
+          className="touch-none w-full h-[150px] cursor-crosshair bg-white"
+          onMouseDown={startDrawing}
+          onMouseMove={draw}
+          onMouseUp={stopDrawing}
+          onMouseLeave={stopDrawing}
+          onTouchStart={startDrawing}
+          onTouchMove={draw}
+          onTouchEnd={stopDrawing}
+        />
+      </div>
       <button
         type="button"
         onClick={clear}
-        className="absolute top-2 right-2 rounded-full border border-[#e1e5ea] bg-white px-2 py-0.5 text-xs font-semibold text-slate-500 hover:text-slate-800 shadow-sm cursor-pointer"
+        className="text-xs font-semibold text-rose-600 hover:text-rose-700 underline"
       >
-        Clear
+        Clear Signature
       </button>
     </div>
   );
 }
 
-export default function ManualRideRequestsPage({
+export function ManualRideRequestsPage({
   hideHeader,
 }: {
   hideHeader?: boolean;
@@ -136,28 +153,22 @@ export default function ManualRideRequestsPage({
     if (!file) return;
 
     setIsUploading(true);
-    const uploadData = new FormData();
-    uploadData.append("image", file);
-    uploadData.append("category", "passenger-avatars");
+    setErrorMsg("");
 
     try {
-      const token = window.localStorage.getItem("fiki_auth_token");
-      const res = await fetch(`${API_BASE_URL}/upload/image`, {
-        method: "POST",
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        body: uploadData,
+      const token = window.localStorage.getItem("fiki_auth_token") || undefined;
+      const s3Url = await uploadOptimizedFile(file, {
+        category: "passenger-avatars",
+        preset: "avatar",
+        token,
       });
-      const data = await res.json();
-      if (data.success && data.data?.url) {
-        setFormData((prev) => ({ ...prev, passengerAvatarUrl: data.data.url }));
-      } else {
-        setErrorMsg(data.error?.message || "Upload failed");
-      }
-    } catch (err) {
-      console.error(err);
-      setErrorMsg("Failed to upload image.");
+      setFormData((prev) => ({ ...prev, passengerAvatarUrl: s3Url }));
+    } catch (err: any) {
+      console.error("Failed to optimize and upload passenger avatar:", err);
+      setErrorMsg(err?.message || "Failed to upload image.");
     } finally {
       setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
     }
   };
 
@@ -418,7 +429,7 @@ export default function ManualRideRequestsPage({
             </div>
             <input 
               type="file" 
-              accept="image/*" 
+              accept={ACCEPTED_IMAGE_TYPES} 
               className="hidden" 
               ref={fileInputRef} 
               onChange={handleFileChange} 
@@ -1101,3 +1112,5 @@ export default function ManualRideRequestsPage({
     </div>
   );
 }
+
+export default ManualRideRequestsPage;
