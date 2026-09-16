@@ -2,18 +2,21 @@
 
 import {
   CalendarDays,
+  Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Download,
   Eye,
   Loader2,
+  RefreshCw,
   Search,
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, useEffect } from "react";
 import { PageHeader } from "@/components/dashboard/page-header";
-import { getAdminTripsApi, deleteTripApi } from "@/lib/api";
+import { getAdminTripsApi, deleteTripApi, getAdminDriversApi, assignDriverApi } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
 type TripStatus =
@@ -31,12 +34,19 @@ type Trip = {
   avatar: string;
   passengerAvatarUrl?: string;
   driver?: string;
+  driverId?: string;
   pickup: string;
   destination: string;
   status: TripStatus;
   time: string;
   date: string;
   timestamp?: number;
+};
+
+type DriverOption = {
+  id: string;
+  name: string;
+  vehiclePlate?: string;
 };
 
 const filters = [
@@ -80,6 +90,7 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
   });
   const [pageSize, setPageSize] = useState("10");
   const [trips, setTrips] = useState<Trip[]>([]);
+  const [drivers, setDrivers] = useState<DriverOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
@@ -90,6 +101,52 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
     needDriver: 0,
     completedCount: 0,
   });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const token = window.localStorage.getItem("fiki_auth_token");
+    if (!token) return;
+    getAdminDriversApi(token, { approvalStatus: "APPROVED", limit: 100 }).then((res) => {
+      if (res.success && res.data?.drivers) {
+        const active: DriverOption[] = res.data.drivers
+          .filter((d: any) => d.accountStatus === "ACTIVE" || d.profile?.approvalStatus === "APPROVED")
+          .map((d: any) => ({
+            id: d.id || d._id,
+            name: d.name,
+            vehiclePlate: d.profile?.vehicle?.licensePlate,
+          }));
+        setDrivers(active);
+      }
+    });
+  }, []);
+
+  const handleAssignDriver = async (tripMongoId: string, newDriverId: string): Promise<boolean> => {
+    if (typeof window === "undefined") return false;
+    const token = window.localStorage.getItem("fiki_auth_token");
+    if (!token) return false;
+
+    const res = await assignDriverApi(token, tripMongoId, newDriverId);
+    if (res.success) {
+      const assignedDriverObj = drivers.find((d) => d.id === newDriverId);
+      setTrips((prevTrips) =>
+        prevTrips.map((t) => {
+          if (t.mongoId === tripMongoId) {
+            return {
+              ...t,
+              driverId: newDriverId || undefined,
+              driver: assignedDriverObj?.name || (newDriverId ? "Assigned Driver" : undefined),
+              status: (t.status === "Need driver" && newDriverId) ? "Scheduled" : t.status,
+            };
+          }
+          return t;
+        })
+      );
+      return true;
+    } else {
+      alert(res.error?.message || "Failed to assign driver");
+      return false;
+    }
+  };
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -242,6 +299,7 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
             avatar: "bg-violet-600",
             passengerAvatarUrl: t.passengerAvatarUrl || t.passengerId?.avatarUrl,
             driver: driverName,
+            driverId: t.driverId?._id ? String(t.driverId._id) : (typeof t.driverId === "string" ? t.driverId : undefined),
             pickup: t.pickupLocation?.address || "—",
             destination: t.dropoffLocation?.address || "—",
             status: statusVal,
@@ -477,12 +535,12 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
         ) : (
           <>
             <div className="hidden overflow-x-auto lg:block">
-              <table className="w-full min-w-270 table-fixed text-left">
+              <table className="w-full min-w-[1150px] table-fixed text-left">
                 <thead>
                   <tr className="border-b border-border bg-muted/55 text-[11px] font-bold text-muted-foreground">
                     <th className="w-20 px-5 py-3.5">Trip ID</th>
                     <th className="w-40 py-3.5">Passenger</th>
-                    <th className="w-36 py-3.5">Driver</th>
+                    <th className="w-56 py-3.5">Driver</th>
                     <th className="w-36 py-3.5">Pickup</th>
                     <th className="w-36 py-3.5">Destination</th>
                     <th className="w-28 py-3.5">Status</th>
@@ -493,7 +551,13 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
                 </thead>
                 <tbody>
                   {visibleTrips.map((trip) => (
-                    <TripRow key={trip.mongoId} trip={trip} onDelete={handleDeleteTrip} />
+                    <TripRow
+                      key={trip.mongoId}
+                      trip={trip}
+                      drivers={drivers}
+                      onAssignDriver={handleAssignDriver}
+                      onDelete={handleDeleteTrip}
+                    />
                   ))}
                 </tbody>
               </table>
@@ -501,7 +565,13 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
 
             <div className="divide-y divide-border lg:hidden">
               {visibleTrips.map((trip) => (
-                <TripCard key={trip.mongoId} trip={trip} onDelete={handleDeleteTrip} />
+                <TripCard
+                  key={trip.mongoId}
+                  trip={trip}
+                  drivers={drivers}
+                  onAssignDriver={handleAssignDriver}
+                  onDelete={handleDeleteTrip}
+                />
               ))}
             </div>
 
@@ -640,15 +710,95 @@ export function TripsPage({ hideHeader }: { hideHeader?: boolean }) {
   );
 }
 
-function TripRow({ trip, onDelete }: { trip: Trip; onDelete?: (id: string) => void }) {
+function TripRow({
+  trip,
+  drivers,
+  onAssignDriver,
+  onDelete,
+}: {
+  trip: Trip;
+  drivers: DriverOption[];
+  onAssignDriver: (tripMongoId: string, driverId: string) => Promise<boolean>;
+  onDelete?: (id: string) => void;
+}) {
+  const [selectedDriverId, setSelectedDriverId] = useState(trip.driverId || "");
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+
+  useEffect(() => {
+    setSelectedDriverId(trip.driverId || "");
+  }, [trip.driverId]);
+
+  const isChanged = (selectedDriverId || "") !== (trip.driverId || "");
+
+  const handleUpdate = async () => {
+    setIsUpdating(true);
+    setIsSuccess(false);
+    const ok = await onAssignDriver(trip.mongoId, selectedDriverId);
+    setIsUpdating(false);
+    if (ok) {
+      setIsSuccess(true);
+      setTimeout(() => setIsSuccess(false), 2200);
+    }
+  };
+
   return (
-    <tr className="border-b border-border/80 text-xs last:border-0 hover:bg-muted/35">
-      <td className="px-5 py-4 font-bold text-primary">{trip.id}</td>
-      <td className="py-4">
+    <tr className="border-b border-border/80 text-xs last:border-0 hover:bg-muted/35 transition-colors">
+      <td className="px-5 py-3.5 font-bold text-primary">{trip.id}</td>
+      <td className="py-3.5">
         <Passenger trip={trip} />
       </td>
-      <td className="truncate pr-3 font-medium text-foreground">
-        {trip.driver ?? <span className="text-brand-soft">— Unassigned</span>}
+      <td className="py-2.5 pr-3">
+        <div className="flex items-center gap-1.5">
+          <div className="relative min-w-[145px] max-w-[185px] flex-1">
+            <select
+              value={selectedDriverId}
+              onChange={(e) => {
+                setSelectedDriverId(e.target.value);
+                setIsSuccess(false);
+              }}
+              disabled={isUpdating}
+              className={cn(
+                "h-8 w-full appearance-none rounded-lg border bg-white pl-2.5 pr-7 text-[11px] font-medium text-foreground outline-none transition cursor-pointer",
+                isChanged
+                  ? "border-primary ring-2 ring-primary/15 bg-blue-50/20 font-semibold"
+                  : "border-border hover:border-primary/50 focus:border-primary"
+              )}
+              title={trip.driver || "Unassigned"}
+            >
+              <option value="">— Unassigned —</option>
+              {drivers.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name} {d.vehiclePlate ? `(${d.vehiclePlate})` : ""}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          </div>
+
+          <button
+            type="button"
+            onClick={handleUpdate}
+            disabled={isUpdating || (!isChanged && !selectedDriverId && !trip.driverId)}
+            title={isChanged ? "Save driver assignment" : "Update driver assignment"}
+            className={cn(
+              "grid size-8 shrink-0 place-items-center rounded-lg border transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed",
+              isSuccess
+                ? "border-emerald-500 bg-emerald-50 text-emerald-600 shadow-xs"
+                : isChanged
+                ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs"
+                : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-primary hover:bg-muted"
+            )}
+          >
+            {isUpdating ? (
+              <Loader2 className="size-3.5 animate-spin text-primary" />
+            ) : isSuccess ? (
+              <Check className="size-3.5 text-emerald-600 stroke-[2.5]" />
+            ) : (
+              <RefreshCw className={cn("size-3.5 stroke-[2]", isChanged && "text-primary-foreground")} />
+            )}
+          </button>
+        </div>
       </td>
       <td className="truncate pr-3 text-muted-foreground" title={trip.pickup}>
         {trip.pickup}
@@ -687,7 +837,38 @@ function TripRow({ trip, onDelete }: { trip: Trip; onDelete?: (id: string) => vo
   );
 }
 
-function TripCard({ trip, onDelete }: { trip: Trip; onDelete?: (id: string) => void }) {
+function TripCard({
+  trip,
+  drivers,
+  onAssignDriver,
+  onDelete,
+}: {
+  trip: Trip;
+  drivers: DriverOption[];
+  onAssignDriver: (tripMongoId: string, driverId: string) => Promise<boolean>;
+  onDelete?: (id: string) => void;
+}) {
+  const [selectedDriverId, setSelectedDriverId] = useState(trip.driverId || "");
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+
+  useEffect(() => {
+    setSelectedDriverId(trip.driverId || "");
+  }, [trip.driverId]);
+
+  const isChanged = (selectedDriverId || "") !== (trip.driverId || "");
+
+  const handleUpdate = async () => {
+    setIsUpdating(true);
+    setIsSuccess(false);
+    const ok = await onAssignDriver(trip.mongoId, selectedDriverId);
+    setIsUpdating(false);
+    if (ok) {
+      setIsSuccess(true);
+      setTimeout(() => setIsSuccess(false), 2200);
+    }
+  };
+
   return (
     <article className="p-5">
       <div className="flex items-start justify-between gap-3">
@@ -699,9 +880,68 @@ function TripCard({ trip, onDelete }: { trip: Trip; onDelete?: (id: string) => v
         </div>
         <StatusBadge status={trip.status} />
       </div>
+
+      <div className="mt-4 rounded-lg border border-border/80 bg-muted/20 p-3">
+        <label className="text-[11px] font-bold uppercase text-muted-foreground">Driver</label>
+        <div className="mt-1.5 flex items-center gap-2">
+          <div className="relative flex-1">
+            <select
+              value={selectedDriverId}
+              onChange={(e) => {
+                setSelectedDriverId(e.target.value);
+                setIsSuccess(false);
+              }}
+              disabled={isUpdating}
+              className={cn(
+                "h-8 w-full appearance-none rounded-lg border bg-white pl-2.5 pr-7 text-xs font-medium text-foreground outline-none transition cursor-pointer",
+                isChanged
+                  ? "border-primary ring-2 ring-primary/15 bg-blue-50/20 font-semibold"
+                  : "border-border hover:border-primary/50 focus:border-primary"
+              )}
+            >
+              <option value="">— Unassigned —</option>
+              {drivers.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name} {d.vehiclePlate ? `(${d.vehiclePlate})` : ""}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+          </div>
+
+          <button
+            type="button"
+            onClick={handleUpdate}
+            disabled={isUpdating || (!isChanged && !selectedDriverId && !trip.driverId)}
+            className={cn(
+              "flex h-8 items-center gap-1 px-2.5 rounded-lg border text-xs font-semibold transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed",
+              isSuccess
+                ? "border-emerald-500 bg-emerald-50 text-emerald-600"
+                : isChanged
+                ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
+                : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-primary hover:bg-muted"
+            )}
+          >
+            {isUpdating ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : isSuccess ? (
+              <>
+                <Check className="size-3.5 text-emerald-600" />
+                <span>Saved</span>
+              </>
+            ) : (
+              <>
+                <RefreshCw className="size-3.5" />
+                <span>Update</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
       <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-xs">
-        <Info label="Driver" value={trip.driver ?? "Unassigned"} />
         <Info label="Schedule" value={`${trip.date} · ${trip.time}`} />
+        <Info label="Status" value={trip.status} />
         <Info label="Pickup" value={trip.pickup} />
         <Info label="Destination" value={trip.destination} />
       </dl>

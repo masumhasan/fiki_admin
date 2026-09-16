@@ -27,7 +27,7 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { use, useEffect, useRef, useState } from "react";
-import { API_BASE_URL, approveRideRequestApi, assignDriverApi, deleteTripApi, getAdminDriversApi, getAdminTripDetailApi, regenerateTripsApi, rejectRideRequestApi, respondToCounterOfferApi, updateTripApi } from "@/lib/api";
+import { API_BASE_URL, approveRideRequestApi, deleteTripApi, getAdminTripDetailApi, regenerateTripsApi, rejectRideRequestApi, respondToCounterOfferApi, updateTripApi } from "@/lib/api";
 
 const card =
   "overflow-hidden rounded-xl border border-[#e1e6ee] bg-white shadow-[0_4px_14px_rgba(15,37,74,.04)]";
@@ -39,7 +39,7 @@ function statusLabel(status: string): { text: string; color: string } {
     case "QUOTE_ACCEPTED": return { text: "Quote Accepted", color: "green" };
     case "QUOTE_DENIED": return { text: "Quote Declined", color: "red" };
     case "QUOTE_COUNTERED": return { text: "Counter Offer", color: "violet" };
-    case "ACCEPTED": return { text: "Driver Assigned", color: "green" };
+    case "ACCEPTED": return { text: "Approved", color: "green" };
     case "DRIVER_ARRIVING": return { text: "Driver Arriving", color: "blue" };
     case "DRIVER_ARRIVED": return { text: "Driver Arrived", color: "blue" };
     case "IN_PROGRESS": return { text: "In Progress", color: "blue" };
@@ -71,10 +71,6 @@ export default function RideRequestDetails({
   const [trip, setTrip] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
-  const [drivers, setDrivers] = useState<any[]>([]);
-  const [selectedDriverId, setSelectedDriverId] = useState("");
-  const [assigning, setAssigning] = useState(false);
-  const [assignFeedback, setAssignFeedback] = useState<{ ok: boolean; text: string } | null>(null);
   const [deleting, setDeleting] = useState(false);
 
   // Editing state for Trip Info
@@ -298,45 +294,13 @@ export default function RideRequestDetails({
     const token = window.localStorage.getItem("fiki_auth_token");
     if (!token) { setLoading(false); return; }
 
-    Promise.all([
-      getAdminTripDetailApi(token, id),
-      getAdminDriversApi(token, { approvalStatus: "APPROVED", limit: 100 }),
-    ]).then(([tripRes, driversRes]) => {
+    getAdminTripDetailApi(token, id).then((tripRes) => {
       if (tripRes.success && tripRes.data) {
         setTrip(tripRes.data);
-        const dId = tripRes.data.driverId?._id || tripRes.data.driverId;
-        if (dId) setSelectedDriverId(dId);
-      }
-      if (driversRes.success && driversRes.data?.drivers) {
-        const active = driversRes.data.drivers.filter(
-          (d: any) => d.accountStatus === "ACTIVE" || d.profile?.approvalStatus === "APPROVED"
-        );
-        setDrivers(active);
       }
       setLoading(false);
     });
   }, [id]);
-
-  async function handleAssignDriver() {
-    if (!selectedDriverId) return;
-    const token = window.localStorage.getItem("fiki_auth_token");
-    if (!token) return;
-    setAssigning(true);
-    setAssignFeedback(null);
-    const res = await assignDriverApi(token, id, selectedDriverId);
-    if (res.success) {
-      const refreshed = await getAdminTripDetailApi(token, id);
-      if (refreshed.success && refreshed.data) {
-        setTrip(refreshed.data);
-        const dId = refreshed.data.driverId?._id || refreshed.data.driverId;
-        if (dId) setSelectedDriverId(dId);
-      }
-      setAssignFeedback({ ok: true, text: "Driver assigned successfully." });
-    } else {
-      setAssignFeedback({ ok: false, text: res.error?.message || "Failed to assign driver." });
-    }
-    setAssigning(false);
-  }
 
   async function handleCounterAction(action: "ACCEPT" | "DECLINE") {
     if (typeof window === "undefined") return;
@@ -360,7 +324,6 @@ export default function RideRequestDetails({
     const res = await approveRideRequestApi(token, id);
     if (res.success && res.data) {
       setTrip(res.data);
-      setAssignFeedback({ ok: true, text: "Ride request approved successfully! Driver assignment unlocked." });
     } else {
       alert(res.error?.message || "Failed to approve ride request");
     }
@@ -1505,73 +1468,17 @@ export default function RideRequestDetails({
                 <p className="text-[12px] text-[#8090a5]">{passengerEmail}</p>
               </article>
 
-              {hasDriver && (
-                <article className={`${card} p-4`}>
-                  <p className="text-[11px] font-bold uppercase text-[#8190a5]">Assigned Driver</p>
-                  <p className="mt-2 text-sm font-bold text-foreground">{trip.driverId?.name || "—"}</p>
-                </article>
-              )}
-
-              <article className={`${card} p-4 space-y-4`}>
-                <div>
-                  <h3 className="text-xs font-bold uppercase tracking-wide text-[#8190a5]">
-                    {hasDriver ? "Change Driver" : "Assign Driver"}
-                  </h3>
-                  <p className="text-[11px] text-muted-foreground mt-1">Select driver, vehicle and schedule</p>
-                </div>
-                
-                {status !== "ACCEPTED" && status !== "DRIVER_ARRIVING" && status !== "DRIVER_ARRIVED" && status !== "IN_PROGRESS" && status !== "COMPLETED" ? (
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 space-y-1">
-                    <p className="font-bold flex items-center gap-1.5 text-amber-800">
-                      <ShieldAlert className="size-4 text-amber-600" />
-                      Approval Required
-                    </p>
-                    <p className="text-[11px] leading-relaxed text-amber-700">
-                      Driver assignment is locked. Please approve the ride request first.
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    <div className="relative">
-                      <select
-                        className="h-10 w-full appearance-none rounded-lg border border-[#e1e6ee] bg-white px-3 pr-10 text-[13px] text-[#34435a] outline-none focus:border-[#173d76] focus:ring-2 focus:ring-[#173d76]/10"
-                        value={selectedDriverId}
-                        onChange={(e) => {
-                          setSelectedDriverId(e.target.value);
-                          setAssignFeedback(null);
-                        }}
-                        disabled={assigning}
-                      >
-                        <option value="">{hasDriver ? "Change driver" : "Assign driver"}</option>
-                        {drivers.map((d: any) => (
-                          <option key={d.id || d._id} value={d.id || d._id}>
-                            {d.name} {d.profile?.vehicle?.licensePlate ? `(${d.profile.vehicle.licensePlate})` : ""}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#8190a5]">
-                        <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                        </svg>
-                      </div>
-                    </div>
-
-                    {assignFeedback && (
-                      <p className={`text-[11px] font-semibold ${assignFeedback.ok ? "text-emerald-600" : "text-red-600"}`}>
-                        {assignFeedback.text}
-                      </p>
-                    )}
-
-                    <button
-                      type="button"
-                      disabled={!selectedDriverId || selectedDriverId === currentDriverId || assigning}
-                      onClick={handleAssignDriver}
-                      className="w-full h-10 rounded-lg bg-[#173d76] hover:bg-[#0d2c58] disabled:opacity-50 text-white font-bold text-xs transition duration-150 cursor-pointer"
-                    >
-                      {assigning ? "Assigning..." : "Confirm Assignment"}
-                    </button>
-                  </>
-                )}
+              <article className={`${card} p-4 space-y-2`}>
+                <p className="text-[11px] font-bold uppercase text-[#8190a5]">Driver Assignment</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Driver assignment is managed per individual trip on the Trips page.
+                </p>
+                <Link
+                  href="/rides"
+                  className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-[#173d76] hover:underline"
+                >
+                  Go to Trips page →
+                </Link>
               </article>
             </aside>
           </div>
@@ -1633,7 +1540,7 @@ export default function RideRequestDetails({
                 )}
                 {status === "ACCEPTED" && (
                   <span className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-[11px] font-semibold text-emerald-700">
-                    ✓ Approved — Driver Assignment Unlocked
+                    ✓ Request Approved
                   </span>
                 )}
                 {status === "QUOTE_DENIED" && (
