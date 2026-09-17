@@ -150,6 +150,18 @@ export function TripsPage({
     const token = window.localStorage.getItem("fiki_auth_token");
     if (!token) return false;
 
+    const targetTrip = trips.find((t) => t.mongoId === tripMongoId);
+    if (targetTrip) {
+      if (targetTrip.status === "Completed") {
+        alert("Cannot assign or reassign driver to a completed trip.");
+        return false;
+      }
+      if (targetTrip.status !== "Scheduled" && targetTrip.status !== "Need driver") {
+        alert("Driver can only be assigned or reassigned to scheduled trips.");
+        return false;
+      }
+    }
+
     const res = await assignDriverApi(token, tripMongoId, newDriverId);
     if (res.success) {
       const assignedDriverObj = drivers.find((d) => d.id === newDriverId);
@@ -777,6 +789,7 @@ function TripRow({
   }, [trip.driverId]);
 
   const isChanged = (selectedDriverId || "") !== (trip.driverId || "");
+  const isAssignable = trip.status === "Scheduled" || trip.status === "Need driver";
 
   const handleUpdate = async () => {
     setIsUpdating(true);
@@ -796,56 +809,70 @@ function TripRow({
         <Passenger trip={trip} />
       </td>
       <td className="py-2.5 pr-3">
-        <div className="flex items-center gap-1.5">
-          <div className="relative min-w-[145px] max-w-[185px] flex-1">
-            <select
-              value={selectedDriverId}
-              onChange={(e) => {
-                setSelectedDriverId(e.target.value);
-                setIsSuccess(false);
-              }}
-              disabled={isUpdating}
+        {isAssignable ? (
+          <div className="flex items-center gap-1.5">
+            <div className="relative min-w-[145px] max-w-[185px] flex-1">
+              <select
+                value={selectedDriverId}
+                onChange={(e) => {
+                  setSelectedDriverId(e.target.value);
+                  setIsSuccess(false);
+                }}
+                disabled={isUpdating}
+                className={cn(
+                  "h-8 w-full appearance-none rounded-lg border bg-white pl-2.5 pr-7 text-[11px] font-medium text-foreground outline-none transition cursor-pointer",
+                  isChanged
+                    ? "border-primary ring-2 ring-primary/15 bg-blue-50/20 font-semibold"
+                    : "border-border hover:border-primary/50 focus:border-primary"
+                )}
+                title={trip.driver || "Unassigned"}
+              >
+                <option value="">— Unassigned —</option>
+                {drivers.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} {d.vehiclePlate ? `(${d.vehiclePlate})` : ""}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleUpdate}
+              disabled={isUpdating || (!isChanged && !selectedDriverId && !trip.driverId)}
+              title={isChanged ? "Save driver assignment" : "Update driver assignment"}
               className={cn(
-                "h-8 w-full appearance-none rounded-lg border bg-white pl-2.5 pr-7 text-[11px] font-medium text-foreground outline-none transition cursor-pointer",
-                isChanged
-                  ? "border-primary ring-2 ring-primary/15 bg-blue-50/20 font-semibold"
-                  : "border-border hover:border-primary/50 focus:border-primary"
+                "grid size-8 shrink-0 place-items-center rounded-lg border transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed",
+                isSuccess
+                  ? "border-emerald-500 bg-emerald-50 text-emerald-600 shadow-xs"
+                  : isChanged
+                  ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs"
+                  : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-primary hover:bg-muted"
+              )}
+            >
+              {isUpdating ? (
+                <Loader2 className="size-3.5 animate-spin text-primary" />
+              ) : isSuccess ? (
+                <Check className="size-3.5 text-emerald-600 stroke-[2.5]" />
+              ) : (
+                <RefreshCw className={cn("size-3.5 stroke-[2]", isChanged && "text-primary-foreground")} />
+              )}
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 py-1">
+            <span
+              className={cn(
+                "text-xs font-semibold truncate max-w-[185px]",
+                trip.driver ? "text-foreground" : "text-muted-foreground italic"
               )}
               title={trip.driver || "Unassigned"}
             >
-              <option value="">— Unassigned —</option>
-              {drivers.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name} {d.vehiclePlate ? `(${d.vehiclePlate})` : ""}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              {trip.driver || "Unassigned"}
+            </span>
           </div>
-
-          <button
-            type="button"
-            onClick={handleUpdate}
-            disabled={isUpdating || (!isChanged && !selectedDriverId && !trip.driverId)}
-            title={isChanged ? "Save driver assignment" : "Update driver assignment"}
-            className={cn(
-              "grid size-8 shrink-0 place-items-center rounded-lg border transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed",
-              isSuccess
-                ? "border-emerald-500 bg-emerald-50 text-emerald-600 shadow-xs"
-                : isChanged
-                ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90 shadow-xs"
-                : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-primary hover:bg-muted"
-            )}
-          >
-            {isUpdating ? (
-              <Loader2 className="size-3.5 animate-spin text-primary" />
-            ) : isSuccess ? (
-              <Check className="size-3.5 text-emerald-600 stroke-[2.5]" />
-            ) : (
-              <RefreshCw className={cn("size-3.5 stroke-[2]", isChanged && "text-primary-foreground")} />
-            )}
-          </button>
-        </div>
+        )}
       </td>
       <td className="truncate pr-3 text-muted-foreground" title={trip.pickup}>
         {trip.pickup}
@@ -904,6 +931,7 @@ function TripCard({
   }, [trip.driverId]);
 
   const isChanged = (selectedDriverId || "") !== (trip.driverId || "");
+  const isAssignable = trip.status === "Scheduled" || trip.status === "Need driver";
 
   const handleUpdate = async () => {
     setIsUpdating(true);
@@ -930,60 +958,66 @@ function TripCard({
 
       <div className="mt-4 rounded-lg border border-border/80 bg-muted/20 p-3">
         <label className="text-[11px] font-bold uppercase text-muted-foreground">Driver</label>
-        <div className="mt-1.5 flex items-center gap-2">
-          <div className="relative flex-1">
-            <select
-              value={selectedDriverId}
-              onChange={(e) => {
-                setSelectedDriverId(e.target.value);
-                setIsSuccess(false);
-              }}
-              disabled={isUpdating}
+        {isAssignable ? (
+          <div className="mt-1.5 flex items-center gap-2">
+            <div className="relative flex-1">
+              <select
+                value={selectedDriverId}
+                onChange={(e) => {
+                  setSelectedDriverId(e.target.value);
+                  setIsSuccess(false);
+                }}
+                disabled={isUpdating}
+                className={cn(
+                  "h-8 w-full appearance-none rounded-lg border bg-white pl-2.5 pr-7 text-xs font-medium text-foreground outline-none transition cursor-pointer",
+                  isChanged
+                    ? "border-primary ring-2 ring-primary/15 bg-blue-50/20 font-semibold"
+                    : "border-border hover:border-primary/50 focus:border-primary"
+                )}
+              >
+                <option value="">— Unassigned —</option>
+                {drivers.map((d) => (
+                  <option key={d.id} value={d.id}>
+                    {d.name} {d.vehiclePlate ? `(${d.vehiclePlate})` : ""}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+            </div>
+
+            <button
+              type="button"
+              onClick={handleUpdate}
+              disabled={isUpdating || (!isChanged && !selectedDriverId && !trip.driverId)}
               className={cn(
-                "h-8 w-full appearance-none rounded-lg border bg-white pl-2.5 pr-7 text-xs font-medium text-foreground outline-none transition cursor-pointer",
-                isChanged
-                  ? "border-primary ring-2 ring-primary/15 bg-blue-50/20 font-semibold"
-                  : "border-border hover:border-primary/50 focus:border-primary"
+                "flex h-8 items-center gap-1 px-2.5 rounded-lg border text-xs font-semibold transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed",
+                isSuccess
+                  ? "border-emerald-500 bg-emerald-50 text-emerald-600"
+                  : isChanged
+                  ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
+                  : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-primary hover:bg-muted"
               )}
             >
-              <option value="">— Unassigned —</option>
-              {drivers.map((d) => (
-                <option key={d.id} value={d.id}>
-                  {d.name} {d.vehiclePlate ? `(${d.vehiclePlate})` : ""}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="pointer-events-none absolute right-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+              {isUpdating ? (
+                <Loader2 className="size-3.5 animate-spin" />
+              ) : isSuccess ? (
+                <>
+                  <Check className="size-3.5 text-emerald-600" />
+                  <span>Saved</span>
+                </>
+              ) : (
+                <>
+                  <RefreshCw className="size-3.5" />
+                  <span>{isChanged ? "Save" : "Update"}</span>
+                </>
+              )}
+            </button>
           </div>
-
-          <button
-            type="button"
-            onClick={handleUpdate}
-            disabled={isUpdating || (!isChanged && !selectedDriverId && !trip.driverId)}
-            className={cn(
-              "flex h-8 items-center gap-1 px-2.5 rounded-lg border text-xs font-semibold transition cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed",
-              isSuccess
-                ? "border-emerald-500 bg-emerald-50 text-emerald-600"
-                : isChanged
-                ? "border-primary bg-primary text-primary-foreground hover:bg-primary/90"
-                : "border-border bg-card text-muted-foreground hover:border-primary/40 hover:text-primary hover:bg-muted"
-            )}
-          >
-            {isUpdating ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : isSuccess ? (
-              <>
-                <Check className="size-3.5 text-emerald-600" />
-                <span>Saved</span>
-              </>
-            ) : (
-              <>
-                <RefreshCw className="size-3.5" />
-                <span>Update</span>
-              </>
-            )}
-          </button>
-        </div>
+        ) : (
+          <p className={cn("mt-1 text-xs font-semibold", trip.driver ? "text-foreground" : "text-muted-foreground italic")}>
+            {trip.driver || "Unassigned"}
+          </p>
+        )}
       </div>
 
       <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-xs">

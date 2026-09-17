@@ -121,6 +121,17 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
   const [selectedDriverId, setSelectedDriverId] = useState("");
   const [reassigning, setReassigning] = useState(false);
 
+  const isCancelled = trip?.status === "CANCELLED";
+  const isCompleted = trip?.status === "COMPLETED";
+  const isNoShow =
+    trip?.status === "CANCELLED" &&
+    (trip?.cancellationReason === "No Show Up" ||
+      trip?.cancellationReason === "NO_SHOW");
+  const isScheduled = trip
+    ? ["REQUESTED", "QUOTE_ACCEPTED", "ACCEPTED", "DRIVER_ARRIVING", "DRIVER_ARRIVED"].includes(trip.status)
+    : false;
+  const canAssignOrReassign = isScheduled && !isCompleted && !isCancelled && !isNoShow;
+
   const fetchTripDetail = useCallback(async () => {
     if (typeof window === "undefined") return;
     const token = window.localStorage.getItem("fiki_auth_token");
@@ -150,6 +161,10 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
   }, [fetchTripDetail]);
 
   const handleOpenReassignModal = async () => {
+    if (!canAssignOrReassign) {
+      alert("Driver can only be assigned or reassigned to scheduled trips.");
+      return;
+    }
     setReassignModalOpen(true);
     if (typeof window === "undefined") return;
     const token = window.localStorage.getItem("fiki_auth_token");
@@ -316,13 +331,7 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
     (trip.specialInstructions || trip.accessInformation)?.trim() ||
     "No Special instructions";
 
-  const isNoShow =
-    trip.status === "CANCELLED" &&
-    (trip.cancellationReason === "No Show Up" ||
-      trip.cancellationReason === "NO_SHOW");
   const statusBadge = getStatusBadge(trip.status, trip.cancellationReason);
-  const isCancelled = trip.status === "CANCELLED";
-  const isCompleted = trip.status === "COMPLETED";
 
   // Timeline steps computation
   const timelineSteps = [
@@ -481,11 +490,13 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
             onClick={() => window.print()}
           />
           <ToolbarButton icon={Download} label="Export" onClick={exportTrip} />
-          <ToolbarButton
-            icon={UserRoundCog}
-            label={driverObj ? "Reassign driver" : "Assign driver"}
-            onClick={handleOpenReassignModal}
-          />
+          {canAssignOrReassign && (
+            <ToolbarButton
+              icon={UserRoundCog}
+              label={driverObj ? "Reassign driver" : "Assign driver"}
+              onClick={handleOpenReassignModal}
+            />
+          )}
           <button
             className="flex h-9 items-center justify-center gap-1.5 rounded-lg border border-red-400 px-3 text-xs font-bold text-red-500 transition hover:bg-red-50 disabled:opacity-50"
             disabled={isCancelled || isCompleted || cancelling}
