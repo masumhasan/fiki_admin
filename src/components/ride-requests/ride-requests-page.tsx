@@ -9,7 +9,6 @@ import {
   Repeat2,
   Search,
   Trash2,
-  UserPlus,
   X,
 } from "lucide-react";
 import Link from "next/link";
@@ -17,18 +16,15 @@ import { useMemo, useState, useEffect } from "react";
 import { PageHeader } from "@/components/dashboard/page-header";
 import {
   getAdminTripsApi,
-  getAdminDriversApi,
-  assignDriverApi,
+  approveRideRequestApi,
   deleteTripApi,
 } from "@/lib/api";
 
 type RequestStatus =
   | "Pending"
   | "Approved"
-  | "Need driver"
   | "Completed"
-  | "Rejected"
-  | "Scheduled";
+  | "Rejected";
 
 type RideRequest = {
   id: string;
@@ -55,7 +51,6 @@ type RideRequest = {
 const tabs = [
   "Approved",
   "Pending",
-  "Need driver",
   "Completed",
   "Rejected",
 ] as const;
@@ -66,8 +61,8 @@ export function RideRequestsPage({ hideHeader }: { hideHeader?: boolean }) {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(5);
   const [trips, setTrips] = useState<RideRequest[]>([]);
-  const [availableDrivers, setAvailableDrivers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
 
   const handleDeleteRequest = async (id: string) => {
     if (!confirm("Are you sure you want to delete this ride request and all associated recurring trips? This action is permanent.")) {
@@ -77,13 +72,26 @@ export function RideRequestsPage({ hideHeader }: { hideHeader?: boolean }) {
     if (!token) return;
     const res = await deleteTripApi(token, id);
     if (res.success) {
-      fetchTripsAndDrivers();
+      fetchTrips();
     } else {
       alert(res.error?.message || "Failed to delete ride request");
     }
   };
 
-  const fetchTripsAndDrivers = async () => {
+  const handleApproveRequest = async (id: string) => {
+    const token = window.localStorage.getItem("fiki_auth_token");
+    if (!token) return;
+    setApprovingId(id);
+    const res = await approveRideRequestApi(token, id);
+    setApprovingId(null);
+    if (res.success) {
+      fetchTrips();
+    } else {
+      alert(res.error?.message || "Failed to approve ride request");
+    }
+  };
+
+  const fetchTrips = async () => {
     if (typeof window === "undefined") return;
     const token = window.localStorage.getItem("fiki_auth_token");
     if (!token) {
@@ -92,10 +100,7 @@ export function RideRequestsPage({ hideHeader }: { hideHeader?: boolean }) {
     }
 
     try {
-      const [tripsRes, driversRes] = await Promise.all([
-        getAdminTripsApi(token, 1, 1000, undefined, "requests"),
-        getAdminDriversApi(token),
-      ]);
+      const tripsRes = await getAdminTripsApi(token, 1, 1000, undefined, "requests");
 
       if (
         tripsRes.success &&
@@ -111,22 +116,21 @@ export function RideRequestsPage({ hideHeader }: { hideHeader?: boolean }) {
           const driverName = t.driverId?.name;
 
           let statusStr: RequestStatus = "Pending";
-          if (t.status === "COMPLETED") statusStr = "Completed";
-          else if (t.status === "CANCELLED" || t.status === "QUOTE_DENIED")
+          if (t.status === "COMPLETED") {
+            statusStr = "Completed";
+          } else if (t.status === "CANCELLED" || t.status === "QUOTE_DENIED") {
             statusStr = "Rejected";
-          else if (
+          } else if (
             t.status === "ACCEPTED" ||
+            t.status === "QUOTE_ACCEPTED" ||
             t.status === "DRIVER_ARRIVING" ||
             t.status === "DRIVER_ARRIVED" ||
             t.status === "IN_PROGRESS"
-          )
-            statusStr = driverName ? "Approved" : "Need driver";
-          else if (t.status === "QUOTE_ACCEPTED")
-            statusStr = driverName ? "Approved" : "Need driver";
-          else if (t.status === "QUOTE_SENT")
-            statusStr = driverName ? "Approved" : "Pending";
-          else if (t.status === "REQUESTED" || t.status === "QUOTE_COUNTERED")
+          ) {
+            statusStr = "Approved";
+          } else {
             statusStr = "Pending";
+          }
 
           const isRecurring =
             t.schedule === "recurring" ||
@@ -210,14 +214,6 @@ export function RideRequestsPage({ hideHeader }: { hideHeader?: boolean }) {
       } else {
         setTrips([]);
       }
-
-      if (
-        driversRes.success &&
-        driversRes.data &&
-        Array.isArray(driversRes.data.drivers)
-      ) {
-        setAvailableDrivers(driversRes.data.drivers);
-      }
     } catch {
       setTrips([]);
     } finally {
@@ -226,24 +222,13 @@ export function RideRequestsPage({ hideHeader }: { hideHeader?: boolean }) {
   };
 
   useEffect(() => {
-    fetchTripsAndDrivers();
+    fetchTrips();
   }, []);
-
-  const handleAssignDriver = async (tripId: string) => {
-    if (typeof window === "undefined") return;
-    const token = window.localStorage.getItem("fiki_auth_token");
-    if (!token) return;
-    const targetDriver = availableDrivers[0];
-    if (!targetDriver) return;
-    const res = await assignDriverApi(token, tripId, targetDriver._id);
-    if (res.success) {
-      await fetchTripsAndDrivers();
-    }
-  };
 
   const tripsWithHandler = trips.map((req) => ({
     ...req,
-    onAssign: handleAssignDriver,
+    onApprove: handleApproveRequest,
+    onDelete: handleDeleteRequest,
   }));
 
   const filtered = useMemo(() => {
@@ -349,7 +334,7 @@ export function RideRequestsPage({ hideHeader }: { hideHeader?: boolean }) {
                       serial={(page - 1) * pageSize + index + 1}
                       request={{
                         ...request,
-                        onDelete: handleDeleteRequest,
+                        isApproving: approvingId === request.rawId,
                       }}
                     />
                   ))}
@@ -364,7 +349,7 @@ export function RideRequestsPage({ hideHeader }: { hideHeader?: boolean }) {
                   serial={(page - 1) * pageSize + index + 1}
                   request={{
                     ...request,
-                    onDelete: handleDeleteRequest,
+                    isApproving: approvingId === request.rawId,
                   }}
                 />
               ))}
@@ -489,7 +474,11 @@ function RequestRow({
   request,
 }: {
   serial: number;
-  request: RideRequest & { onAssign?: (id: string) => void; onDelete?: (id: string) => void };
+  request: RideRequest & {
+    onApprove?: (id: string) => void;
+    onDelete?: (id: string) => void;
+    isApproving?: boolean;
+  };
 }) {
   return (
     <tr className="border-b border-border/80 text-xs last:border-0 hover:bg-muted/35">
@@ -544,19 +533,8 @@ function RequestRow({
       <td className="py-4">
         {request.driver ? (
           <span className="font-medium text-foreground">{request.driver}</span>
-        ) : request.backendStatus === "ACCEPTED" ? (
-          <button
-            className="inline-flex items-center gap-1 font-bold text-brand-yellow-hover cursor-pointer"
-            type="button"
-            onClick={() => request.onAssign?.(request.rawId)}
-          >
-            <UserPlus className="size-3.5" />
-            Assign
-          </button>
         ) : (
-          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200/80 rounded-full px-2 py-0.5" title="Approve ride request to enable driver assignment">
-            Pending Approval
-          </span>
+          <span className="text-muted-foreground text-xs">—</span>
         )}
       </td>
       <td className="py-4">
@@ -564,8 +542,25 @@ function RequestRow({
       </td>
       <td className="py-4 text-center">
         <div className="flex items-center justify-center gap-1.5">
+          {request.status === "Pending" && (
+            <button
+              type="button"
+              aria-label={`Approve ${request.id}`}
+              title="Approve Ride Request"
+              disabled={request.isApproving}
+              onClick={() => request.onApprove?.(request.rawId || request.id)}
+              className="inline-grid size-8 place-items-center rounded-lg border border-emerald-200 bg-emerald-50 text-emerald-600 transition hover:bg-emerald-100 hover:text-emerald-700 disabled:opacity-50 cursor-pointer"
+            >
+              {request.isApproving ? (
+                <Loader2 className="size-4 animate-spin text-emerald-600" />
+              ) : (
+                <Check className="size-4 stroke-[2.5]" />
+              )}
+            </button>
+          )}
           <Link
             aria-label={`View ${request.id}`}
+            title="View Details"
             className="inline-grid size-8 place-items-center rounded-lg border border-border text-muted-foreground transition hover:border-primary/30 hover:bg-muted hover:text-primary cursor-pointer"
             href={`/ride-requests/${request.rawId || request.id}`}
           >
@@ -574,6 +569,7 @@ function RequestRow({
           <button
             type="button"
             aria-label={`Delete ${request.id}`}
+            title="Delete Request"
             onClick={() => request.onDelete?.(request.rawId || request.id)}
             className="inline-grid size-8 place-items-center rounded-lg border border-red-200 bg-red-50 text-red-600 transition hover:bg-red-100 hover:text-red-700 cursor-pointer"
           >
@@ -590,7 +586,11 @@ function RequestCard({
   request,
 }: {
   serial: number;
-  request: RideRequest & { onDelete?: (id: string) => void };
+  request: RideRequest & {
+    onApprove?: (id: string) => void;
+    onDelete?: (id: string) => void;
+    isApproving?: boolean;
+  };
 }) {
   return (
     <article className="p-5">
@@ -626,11 +626,26 @@ function RequestCard({
         <div>
           <dt className="font-semibold text-muted-foreground">Driver</dt>
           <dd className="mt-1 text-foreground">
-            {request.driver ?? "Not assigned"}
+            {request.driver ?? "Unassigned"}
           </dd>
         </div>
       </dl>
       <div className="ml-7 mt-4 flex items-center gap-2">
+        {request.status === "Pending" && (
+          <button
+            type="button"
+            disabled={request.isApproving}
+            onClick={() => request.onApprove?.((request as any).rawId || request.id)}
+            className="flex h-9 items-center gap-1.5 rounded-full bg-emerald-600 px-3 text-xs font-bold text-white shadow transition hover:bg-emerald-700 disabled:opacity-50 cursor-pointer"
+          >
+            {request.isApproving ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Check className="size-3.5 stroke-[2.5]" />
+            )}
+            Approve
+          </button>
+        )}
         <Link
           className="flex h-9 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-bold text-primary hover:bg-muted"
           href={`/ride-requests/${(request as any).rawId || request.id}`}
@@ -646,15 +661,6 @@ function RequestCard({
           <Trash2 className="size-3.5" />
           Delete
         </button>
-        {!request.driver ? (
-          <button
-            className="flex h-9 items-center gap-1.5 rounded-full bg-secondary px-3 text-xs font-bold text-secondary-foreground"
-            type="button"
-          >
-            <UserPlus className="size-3.5" />
-            Assign driver
-          </button>
-        ) : null}
       </div>
     </article>
   );
@@ -688,14 +694,12 @@ function StatusBadge({ status }: { status: RequestStatus }) {
   const styles: Record<RequestStatus, string> = {
     Pending: "bg-amber-50 text-amber-700",
     Approved: "bg-emerald-50 text-emerald-700",
-    "Need driver": "bg-rose-50 text-rose-600",
     Completed: "bg-green-50 text-green-700",
     Rejected: "bg-red-50 text-red-600",
-    Scheduled: "bg-blue-50 text-blue-600",
   };
   return (
     <span
-      className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-bold ${styles[status]}`}
+      className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-bold ${styles[status] || "bg-slate-50 text-slate-700"}`}
     >
       {status}
     </span>

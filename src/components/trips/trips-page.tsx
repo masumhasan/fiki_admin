@@ -143,11 +143,14 @@ export function TripsPage({
       setTrips((prevTrips) =>
         prevTrips.map((t) => {
           if (t.mongoId === tripMongoId) {
+            const hasDriver = !!newDriverId;
             return {
               ...t,
               driverId: newDriverId || undefined,
               driver: assignedDriverObj?.name || (newDriverId ? "Assigned Driver" : undefined),
-              status: (t.status === "Need driver" && newDriverId) ? "Scheduled" : t.status,
+              status: hasDriver
+                ? (t.status === "Need driver" ? "Scheduled" : t.status)
+                : (["Completed", "Cancelled", "No Show Up"].includes(t.status) ? t.status : "Need driver"),
             };
           }
           return t;
@@ -196,8 +199,8 @@ export function TripsPage({
     setLoading(true);
     try {
       let apiStatus = undefined;
-      if (status === "Need driver") apiStatus = "REQUESTED";
-      else if (status === "Scheduled") apiStatus = "ACCEPTED,DRIVER_ARRIVING,DRIVER_ARRIVED";
+      if (status === "Need driver") apiStatus = "NEED_DRIVER";
+      else if (status === "Scheduled") apiStatus = "Scheduled";
       else if (status === "Onboard") apiStatus = "IN_PROGRESS";
       else if (status === "Completed") apiStatus = "COMPLETED";
       else if (status === "Cancelled") apiStatus = "CANCELLED";
@@ -261,9 +264,20 @@ export function TripsPage({
             t.status === "CANCELLED" &&
             (t.cancellationReason === "No Show Up" ||
               t.cancellationReason === "NO_SHOW");
-          const statusVal: TripStatus = isNoShow
-            ? "No Show Up"
-            : statusMap[t.status] ?? "Scheduled";
+          let statusVal: TripStatus = "Scheduled";
+          if (isNoShow) {
+            statusVal = "No Show Up";
+          } else if (t.status === "COMPLETED") {
+            statusVal = "Completed";
+          } else if (t.status === "CANCELLED") {
+            statusVal = "Cancelled";
+          } else if (t.status === "IN_PROGRESS") {
+            statusVal = "Onboard";
+          } else if (!driverName || !t.driverId) {
+            statusVal = "Need driver";
+          } else {
+            statusVal = statusMap[t.status] ?? "Scheduled";
+          }
 
           const nameParts = passName.split(" ");
           const initials =

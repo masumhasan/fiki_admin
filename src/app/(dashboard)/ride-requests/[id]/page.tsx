@@ -1468,7 +1468,7 @@ export default function RideRequestDetails({
                   Driver assignment is managed per individual trip on the Trips page.
                 </p>
                 <Link
-                  href="/rides"
+                  href="/ride-requests?tab=trips"
                   className="mt-2 inline-flex items-center gap-1.5 text-xs font-semibold text-[#173d76] hover:underline"
                 >
                   Go to Trips page →
