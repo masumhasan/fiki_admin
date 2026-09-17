@@ -70,7 +70,7 @@ export function RideRequestsPage({ hideHeader }: { hideHeader?: boolean }) {
     }
     const token = window.localStorage.getItem("fiki_auth_token");
     if (!token) return;
-    const res = await deleteTripApi(token, id);
+    const res = await deleteTripApi(token, id, true);
     if (res.success) {
       fetchTrips();
     } else {

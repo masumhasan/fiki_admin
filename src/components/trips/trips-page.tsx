@@ -75,7 +75,19 @@ function formatTimeTo12Hour(timeStr?: string): string {
   return `${hours}:${minutes} ${ampm}`;
 }
 
-export type TripTab = "today" | "nextDay" | "completed" | "missed" | "all";
+function parseTimeToMinutes(timeStr?: string): number {
+  if (!timeStr) return 0;
+  const match = /^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i.exec(timeStr.trim());
+  if (!match) return 0;
+  let h = parseInt(match[1], 10);
+  const m = parseInt(match[2], 10);
+  const ampm = match[3]?.toUpperCase();
+  if (ampm === "PM" && h < 12) h += 12;
+  if (ampm === "AM" && h === 12) h = 0;
+  return h * 60 + m;
+}
+
+export type TripTab = "today" | "nextDay" | "completed" | "noShow" | "cancelled" | "all";
 
 export function TripsPage({
   hideHeader,
@@ -97,7 +109,8 @@ export function TripsPage({
     today: 0,
     nextDay: 0,
     completed: 0,
-    missed: 0,
+    noShow: 0,
+    cancelled: 0,
     all: 0,
   });
   const [pageSize, setPageSize] = useState("10");
@@ -232,7 +245,8 @@ export function TripsPage({
             today: countsObj.today ?? 0,
             nextDay: countsObj.nextDay ?? countsObj.upcoming ?? 0,
             completed: countsObj.completed ?? 0,
-            missed: countsObj.missed ?? 0,
+            noShow: countsObj.noShow ?? 0,
+            cancelled: countsObj.cancelled ?? 0,
             all: countsObj.all ?? res.data.summary?.totalTrips ?? 0,
           });
         }
@@ -314,14 +328,24 @@ export function TripsPage({
                   })
                 : "—");
 
-          const dateValForSort = t.pickupDate || t.startDate || t.createdAt;
           let timestamp = 0;
-          if (dateValForSort) {
-            const rawS = String(dateValForSort).trim();
-            const timeS = t.pickupTime || "00:00";
-            const fullIso = rawS.includes("T") ? rawS : `${rawS}T${timeS.length === 5 ? timeS : "00:00"}:00`;
-            const parsedD = new Date(fullIso);
-            timestamp = !isNaN(parsedD.getTime()) ? parsedD.getTime() : new Date(t.createdAt || 0).getTime();
+          if (t.scheduledTime) {
+            const parsed = new Date(t.scheduledTime).getTime();
+            if (!isNaN(parsed)) {
+              timestamp = parsed;
+            }
+          }
+          if (!timestamp) {
+            const rawDateStr = t.pickupDate || t.startDate;
+            const minutes = parseTimeToMinutes(t.pickupTime);
+            if (rawDateStr) {
+              const baseDate = new Date(rawDateStr.includes("T") ? rawDateStr : `${rawDateStr}T00:00:00`).getTime();
+              if (!isNaN(baseDate)) {
+                timestamp = baseDate + minutes * 60 * 1000;
+              }
+            } else if (t.createdAt) {
+              timestamp = new Date(t.createdAt).getTime();
+            }
           }
 
           return {
@@ -347,18 +371,10 @@ export function TripsPage({
           const tB = b.timestamp || 0;
           
           if (activeTab === 'today' || activeTab === 'nextDay') {
-            return tA - tB; // Chronological order
-          } else if (activeTab === 'missed') {
-            // Same day: ascending time. Different day: descending date.
-            const dateA = new Date(tA).setHours(0, 0, 0, 0);
-            const dateB = new Date(tB).setHours(0, 0, 0, 0);
-            if (dateB !== dateA) {
-              return dateB - dateA;
-            }
-            return tA - tB;
+            return tA - tB; // Chronological order: earliest trip on top
           }
           
-          return tB - tA; // Default reverse chronological
+          return tB - tA; // Default reverse chronological: latest dates on page 1
         });
         setTrips(mapped);
       } else {
@@ -507,17 +523,17 @@ export function TripsPage({
               />
             </div>
 
-            {/* Horizontal Filter Tabs: Today's Trips, Next Day's Trips, Completed Trips, Missed Trips, All Trips */}
+            {/* Horizontal Filter Tabs: Today's Trips, Next Day's Trips, Completed Trips, No Show Up, Cancelled, All Trips */}
             <div className="flex items-center gap-1 overflow-x-auto border-b border-border lg:border-b-0 py-1 lg:py-0">
               {[
                 { id: "today" as const, label: "Today's Trips", count: tabCounts.today },
                 { id: "nextDay" as const, label: "Next Day's Trips", count: tabCounts.nextDay },
                 { id: "completed" as const, label: "Completed Trips", count: tabCounts.completed },
-                { id: "missed" as const, label: "Missed Trips", count: tabCounts.missed },
+                { id: "noShow" as const, label: "No Show Up", count: tabCounts.noShow },
+                { id: "cancelled" as const, label: "Cancelled", count: tabCounts.cancelled },
                 { id: "all" as const, label: "All Trips", count: tabCounts.all },
               ].map((tab) => {
                 const isActive = activeTab === tab.id;
-                const isMissed = tab.id === "missed";
                 return (
                   <button
                     key={tab.id}
@@ -526,20 +542,13 @@ export function TripsPage({
                     className={cn(
                       "relative px-3.5 py-2.5 text-xs font-bold transition-colors whitespace-nowrap cursor-pointer",
                       isActive
-                        ? isMissed
-                          ? "text-red-600 font-extrabold"
-                          : "text-primary"
+                        ? "text-primary"
                         : "text-muted-foreground hover:text-foreground",
                     )}
                   >
                     {tab.label} ({tab.count})
                     {isActive && (
-                      <span
-                        className={cn(
-                          "absolute inset-x-2 bottom-0 h-0.5 rounded-full",
-                          isMissed ? "bg-red-600" : "bg-primary",
-                        )}
-                      />
+                      <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-primary" />
                     )}
                   </button>
                 );

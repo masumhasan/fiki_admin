@@ -1,13 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Banknote,
   Calendar,
+  Check,
   CheckCircle2,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   DollarSign,
+  Download,
   Edit2,
+  Loader2,
   RefreshCw,
   Search,
   TrendingUp,
@@ -17,6 +23,16 @@ import {
 import { API_BASE_URL } from "@/lib/api";
 
 const API_BASE = API_BASE_URL;
+
+export interface FortnightPeriod {
+  id: string;
+  startDate: string;
+  endDate: string;
+  label: string;
+  isCurrent: boolean;
+  expectedPayDate: string;
+  payrollStatus: "Approved" | "Paid" | "Entered into Payroll" | "Waiting Deposit";
+}
 
 interface DriverEarningItem {
   driverId: string;
@@ -52,6 +68,7 @@ export default function EarningManagementPage() {
     drivers: DriverEarningItem[];
   } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchingPeriod, setFetchingPeriod] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedDriver, setSelectedDriver] = useState<DriverEarningItem | null>(null);
   const [editRate, setEditRate] = useState("");
@@ -59,7 +76,12 @@ export default function EarningManagementPage() {
   const [saving, setSaving] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const fetchEarningsData = async () => {
+  const [availablePeriods, setAvailablePeriods] = useState<FortnightPeriod[]>([]);
+  const [selectedPeriod, setSelectedPeriod] = useState<FortnightPeriod | null>(null);
+  const [selectorOpen, setSelectorOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const fetchEarningsData = async (startDate?: string, endDate?: string) => {
     const token = window.localStorage.getItem("fiki_auth_token");
     if (!token) {
       setLoading(false);
@@ -67,24 +89,149 @@ export default function EarningManagementPage() {
     }
 
     try {
-      setLoading(true);
-      const res = await fetch(`${API_BASE}/admin/earnings`, {
+      setFetchingPeriod(true);
+      const qs = startDate && endDate ? `?startDate=${startDate}&endDate=${endDate}` : "";
+      const res = await fetch(`${API_BASE}/admin/earnings${qs}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const json = await res.json();
       if (json.success && json.data) {
         setData(json.data);
+        if (json.data.availablePeriods && json.data.availablePeriods.length > 0) {
+          setAvailablePeriods(json.data.availablePeriods);
+        }
+        if (json.data.selectedPeriod) {
+          setSelectedPeriod(json.data.selectedPeriod);
+        }
       }
     } catch {
       // error fallback
     } finally {
       setLoading(false);
+      setFetchingPeriod(false);
     }
   };
 
   useEffect(() => {
+    setLoading(true);
     fetchEarningsData();
   }, []);
+
+  // Close fortnight dropdown on click outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setSelectorOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const handleSelectPeriod = (period: FortnightPeriod) => {
+    setSelectedPeriod(period);
+    setSelectorOpen(false);
+    fetchEarningsData(period.startDate, period.endDate);
+  };
+
+  const currentPeriodIndex = availablePeriods.findIndex((p) => p.id === selectedPeriod?.id);
+  const hasPrevPeriod = currentPeriodIndex < availablePeriods.length - 1;
+  const hasNextPeriod = currentPeriodIndex > 0;
+
+  const handleNavigatePeriod = (direction: "prev" | "next") => {
+    if (!selectedPeriod || availablePeriods.length === 0) return;
+    const currentIndex = availablePeriods.findIndex((p) => p.id === selectedPeriod.id);
+    if (currentIndex === -1) return;
+
+    const newIndex = direction === "prev" ? currentIndex + 1 : currentIndex - 1;
+    if (newIndex >= 0 && newIndex < availablePeriods.length) {
+      handleSelectPeriod(availablePeriods[newIndex]);
+    }
+  };
+
+  const handleExportCsv = () => {
+    const drivers = data?.drivers || [];
+    if (drivers.length === 0) {
+      alert("No driver payroll data to export for this pay period.");
+      return;
+    }
+
+    const periodLabel = selectedPeriod?.label || data?.payPeriodRange || "Current Pay Period";
+
+    const headers = [
+      "Driver Name",
+      "Email",
+      "Phone",
+      "Vehicle",
+      "License Plate",
+      "Hourly Rate ($)",
+      "Clocked Hours",
+      "Completed Trips",
+      "Trip Bonus Rate ($)",
+      "Trip Bonus ($)",
+      "Regular Wages ($)",
+      "Total Gross Salary ($)",
+      "Payroll Status",
+      "Pay Period",
+    ];
+
+    const rows = drivers.map((d) => [
+      d.name,
+      d.email,
+      d.phone,
+      d.vehicle || "Unassigned",
+      d.licensePlate || "N/A",
+      d.hourlyRate.toFixed(2),
+      (d.clockedHours ?? d.approvedHours ?? 0).toFixed(2),
+      d.completedTrips,
+      (d.tripBonusRate ?? 3).toFixed(2),
+      d.tripBonus.toFixed(2),
+      d.regularWages.toFixed(2),
+      d.grossEarnings.toFixed(2),
+      d.payrollStatus || "Approved",
+      periodLabel,
+    ]);
+
+    // Add totals summary row
+    const totalClocked = drivers.reduce((sum, d) => sum + (d.clockedHours ?? d.approvedHours ?? 0), 0);
+    const totalTrips = drivers.reduce((sum, d) => sum + d.completedTrips, 0);
+    const totalBonus = drivers.reduce((sum, d) => sum + d.tripBonus, 0);
+    const totalWages = drivers.reduce((sum, d) => sum + d.regularWages, 0);
+    const totalPayroll = drivers.reduce((sum, d) => sum + d.grossEarnings, 0);
+
+    const totalsRow = [
+      "TOTAL",
+      "",
+      "",
+      "",
+      "",
+      "",
+      totalClocked.toFixed(2),
+      totalTrips,
+      "",
+      totalBonus.toFixed(2),
+      totalWages.toFixed(2),
+      totalPayroll.toFixed(2),
+      "",
+      periodLabel,
+    ];
+
+    const csvContent = [
+      headers.map((h) => `"${h}"`).join(","),
+      ...rows.map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(",")),
+      totalsRow.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","),
+    ].join("\n");
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const safeStart = selectedPeriod?.startDate || "start";
+    const safeEnd = selectedPeriod?.endDate || "end";
+    link.href = url;
+    link.download = `fiki_payroll_${safeStart}_to_${safeEnd}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   const handleOpenEditModal = (driver: DriverEarningItem) => {
     setSelectedDriver(driver);
@@ -123,7 +270,7 @@ export default function EarningManagementPage() {
       if (json.success) {
         setToastMessage(`Updated earnings parameters for ${selectedDriver.name}`);
         setSelectedDriver(null);
-        fetchEarningsData();
+        fetchEarningsData(selectedPeriod?.startDate, selectedPeriod?.endDate);
         setTimeout(() => setToastMessage(null), 3000);
       } else {
         alert(json.error?.message || "Failed to update driver earnings");
@@ -163,17 +310,139 @@ export default function EarningManagementPage() {
           </p>
         </div>
         <div className="flex items-center gap-3">
+          {/* Export Data Button */}
           <button
             type="button"
-            onClick={fetchEarningsData}
+            onClick={handleExportCsv}
+            disabled={loading || !data || data.drivers.length === 0}
+            className="flex items-center gap-2 rounded-xl border border-[#e2e8f0] bg-white px-3.5 py-2 text-xs font-bold text-[#475569] shadow-sm hover:bg-slate-50 transition-colors cursor-pointer disabled:opacity-50"
+          >
+            <Download className="size-3.5 text-[#64748b]" />
+            Export Data
+          </button>
+
+          {/* Refresh Button */}
+          <button
+            type="button"
+            onClick={() => fetchEarningsData(selectedPeriod?.startDate, selectedPeriod?.endDate)}
+            disabled={loading || fetchingPeriod}
             className="flex items-center gap-2 rounded-xl border border-[#e2e8f0] bg-white px-3.5 py-2 text-xs font-bold text-[#475569] shadow-sm hover:bg-slate-50 transition-colors cursor-pointer"
           >
-            <RefreshCw className={`size-3.5 ${loading ? "animate-spin" : ""}`} />
+            <RefreshCw className={`size-3.5 ${loading || fetchingPeriod ? "animate-spin" : ""}`} />
             Refresh
           </button>
-          <div className="flex items-center gap-2 rounded-xl border border-[#e2e8f0] bg-white px-3.5 py-2 text-xs font-bold text-[#1e293b] shadow-sm">
-            <Calendar className="size-4 text-[#64748b]" />
-            <span>{data?.payPeriodRange || "Current 14-Day Pay Period"}</span>
+
+          {/* Fortnightly Pay Period Selector Popover */}
+          <div className="relative" ref={dropdownRef}>
+            <button
+              type="button"
+              onClick={() => setSelectorOpen((v) => !v)}
+              disabled={loading || fetchingPeriod}
+              className="flex items-center gap-2.5 rounded-xl border border-[#e2e8f0] bg-white px-3.5 py-2 text-xs font-bold text-[#1e293b] shadow-sm hover:bg-slate-50 transition-colors cursor-pointer focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/10"
+              aria-expanded={selectorOpen}
+              aria-haspopup="true"
+            >
+              {fetchingPeriod ? (
+                <Loader2 className="size-4 animate-spin text-primary" />
+              ) : (
+                <Calendar className="size-4 text-primary" />
+              )}
+              <span>{selectedPeriod?.label || data?.payPeriodRange || "Current 14-Day Pay Period"}</span>
+              {selectedPeriod?.isCurrent && (
+                <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">
+                  CURRENT
+                </span>
+              )}
+              <ChevronDown
+                className={`size-3.5 text-muted-foreground transition-transform duration-200 ${
+                  selectorOpen ? "rotate-180" : ""
+                }`}
+              />
+            </button>
+
+            {/* Pay Period Selector Dropdown / Popover Modal */}
+            {selectorOpen && (
+              <div className="absolute right-0 top-12 z-50 w-80 sm:w-96 rounded-2xl border border-border bg-white p-4 shadow-2xl animate-in fade-in-50 zoom-in-95">
+                <div className="flex items-center justify-between border-b border-border pb-3">
+                  <div className="flex items-center gap-2">
+                    <Calendar className="size-4 text-primary" />
+                    <h3 className="text-xs font-bold text-foreground">Select Pay Period</h3>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSelectorOpen(false)}
+                    className="rounded-lg p-1 text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </div>
+
+                {/* Quick Stepper Navigation */}
+                <div className="my-3 flex items-center justify-between rounded-xl bg-slate-50 p-1.5 text-xs font-semibold">
+                  <button
+                    type="button"
+                    onClick={() => handleNavigatePeriod("prev")}
+                    disabled={!hasPrevPeriod}
+                    className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-foreground hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer shadow-xs"
+                  >
+                    <ChevronLeft className="size-4" />
+                    <span>Previous</span>
+                  </button>
+                  <span className="text-[11px] font-bold text-muted-foreground">Fortnightly Cycles</span>
+                  <button
+                    type="button"
+                    onClick={() => handleNavigatePeriod("next")}
+                    disabled={!hasNextPeriod}
+                    className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-foreground hover:bg-white disabled:opacity-30 disabled:hover:bg-transparent cursor-pointer shadow-xs"
+                  >
+                    <span>Next</span>
+                    <ChevronRight className="size-4" />
+                  </button>
+                </div>
+
+                {/* List of 14-day Fortnightly Periods */}
+                <div className="max-h-64 overflow-y-auto space-y-1 pr-1">
+                  {availablePeriods.map((period) => {
+                    const isSelected = selectedPeriod?.id === period.id;
+                    return (
+                      <button
+                        key={period.id}
+                        type="button"
+                        onClick={() => handleSelectPeriod(period)}
+                        className={`flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-xs font-medium transition-colors cursor-pointer ${
+                          isSelected
+                            ? "bg-primary/10 font-bold text-primary border border-primary/20"
+                            : "hover:bg-slate-50 text-foreground"
+                        }`}
+                      >
+                        <div className="flex flex-col gap-0.5">
+                          <span className="font-semibold">{period.label}</span>
+                          <span className="text-[10px] text-muted-foreground">
+                            Pay Date: {period.expectedPayDate}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {period.isCurrent ? (
+                            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold text-emerald-700">
+                              CURRENT
+                            </span>
+                          ) : (
+                            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-semibold text-slate-600">
+                              PAID
+                            </span>
+                          )}
+                          {isSelected && <Check className="size-4 text-primary shrink-0" />}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="mt-3 border-t border-border pt-2 text-[10px] text-muted-foreground text-center">
+                  System fortnightly pay periods (14 days)
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

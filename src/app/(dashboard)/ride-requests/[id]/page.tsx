@@ -161,7 +161,7 @@ export default function RideRequestDetails({
     setDeleting(true);
     const token = window.localStorage.getItem("fiki_auth_token");
     if (token) {
-      const res = await deleteTripApi(token, id);
+      const res = await deleteTripApi(token, id, true);
       if (res.success) {
         router.push("/ride-requests");
       } else {

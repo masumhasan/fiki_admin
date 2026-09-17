@@ -133,13 +133,13 @@ export function AnalyticsPage() {
   const rev = analyticsData?.revenueSummary;
 
   // 6 Top Metrics (Removed "Total passengers" and "Outstanding payments")
-  const totalRequestsVal = m?.totalRideRequests ?? 10;
-  const completedTripsVal = m?.completedTrips ?? 14;
-  const pendingRequestsVal = m?.pendingRequests ?? m?.pendingTrips ?? 1;
-  const activeTripsVal = m?.activeTrips ?? 702;
-  const totalRevenueVal = m?.totalRevenue ?? 547.0;
+  const totalRequestsVal = m?.totalRideRequests ?? 0;
+  const completedTripsVal = m?.completedTrips ?? 0;
+  const pendingRequestsVal = m?.pendingRequests ?? m?.pendingTrips ?? 0;
+  const activeTripsVal = m?.activeTrips ?? 0;
+  const totalRevenueVal = m?.totalRevenue ?? 0;
   const activeDriversVal = m?.activeDrivers ?? 0;
-  const totalDriversVal = m?.totalDrivers ?? 2;
+  const totalDriversVal = m?.totalDrivers ?? 0;
 
   const completionRate =
     totalRequestsVal > 0 ? ((completedTripsVal / (completedTripsVal + pendingRequestsVal + (m?.cancelledTrips || 0) || 1)) * 100).toFixed(1) : "0.0";
@@ -234,11 +234,11 @@ export function AnalyticsPage() {
     }
     return {
       completed: completedTripsVal,
-      inProgress: 2,
-      scheduled: 96,
+      inProgress: 0,
+      scheduled: 0,
       pending: pendingRequestsVal,
       cancelled: 0,
-      total: completedTripsVal + 2 + 96 + pendingRequestsVal,
+      total: completedTripsVal + pendingRequestsVal,
     };
   })();
 
@@ -577,12 +577,12 @@ export function AnalyticsPage() {
 
         <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
           {[
-            ["Today's revenue", rev ? `$${Number(rev.todayRevenue || 0).toFixed(2)}` : "$0.00", "text-emerald-600"],
-            ["Weekly revenue", rev ? `$${Number(rev.weeklyRevenue || 0).toFixed(2)}` : "$0.00", "text-blue-600"],
-            ["Fortnightly revenue", rev ? `$${Number(rev.fortnightRevenue || 547.0).toFixed(2)}` : "$547.00", "text-blue-600"],
-            ["Monthly revenue", rev ? `$${Number(rev.monthlyRevenue || 547.0).toFixed(2)}` : "$547.00", "text-blue-600"],
-            ["Yearly revenue", rev ? `$${Number(rev.yearlyRevenue || 547.0).toFixed(2)}` : "$547.00", "text-blue-600"],
-            ["Avg ride price", rev ? `$${Number(rev.avgRidePrice || 39.07).toFixed(2)}` : "$39.07", "text-foreground"],
+            ["Today's revenue", `$${Number(rev?.todayRevenue ?? 0).toFixed(2)}`, "text-emerald-600"],
+            ["Weekly revenue", `$${Number(rev?.weeklyRevenue ?? 0).toFixed(2)}`, "text-blue-600"],
+            ["Fortnightly revenue", `$${Number(rev?.fortnightRevenue ?? 0).toFixed(2)}`, "text-blue-600"],
+            ["Monthly revenue", `$${Number(rev?.monthlyRevenue ?? 0).toFixed(2)}`, "text-blue-600"],
+            ["Yearly revenue", `$${Number(rev?.yearlyRevenue ?? 0).toFixed(2)}`, "text-blue-600"],
+            ["Avg ride price", `$${Number(rev?.avgRidePrice ?? 0).toFixed(2)}`, "text-foreground"],
           ].map(([label, value, color]) => (
             <div
               className="rounded-xl border border-border bg-muted/20 p-4 transition hover:bg-muted/35"

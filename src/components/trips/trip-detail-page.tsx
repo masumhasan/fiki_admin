@@ -204,7 +204,7 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
   const [deleting, setDeleting] = useState(false);
 
   const handleDeleteTrip = async () => {
-    if (!window.confirm("Are you sure you want to delete this trip and any associated recurring legs? This action is permanent and will remove it from all financial accounting.")) return;
+    if (!window.confirm("Are you sure you want to delete this trip? This action is permanent and will remove it from all financial accounting.")) return;
     setDeleting(true);
     try {
       const token = window.localStorage.getItem("fiki_auth_token") || "";

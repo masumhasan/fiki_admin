@@ -117,9 +117,12 @@ export async function getAdminTripsApi(token: string, page = 1, limit = 10, stat
   }
 }
 
-export async function deleteTripApi(token: string, tripId: string) {
+export async function deleteTripApi(token: string, tripId: string, cascade = false) {
   try {
-    const res = await fetch(`${API_BASE_URL}/admin/trips/${tripId}`, {
+    const url = cascade
+      ? `${API_BASE_URL}/admin/trips/${tripId}?cascade=true`
+      : `${API_BASE_URL}/admin/trips/${tripId}`;
+    const res = await fetch(url, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     });
@@ -738,6 +741,21 @@ export async function deleteAdminUserApi(token: string, userId: string) {
     return await res.json();
   } catch (error) {
     return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to delete user" } };
+  }
+}
+
+export async function getAdminEarningsApi(token: string, startDate?: string, endDate?: string) {
+  try {
+    const params = new URLSearchParams();
+    if (startDate) params.append("startDate", startDate);
+    if (endDate) params.append("endDate", endDate);
+    const qs = params.toString() ? `?${params.toString()}` : "";
+    const res = await fetch(`${API_BASE_URL}/admin/earnings${qs}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to fetch earnings" } };
   }
 }
 
