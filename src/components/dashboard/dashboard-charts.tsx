@@ -40,7 +40,7 @@ export function WeeklyTripChart({ className, data = [] }: ChartProps & { data?: 
   const ref = useChart({
     animationDuration: 700,
     color: ["#173d76", "#f5ad00"],
-    grid: { left: 38, right: 12, top: 16, bottom: 28 },
+    grid: { left: 10, right: 10, top: 16, bottom: 24, containLabel: true },
     tooltip: {
       trigger: "axis",
       backgroundColor: "#0b2348",
@@ -51,7 +51,7 @@ export function WeeklyTripChart({ className, data = [] }: ChartProps & { data?: 
       type: "category",
       boundaryGap: false,
       data: days,
-      axisLabel,
+      axisLabel: { ...axisLabel, fontSize: 10 },
       axisLine: { lineStyle: { color: "#9aa3af" } },
       axisTick: { show: false },
     },
@@ -59,8 +59,8 @@ export function WeeklyTripChart({ className, data = [] }: ChartProps & { data?: 
       type: "value",
       min: 0,
       max: yAxisMax,
-      interval: Math.max(10, Math.floor(yAxisMax / 4)),
-      axisLabel,
+      interval: Math.max(10, yAxisMax / 5),
+      axisLabel: { ...axisLabel, fontSize: 10 },
       axisLine: { show: true, lineStyle: { color: "#9aa3af" } },
       axisTick: { show: false },
       splitLine,
@@ -72,7 +72,13 @@ export function WeeklyTripChart({ className, data = [] }: ChartProps & { data?: 
         smooth: 0.35,
         symbol: "none",
         data: totalData,
-        lineStyle: { width: 2.5, color: "#173d76" },
+        lineStyle: { width: 2.5, color: "#0b2b58" },
+        areaStyle: {
+          color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+            { offset: 0, color: "rgba(11,43,88,.25)" },
+            { offset: 1, color: "rgba(11,43,88,0)" },
+          ]),
+        },
       },
       {
         name: "Completed",
@@ -109,7 +115,7 @@ export function DriverPerformanceChart({ className, data = [] }: ChartProps & { 
 
   const ref = useChart({
     animationDuration: 700,
-    grid: { left: 40, right: 10, top: 14, bottom: 38 },
+    grid: { left: 10, right: 10, top: 14, bottom: 28, containLabel: true },
     tooltip: {
       trigger: "axis",
       axisPointer: { type: "shadow" },
@@ -118,7 +124,13 @@ export function DriverPerformanceChart({ className, data = [] }: ChartProps & { 
     xAxis: {
       type: "category",
       data: driverNames,
-      axisLabel: { ...axisLabel, interval: 0 },
+      axisLabel: {
+        ...axisLabel,
+        interval: 0,
+        overflow: "truncate",
+        width: 55,
+        fontSize: 10,
+      },
       axisLine: { lineStyle: { color: "#9aa3af" } },
       axisTick: { show: false },
     },
@@ -127,7 +139,7 @@ export function DriverPerformanceChart({ className, data = [] }: ChartProps & { 
       min: 0,
       max: yAxisMax,
       interval: Math.max(10, yAxisMax / 5),
-      axisLabel,
+      axisLabel: { ...axisLabel, fontSize: 10 },
       axisLine: { show: true, lineStyle: { color: "#9aa3af" } },
       axisTick: { show: false },
       splitLine,
@@ -136,7 +148,7 @@ export function DriverPerformanceChart({ className, data = [] }: ChartProps & { 
       {
         type: "bar",
         data: tripCounts,
-        barMaxWidth: 38,
+        barMaxWidth: 34,
         itemStyle: { color: "#f9b310", borderRadius: [5, 5, 0, 0] },
       },
     ],

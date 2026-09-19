@@ -142,7 +142,7 @@ export default function DashboardPage() {
           : "Trips this year";
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 min-w-0 max-w-full">
       {/* Overview Header with Top Cards Period Filter */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
@@ -211,11 +211,11 @@ export default function DashboardPage() {
       </section>
 
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,2.65fr)_minmax(270px,1fr)]">
-        <article className={`${card} min-w-0 p-6`}>
-          <div className="flex items-start justify-between gap-4">
+      <section className="grid gap-5 xl:grid-cols-[minmax(0,2.65fr)_minmax(270px,1fr)] min-w-0">
+        <article className={`${card} min-w-0 p-4 sm:p-6`}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h2 className="text-lg font-bold text-[#172033]">
+              <h2 className="text-base sm:text-lg font-bold text-[#172033]">
                 {tripFilter === "week"
                   ? "Weekly"
                   : tripFilter === "month"
@@ -227,25 +227,25 @@ export default function DashboardPage() {
                 Jul 9 — Jul 15, 2026
               </p>
             </div>
-            <div className="flex gap-1.5 text-xs">
+            <div className="flex flex-wrap gap-1 sm:gap-1.5 text-xs">
               <button
                 type="button"
                 onClick={() => setTripFilter("week")}
-                className={`rounded-lg px-3 py-2 ${tripFilter === "week" ? "bg-[#0b2b58] text-white" : "border text-[#69758a]"}`}
+                className={`rounded-lg px-2.5 py-1 text-[11px] sm:text-xs sm:px-3 sm:py-1.5 font-medium transition-colors cursor-pointer ${tripFilter === "week" ? "bg-[#0b2b58] text-white shadow-xs" : "border border-border text-[#69758a] hover:bg-slate-50"}`}
               >
                 Week
               </button>
               <button
                 type="button"
                 onClick={() => setTripFilter("month")}
-                className={`rounded-lg px-3 py-2 ${tripFilter === "month" ? "bg-[#0b2b58] text-white" : "border text-[#69758a]"}`}
+                className={`rounded-lg px-2.5 py-1 text-[11px] sm:text-xs sm:px-3 sm:py-1.5 font-medium transition-colors cursor-pointer ${tripFilter === "month" ? "bg-[#0b2b58] text-white shadow-xs" : "border border-border text-[#69758a] hover:bg-slate-50"}`}
               >
                 Month
               </button>
               <button
                 type="button"
                 onClick={() => setTripFilter("year")}
-                className={`rounded-lg px-3 py-2 ${tripFilter === "year" ? "bg-[#0b2b58] text-white" : "border text-[#69758a]"}`}
+                className={`rounded-lg px-2.5 py-1 text-[11px] sm:text-xs sm:px-3 sm:py-1.5 font-medium transition-colors cursor-pointer ${tripFilter === "year" ? "bg-[#0b2b58] text-white shadow-xs" : "border border-border text-[#69758a] hover:bg-slate-50"}`}
               >
                 Year
               </button>
@@ -254,10 +254,12 @@ export default function DashboardPage() {
           {stats === null ? (
             <div className="mt-4 h-48 w-full animate-pulse rounded-lg bg-slate-100" />
           ) : (
-            <WeeklyTripChart
-              className="mt-4 h-48 w-full"
-              data={tripVolumeData}
-            />
+            <div className="mt-4 h-48 w-full min-w-0 overflow-hidden">
+              <WeeklyTripChart
+                className="h-full w-full"
+                data={tripVolumeData}
+              />
+            </div>
           )}
           <div className="mt-2 flex gap-6 text-xs text-[#7c8799]">
             <span className="flex items-center gap-2">
@@ -270,8 +272,8 @@ export default function DashboardPage() {
             </span>
           </div>
         </article>
-        <article className={`${card} p-5`}>
-          <h2 className="text-lg font-bold text-[#172033]">Driver Status</h2>
+        <article className={`${card} min-w-0 p-4 sm:p-5`}>
+          <h2 className="text-base sm:text-lg font-bold text-[#172033]">Driver Status</h2>
           <div className="mt-5 space-y-4">
             {stats === null ? (
               [...Array(5)].map((_, i) => (
@@ -317,136 +319,159 @@ export default function DashboardPage() {
         />
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-2">
-        <article className={`${card} p-6`}>
-          <div className="flex justify-between">
-            <h2 className="text-lg font-bold text-[#172033]">
-              Recent Ride Requests
-            </h2>
-            <Link
-              href="/ride-requests"
-              className="flex items-center gap-1 text-xs font-bold"
-            >
-              View all <ArrowRight className="size-3.5" />
-            </Link>
-          </div>
-          <div className="mt-5 space-y-2.5">
-            {stats === null ? (
-              [...Array(4)].map((_, i) => (
-                <div
-                  className="flex items-center gap-3 rounded-xl border p-3 animate-pulse"
-                  key={i}
-                >
-                  <div className="size-8 rounded-full bg-slate-200 shrink-0" />
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <div className="h-4 w-32 rounded bg-slate-200" />
-                    <div className="h-3 w-48 rounded bg-slate-200" />
-                  </div>
-                  <div className="text-right space-y-2">
-                    <div className="h-5 w-16 rounded-full bg-slate-200 ml-auto" />
-                    <div className="h-3 w-12 rounded bg-slate-200 ml-auto" />
-                  </div>
-                </div>
-              ))
-            ) : recentRideRequests.length === 0 ? (
-              <p className="text-xs text-[#8b95a7] py-4 text-center border rounded-xl">
-                No recent ride requests.
-              </p>
-            ) : (
-              recentRideRequests.slice(0, 4).map((item: any, idx: number) => {
-                const isArr = Array.isArray(item);
-                const ini = isArr
-                  ? item[0]
-                  : item.initials ||
-                    item.passenger?.substring(0, 2)?.toUpperCase() ||
-                    "PA";
-                const name = isArr ? item[1] : item.passenger || "Passenger";
-                const route = isArr
-                  ? item[2]
-                  : item.destination || "Destination";
-                const status = isArr ? item[3] : item.status || "Pending";
-                const date = isArr
-                  ? item[4]
-                  : item.date || item.price || "Recently";
-                const color = isArr ? item[5] : item.color || "#2563eb";
-                const tripId = isArr
-                  ? item[6]
-                  : item.id || item.rawId || `TRP-${idx}`;
-                
-                const avatarUrl = isArr 
-                  ? item[7] 
-                  : item.passengerAvatarUrl || item.passengerId?.avatarUrl || "";
-
-                return (
+      <section className="grid gap-5 xl:grid-cols-2 min-w-0">
+        <article className={`${card} min-w-0 p-4 sm:p-6 flex flex-col justify-between`}>
+          <div>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-base sm:text-lg font-bold text-[#172033]">
+                Recent Ride Requests
+              </h2>
+              <Link
+                href="/ride-requests"
+                className="flex items-center gap-1 text-xs font-bold text-[#173d76] hover:underline shrink-0"
+              >
+                View all <ArrowRight className="size-3.5" />
+              </Link>
+            </div>
+            <div className="mt-4 sm:mt-5 space-y-2.5">
+              {stats === null ? (
+                [...Array(4)].map((_, i) => (
                   <div
-                    className="flex items-center gap-3 rounded-xl border p-3"
-                    key={tripId || name || idx}
+                    className="flex items-center gap-2.5 sm:gap-3 rounded-xl border border-border/80 p-2.5 sm:p-3 animate-pulse"
+                    key={i}
                   >
-                    {avatarUrl ? (
-                      <img src={avatarUrl} alt="Avatar" className="size-9 rounded-full object-cover shrink-0 border border-border" />
-                    ) : (
-                      <Avatar initials={ini} color={color} />
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-bold text-[#293246]">{name}</p>
-                      <p className="truncate text-xs text-[#8993a5]">{route}</p>
+                    <div className="size-8 sm:size-9 rounded-full bg-slate-200 shrink-0" />
+                    <div className="min-w-0 flex-1 space-y-2">
+                      <div className="h-3.5 sm:h-4 w-28 sm:w-32 rounded bg-slate-200" />
+                      <div className="h-3 w-36 sm:w-48 rounded bg-slate-200" />
                     </div>
-                    <div className="text-right">
-                      <Badge status={status} />
-                      <p className="mt-1 text-[11px] text-[#9aa3b2]">{date}</p>
+                    <div className="text-right space-y-1.5 shrink-0">
+                      <div className="h-5 w-16 rounded-full bg-slate-200 ml-auto" />
+                      <div className="h-3 w-10 sm:w-12 rounded bg-slate-200 ml-auto" />
                     </div>
                   </div>
-                );
-              })
-            )}
+                ))
+              ) : recentRideRequests.length === 0 ? (
+                <p className="text-xs text-[#8b95a7] py-4 text-center border rounded-xl">
+                  No recent ride requests.
+                </p>
+              ) : (
+                recentRideRequests.slice(0, 4).map((item: any, idx: number) => {
+                  const isArr = Array.isArray(item);
+                  const ini = isArr
+                    ? item[0]
+                    : item.initials ||
+                      item.passenger?.substring(0, 2)?.toUpperCase() ||
+                      "PA";
+                  const name = isArr ? item[1] : item.passenger || "Passenger";
+                  const route = isArr
+                    ? item[2]
+                    : item.destination || "Destination";
+                  const status = isArr ? item[3] : item.status || "Pending";
+                  const date = isArr
+                    ? item[4]
+                    : item.date || item.price || "Recently";
+                  const color = isArr ? item[5] : item.color || "#2563eb";
+                  const tripId = isArr
+                    ? item[6]
+                    : item.id || item.rawId || `TRP-${idx}`;
+                  
+                  const avatarUrl = isArr 
+                    ? item[7] 
+                    : item.passengerAvatarUrl || item.passengerId?.avatarUrl || "";
+
+                  return (
+                    <div
+                      className="flex items-center gap-2.5 sm:gap-3 rounded-xl border border-border/80 p-2.5 sm:p-3 min-w-0 transition-colors hover:bg-slate-50/50"
+                      key={tripId || name || idx}
+                    >
+                      {avatarUrl ? (
+                        <img src={avatarUrl} alt="Avatar" className="size-8 sm:size-9 rounded-full object-cover shrink-0 border border-border" />
+                      ) : (
+                        <Avatar initials={ini} color={color} />
+                      )}
+                      <div className="min-w-0 flex-1 overflow-hidden">
+                        <p className="truncate text-xs sm:text-sm font-bold text-[#293246]">{name}</p>
+                        <p className="truncate text-[11px] sm:text-xs text-[#8993a5]">{route}</p>
+                      </div>
+                      <div className="text-right shrink-0 flex flex-col items-end justify-center">
+                        <Badge status={status} />
+                        <p className="mt-1 text-[10px] sm:text-[11px] text-[#9aa3b2] font-medium whitespace-nowrap">{date}</p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
           </div>
         </article>
-        <article className={`${card} p-6`}>
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-bold text-[#172033]">
-                Driver Performance
-              </h2>
-              <p className="mt-0.5 text-xs text-[#8b95a7]">{driverPerfText}</p>
-            </div>
-            <div className="flex flex-wrap gap-1.5 text-xs">
-              <button
-                type="button"
-                onClick={() => setDriverPerfFilter("week")}
-                className={`rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 ${driverPerfFilter === "week" ? "bg-[#0b2b58] text-white" : "border text-[#69758a]"}`}
-              >
-                Weekly
-              </button>
-              <button
-                type="button"
-                onClick={() => setDriverPerfFilter("fortnight")}
-                className={`rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 ${driverPerfFilter === "fortnight" ? "bg-[#0b2b58] text-white" : "border text-[#69758a]"}`}
-              >
-                Fortnightly
-              </button>
-              <button
-                type="button"
-                onClick={() => setDriverPerfFilter("month")}
-                className={`rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 ${driverPerfFilter === "month" ? "bg-[#0b2b58] text-white" : "border text-[#69758a]"}`}
-              >
-                Monthly
-              </button>
-              <button
-                type="button"
-                onClick={() => setDriverPerfFilter("year")}
-                className={`rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 ${driverPerfFilter === "year" ? "bg-[#0b2b58] text-white" : "border text-[#69758a]"}`}
-              >
-                Yearly
-              </button>
+
+        <article className={`${card} min-w-0 p-4 sm:p-6 flex flex-col justify-between`}>
+          <div>
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="text-base sm:text-lg font-bold text-[#172033]">
+                  Driver Performance
+                </h2>
+                <p className="mt-0.5 text-xs text-[#8b95a7]">{driverPerfText}</p>
+              </div>
+              <div className="flex flex-wrap items-center gap-1 sm:gap-1.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setDriverPerfFilter("week")}
+                  className={`rounded-lg px-2.5 py-1 text-[11px] sm:text-xs sm:px-3 sm:py-1.5 font-medium transition-colors cursor-pointer ${
+                    driverPerfFilter === "week"
+                      ? "bg-[#0b2b58] text-white shadow-xs"
+                      : "border border-border text-[#69758a] hover:bg-slate-50"
+                  }`}
+                >
+                  Weekly
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDriverPerfFilter("fortnight")}
+                  className={`rounded-lg px-2.5 py-1 text-[11px] sm:text-xs sm:px-3 sm:py-1.5 font-medium transition-colors cursor-pointer ${
+                    driverPerfFilter === "fortnight"
+                      ? "bg-[#0b2b58] text-white shadow-xs"
+                      : "border border-border text-[#69758a] hover:bg-slate-50"
+                  }`}
+                >
+                  Fortnightly
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDriverPerfFilter("month")}
+                  className={`rounded-lg px-2.5 py-1 text-[11px] sm:text-xs sm:px-3 sm:py-1.5 font-medium transition-colors cursor-pointer ${
+                    driverPerfFilter === "month"
+                      ? "bg-[#0b2b58] text-white shadow-xs"
+                      : "border border-border text-[#69758a] hover:bg-slate-50"
+                  }`}
+                >
+                  Monthly
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDriverPerfFilter("year")}
+                  className={`rounded-lg px-2.5 py-1 text-[11px] sm:text-xs sm:px-3 sm:py-1.5 font-medium transition-colors cursor-pointer ${
+                    driverPerfFilter === "year"
+                      ? "bg-[#0b2b58] text-white shadow-xs"
+                      : "border border-border text-[#69758a] hover:bg-slate-50"
+                  }`}
+                >
+                  Yearly
+                </button>
+              </div>
             </div>
           </div>
           {stats === null ? (
-            <div className="mt-5 h-52 w-full animate-pulse rounded-lg bg-slate-100" />
+            <div className="mt-4 sm:mt-5 h-52 w-full animate-pulse rounded-lg bg-slate-100" />
           ) : (
-            <DriverPerformanceChart
-              className="mt-5 h-52 w-full"
-              data={driverPerfData}
-            />
+            <div className="mt-4 sm:mt-5 h-52 w-full min-w-0 overflow-hidden">
+              <DriverPerformanceChart
+                className="h-full w-full"
+                data={driverPerfData}
+              />
+            </div>
           )}
         </article>
       </section>
@@ -545,7 +570,7 @@ function Badge({ status }: { status: string }) {
             : "bg-slate-50 text-slate-400";
   return (
     <span
-      className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold ${tone}`}
+      className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] sm:px-2.5 sm:py-1 sm:text-[11px] font-semibold ${tone}`}
     >
       {status}
     </span>

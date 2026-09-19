@@ -102,7 +102,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
         </div>
       ) : null}
 
-      <div className="lg:pl-58.75">
+      <div className="lg:pl-58.75 min-w-0 max-w-full">
         <header className="sticky top-0 z-30 flex h-15.5 items-center border-b border-[#e7ebf1] bg-white/95 px-4 backdrop-blur-md sm:px-6 lg:px-6">
           <button
             aria-label="Open navigation"
@@ -297,7 +297,7 @@ export function DashboardShell({ children }: { children: ReactNode }) {
             </div>
           </div>
         </header>
-        <main className=" w-full p-4 sm:p-6 lg:p-6">{children}</main>
+        <main className="w-full min-w-0 max-w-full p-3.5 sm:p-6 lg:p-6 overflow-x-hidden">{children}</main>
       </div>
     </div>
   );
