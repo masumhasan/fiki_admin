@@ -347,6 +347,33 @@ function ProfileTab({
   );
 }
 
+function formatCentralTripDate(trip: any): string {
+  const rawDateStr = trip.pickupDate || trip.startDate;
+  if (rawDateStr && typeof rawDateStr === "string" && /^\d{4}-\d{2}-\d{2}$/.test(rawDateStr.trim())) {
+    const [y, m, d] = rawDateStr.trim().split("-").map(Number);
+    const noonUtc = new Date(Date.UTC(y, m - 1, d, 18, 0, 0));
+    return noonUtc.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "America/Chicago",
+    });
+  }
+  const dateVal = trip.completedAt || trip.scheduledTime || trip.createdAt;
+  if (dateVal) {
+    const d = new Date(dateVal);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        timeZone: "America/Chicago",
+      });
+    }
+  }
+  return "—";
+}
+
 function EarningsTab({
   driverId,
   completedTrips,
@@ -642,14 +669,7 @@ function EarningsTab({
                 {completedTrips.map((trip) => (
                   <tr className="border-t border-border" key={trip._id}>
                     <td className="px-5 py-3.5 text-muted-foreground">
-                      {trip.createdAt
-                        ? new Date(trip.createdAt).toLocaleDateString("en-US", {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                            timeZone: "America/Chicago",
-                          })
-                        : "—"}
+                      {formatCentralTripDate(trip)}
                     </td>
                     <td className="py-3.5 font-medium text-foreground">
                       {trip.passengerName || "—"}

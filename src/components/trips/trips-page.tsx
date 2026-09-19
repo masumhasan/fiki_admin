@@ -312,27 +312,45 @@ export function TripsPage({
               : passName.substring(0, 2).toUpperCase();
 
           const rawDateStr = t.pickupDate || t.startDate;
-          const dateStr = rawDateStr
-            ? new Date(rawDateStr + (rawDateStr.includes("T") ? "" : "T00:00:00")).toLocaleDateString("en-US", {
+          let dateStr = "—";
+          if (rawDateStr && typeof rawDateStr === "string" && /^\d{4}-\d{2}-\d{2}$/.test(rawDateStr.trim())) {
+            const [y, m, d] = rawDateStr.trim().split("-").map(Number);
+            const noonUtc = new Date(Date.UTC(y, m - 1, d, 18, 0, 0));
+            dateStr = noonUtc.toLocaleDateString("en-US", {
+              weekday: "short",
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+              timeZone: "America/Chicago",
+            });
+          } else if (rawDateStr) {
+            const d = new Date(rawDateStr);
+            if (!isNaN(d.getTime())) {
+              dateStr = d.toLocaleDateString("en-US", {
                 weekday: "short",
                 month: "short",
                 day: "numeric",
                 year: "numeric",
                 timeZone: "America/Chicago",
-              })
-            : (t.createdAt
-                ? new Date(t.createdAt).toLocaleDateString("en-US", {
-                    weekday: "short",
-                    month: "short",
-                    day: "numeric",
-                    year: "numeric",
-                    timeZone: "America/Chicago",
-                  })
-                : "—");
+              });
+            }
+          } else if (t.scheduledTime || t.completedAt || t.createdAt) {
+            const d = new Date(t.scheduledTime || t.completedAt || t.createdAt);
+            if (!isNaN(d.getTime())) {
+              dateStr = d.toLocaleDateString("en-US", {
+                weekday: "short",
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+                timeZone: "America/Chicago",
+              });
+            }
+          }
+
           const timeStr = t.pickupTime
             ? formatTimeTo12Hour(t.pickupTime)
-            : (t.createdAt
-                ? new Date(t.createdAt).toLocaleTimeString("en-US", {
+            : (t.scheduledTime || t.completedAt || t.createdAt
+                ? new Date(t.scheduledTime || t.completedAt || t.createdAt).toLocaleTimeString("en-US", {
                     hour: "numeric",
                     minute: "2-digit",
                     hour12: true,
@@ -347,11 +365,19 @@ export function TripsPage({
               timestamp = parsed;
             }
           }
+          if (!timestamp && t.completedAt) {
+            const parsed = new Date(t.completedAt).getTime();
+            if (!isNaN(parsed)) {
+              timestamp = parsed;
+            }
+          }
           if (!timestamp) {
-            const rawDateStr = t.pickupDate || t.startDate;
             const minutes = parseTimeToMinutes(t.pickupTime);
-            if (rawDateStr) {
-              const baseDate = new Date(rawDateStr.includes("T") ? rawDateStr : `${rawDateStr}T00:00:00`).getTime();
+            if (rawDateStr && typeof rawDateStr === "string" && /^\d{4}-\d{2}-\d{2}$/.test(rawDateStr.trim())) {
+              const [y, m, d] = rawDateStr.trim().split("-").map(Number);
+              timestamp = Date.UTC(y, m - 1, d, 17, 0, 0) + minutes * 60 * 1000;
+            } else if (rawDateStr) {
+              const baseDate = new Date(rawDateStr).getTime();
               if (!isNaN(baseDate)) {
                 timestamp = baseDate + minutes * 60 * 1000;
               }

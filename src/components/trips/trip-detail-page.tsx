@@ -37,6 +37,16 @@ function getInitials(name: string): string {
 
 function formatDate(dateVal?: string | Date): string {
   if (!dateVal) return "—";
+  if (typeof dateVal === "string" && /^\d{4}-\d{2}-\d{2}$/.test(dateVal.trim())) {
+    const [year, month, day] = dateVal.trim().split("-").map(Number);
+    const noonUtc = new Date(Date.UTC(year, month - 1, day, 18, 0, 0));
+    return noonUtc.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      timeZone: "America/Chicago",
+    });
+  }
   const d = new Date(dateVal);
   if (isNaN(d.getTime())) return String(dateVal);
   return d.toLocaleDateString("en-US", {
