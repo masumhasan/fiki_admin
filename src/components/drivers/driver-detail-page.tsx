@@ -374,6 +374,40 @@ function formatCentralTripDate(trip: any): string {
   return "—";
 }
 
+function formatTimeTo12Hour(timeStr?: string): string {
+  if (!timeStr) return "—";
+  const trimmed = timeStr.trim();
+  const match = /^(\d{1,2}):(\d{2})\s*(AM|PM)?$/i.exec(trimmed);
+  if (!match) return timeStr;
+  let hours = parseInt(match[1], 10);
+  const minutes = match[2];
+  const ampmParam = match[3] ? match[3].toUpperCase() : null;
+  if (ampmParam) return `${hours}:${minutes} ${ampmParam}`;
+  const ampm = hours >= 12 ? "PM" : "AM";
+  hours = hours % 12;
+  hours = hours ? hours : 12;
+  return `${hours}:${minutes} ${ampm}`;
+}
+
+function formatCentralTripTime(trip: any): string {
+  if (trip.pickupTime) {
+    return formatTimeTo12Hour(trip.pickupTime);
+  }
+  const dateVal = trip.scheduledTime || trip.completedAt || trip.createdAt;
+  if (dateVal) {
+    const d = new Date(dateVal);
+    if (!isNaN(d.getTime())) {
+      return d.toLocaleTimeString("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+        timeZone: "America/Chicago",
+      });
+    }
+  }
+  return "—";
+}
+
 function EarningsTab({
   driverId,
   completedTrips,
@@ -654,10 +688,11 @@ function EarningsTab({
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-210 text-left text-xs">
+            <table className="w-full min-w-230 text-left text-xs">
               <thead>
                 <tr className="bg-muted/55 text-[10px] uppercase tracking-[0.06em] text-muted-foreground">
                   <th className="px-5 py-3">Date</th>
+                  <th>Time</th>
                   <th>Passenger</th>
                   <th>Pickup</th>
                   <th>Destination</th>
@@ -668,8 +703,11 @@ function EarningsTab({
               <tbody>
                 {completedTrips.map((trip) => (
                   <tr className="border-t border-border" key={trip._id}>
-                    <td className="px-5 py-3.5 text-muted-foreground">
+                    <td className="px-5 py-3.5 text-muted-foreground whitespace-nowrap">
                       {formatCentralTripDate(trip)}
+                    </td>
+                    <td className="py-3.5 text-muted-foreground whitespace-nowrap font-medium">
+                      {formatCentralTripTime(trip)}
                     </td>
                     <td className="py-3.5 font-medium text-foreground">
                       {trip.passengerName || "—"}
