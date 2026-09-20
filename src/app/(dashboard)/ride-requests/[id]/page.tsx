@@ -177,6 +177,10 @@ export default function RideRequestDetails({
     setSavingTripInfo(true);
     const payload = {
       ...tripInfoForm,
+      pickupDate: tripInfoForm.startDate,
+      returnDate: tripInfoForm.endDate || tripInfoForm.startDate,
+      recurringStartDate: tripInfoForm.startDate,
+      recurringEndDate: tripInfoForm.endDate || tripInfoForm.startDate,
       pickupLocation: { address: tripInfoForm.pickupAddress },
       dropoffLocation: { address: tripInfoForm.destinationAddress },
       returnPickupAddress: tripInfoForm.tripType === "round-trip"
@@ -221,15 +225,55 @@ export default function RideRequestDetails({
     if (!token) return;
     setRegenerating(true);
     setRegenerateFeedback(null);
-    const res = await regenerateTripsApi(token, id);
-    if (res.success) {
-      setRegenerateFeedback({ ok: true, text: res.message || "Future trips regenerated successfully!" });
-      const refreshed = await getAdminTripDetailApi(token, id);
-      if (refreshed.success && refreshed.data) setTrip(refreshed.data);
-    } else {
-      setRegenerateFeedback({ ok: false, text: res.error?.message || "Failed to regenerate trips" });
+
+    try {
+      // Auto-save any currently open edit forms before regenerating so latest edits are applied
+      if (isEditingTripInfo) {
+        const payload = {
+          ...tripInfoForm,
+          pickupDate: tripInfoForm.startDate,
+          returnDate: tripInfoForm.endDate || tripInfoForm.startDate,
+          recurringStartDate: tripInfoForm.startDate,
+          recurringEndDate: tripInfoForm.endDate || tripInfoForm.startDate,
+          pickupLocation: { address: tripInfoForm.pickupAddress },
+          dropoffLocation: { address: tripInfoForm.destinationAddress },
+          returnPickupAddress: tripInfoForm.tripType === "round-trip"
+            ? (tripInfoForm.returnPickupAddress.trim() || tripInfoForm.destinationAddress.trim())
+            : tripInfoForm.returnPickupAddress,
+          returnDestinationAddress: tripInfoForm.tripType === "round-trip"
+            ? (tripInfoForm.returnDestinationAddress.trim() || tripInfoForm.pickupAddress.trim())
+            : tripInfoForm.returnDestinationAddress,
+          returnPickupTime: tripInfoForm.tripType === "round-trip"
+            ? (tripInfoForm.returnPickupTime.trim() || "05:00 PM")
+            : tripInfoForm.returnPickupTime,
+        };
+        await updateTripApi(token, id, payload);
+        setIsEditingTripInfo(false);
+      }
+
+      if (isEditingMobility) {
+        await updateTripApi(token, id, mobilityForm);
+        setIsEditingMobility(false);
+      }
+
+      if (isEditingPassengerInfo) {
+        await updateTripApi(token, id, passengerInfoForm);
+        setIsEditingPassengerInfo(false);
+      }
+
+      const res = await regenerateTripsApi(token, id);
+      if (res.success) {
+        setRegenerateFeedback({ ok: true, text: res.message || "Future trips regenerated successfully!" });
+        const refreshed = await getAdminTripDetailApi(token, id);
+        if (refreshed.success && refreshed.data) setTrip(refreshed.data);
+      } else {
+        setRegenerateFeedback({ ok: false, text: res.error?.message || "Failed to regenerate trips" });
+      }
+    } catch (err: any) {
+      setRegenerateFeedback({ ok: false, text: err?.message || "An unexpected error occurred during regeneration." });
+    } finally {
+      setRegenerating(false);
     }
-    setRegenerating(false);
   };
 
   useEffect(() => {

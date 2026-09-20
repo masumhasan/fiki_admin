@@ -296,8 +296,8 @@ export default function DashboardPage() {
                     <p className="truncate text-xs font-bold text-[#273044]">
                       {driver.name}
                     </p>
-                    <p className="text-[11px] text-[#8a94a6]">
-                      {driver.vehicle}
+                    <p className="truncate text-[11px] text-[#8a94a6]">
+                      {driver.vehicle || "No vehicle assigned"}
                     </p>
                   </div>
                   <Badge status={driver.status} />

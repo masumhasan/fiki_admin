@@ -7,6 +7,7 @@ import {
   CarFront,
   CheckCircle2,
   CreditCard,
+  Gauge,
   Hash,
   Info,
   Pencil,
@@ -33,6 +34,7 @@ interface VehicleItem {
   plateExpirationDate?: string;
   imageUrl?: string;
   createdAt: string;
+  currentOdometer?: number | null;
 }
 
 export default function VehiclesPage() {
@@ -462,6 +464,16 @@ export default function VehiclesPage() {
                         timeZone: "America/Chicago",
                       })
                     : "—"}
+                </dd>
+              </div>
+
+              <div>
+                <dt className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                  <Gauge className="size-3.5" />
+                  CURRENT ODOMETER
+                </dt>
+                <dd className="mt-1 font-bold text-foreground">
+                  {v.currentOdometer != null ? `${Number(v.currentOdometer).toLocaleString()} mi` : "—"}
                 </dd>
               </div>
             </dl>
