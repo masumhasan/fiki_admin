@@ -289,20 +289,30 @@ export default function DashboardPage() {
             ) : driverStatusList.length === 0 ? (
               <p className="text-xs text-[#8a94a6]">No active drivers.</p>
             ) : (
-              driverStatusList.map((driver: any) => (
-                <div className="flex items-center gap-3" key={driver.id}>
-                  <Avatar initials={driver.initials} color={driver.color} url={driver.avatarUrl} />
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-xs font-bold text-[#273044]">
-                      {driver.name}
-                    </p>
-                    <p className="truncate text-[11px] text-[#8a94a6]">
-                      {driver.vehicle || "No vehicle assigned"}
-                    </p>
+              driverStatusList.map((driver: any) => {
+                const isOnline = driver.status === "Online" || driver.isOnTheClock;
+                return (
+                  <div className="flex items-center gap-3" key={driver.id}>
+                    <div className="relative shrink-0">
+                      <Avatar initials={driver.initials} color={driver.color} url={driver.avatarUrl} />
+                      <span
+                        className={`absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-white ${
+                          isOnline ? "bg-emerald-500" : "bg-slate-300"
+                        }`}
+                      />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-xs font-bold text-[#273044]">
+                        {driver.name}
+                      </p>
+                      <p className="truncate text-[11px] text-[#8a94a6]">
+                        {driver.vehicle || "No vehicle assigned"}
+                      </p>
+                    </div>
+                    <Badge status={driver.status} />
                   </div>
-                  <Badge status={driver.status} />
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </article>
@@ -555,23 +565,33 @@ function Avatar({
   );
 }
 function Badge({ status }: { status: string }) {
+  const isOnline = status === "Online" || status === "Active";
+  const isOffline = status === "Offline" || status === "Off Duty";
+
   const tone =
-    status === "Active" ||
+    isOnline ||
     status === "Completed" ||
     status === "Approved" ||
     status === "Onboard"
-      ? "bg-emerald-50 text-emerald-600"
+      ? "bg-emerald-50 text-emerald-700 border border-emerald-200/80"
       : status === "On Trip" || status === "Scheduled"
-        ? "bg-blue-50 text-blue-500"
+        ? "bg-blue-50 text-blue-500 border border-blue-200/80"
         : status === "Pending"
-          ? "bg-amber-50 text-amber-500"
+          ? "bg-amber-50 text-amber-500 border border-amber-200/80"
           : status === "Need Driver"
-            ? "bg-red-50 text-red-400"
-            : "bg-slate-50 text-slate-400";
+            ? "bg-red-50 text-red-400 border border-red-200/80"
+            : "bg-slate-100/90 text-slate-500 border border-slate-200/80";
+
   return (
     <span
-      className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[10px] sm:px-2.5 sm:py-1 sm:text-[11px] font-semibold ${tone}`}
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[10px] sm:text-[11px] font-semibold ${tone}`}
     >
+      {isOnline && (
+        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shrink-0 animate-pulse" />
+      )}
+      {isOffline && (
+        <span className="h-1.5 w-1.5 rounded-full bg-slate-400 shrink-0" />
+      )}
       {status}
     </span>
   );
