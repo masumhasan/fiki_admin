@@ -69,6 +69,20 @@ export default function TripLegsPage({
           )
       : totalCompletedTrips * effectiveFare;
 
+  const fortnightlyBillable =
+    typeof trip?.fortnightlyBillable === "number"
+      ? trip.fortnightlyBillable
+      : typeof trip?.fortnightlyBillableFare === "number"
+      ? trip.fortnightlyBillableFare
+      : 0;
+
+  const fortnightCompletedTrips =
+    typeof trip?.fortnightCompletedTripsCount === "number"
+      ? trip.fortnightCompletedTripsCount
+      : 0;
+
+  const currentFortnightLabel = trip?.currentFortnight?.label || "Current Fortnight";
+
   return (
     <div className="pb-20">
       <header className="mb-4 flex flex-wrap items-start justify-between gap-3">
@@ -107,6 +121,13 @@ export default function TripLegsPage({
                <span className="text-xl font-bold text-emerald-600">${billableFare.toFixed(2)}</span>
                <span className="text-[10px] font-medium text-slate-500">
                  {totalCompletedTrips} completed trip{totalCompletedTrips !== 1 ? "s" : ""} × ${effectiveFare.toFixed(2)}
+               </span>
+             </div>
+             <div className="flex flex-col gap-1 p-3 rounded-xl bg-[#f8fafc] border border-slate-100">
+               <span className="text-xs font-semibold uppercase tracking-wider text-[#8190a5]">Fortnightly Billable</span>
+               <span className="text-xl font-bold text-emerald-600">${fortnightlyBillable.toFixed(2)}</span>
+               <span className="text-[10px] font-medium text-slate-500">
+                 {fortnightCompletedTrips} completed trip{fortnightCompletedTrips !== 1 ? "s" : ""} in current fortnight ({currentFortnightLabel})
                </span>
              </div>
           </section>

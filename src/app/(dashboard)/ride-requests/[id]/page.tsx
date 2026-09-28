@@ -457,6 +457,20 @@ export default function RideRequestDetails({
           )
       : totalCompletedTrips * effectiveFare;
 
+  const fortnightlyBillable =
+    typeof trip?.fortnightlyBillable === "number"
+      ? trip.fortnightlyBillable
+      : typeof trip?.fortnightlyBillableFare === "number"
+      ? trip.fortnightlyBillableFare
+      : 0;
+
+  const fortnightCompletedTrips =
+    typeof trip?.fortnightCompletedTripsCount === "number"
+      ? trip.fortnightCompletedTripsCount
+      : 0;
+
+  const currentFortnightLabel = trip?.currentFortnight?.label || "Current Fortnight";
+
   const startDateRaw = trip?.startDate || trip?.pickupDate || trip?.recurringStartDate;
   const startDateStr = startDateRaw
     ? (/^\d{4}-\d{2}-\d{2}$/.test(String(startDateRaw).trim())
@@ -571,7 +585,7 @@ export default function RideRequestDetails({
         <>
           <section
             className={`${card} mb-4 grid gap-4 p-4 grid-cols-2 sm:grid-cols-3 md:grid-cols-4 ${
-              totalCompletedTrips >= 1 ? "xl:grid-cols-7" : "xl:grid-cols-6"
+              totalCompletedTrips >= 1 ? "xl:grid-cols-8" : "xl:grid-cols-6"
             }`}
           >
             <Status
@@ -586,12 +600,20 @@ export default function RideRequestDetails({
             <Status label="Fare" value={displayFare} tone={isFareDecided ? "green" : undefined} />
             <Status label="Quoted Fare" value={trip.quotedFare ? `$${trip.quotedFare.toFixed(2)}` : "—"} tone={trip.quotedFare ? "blue" : undefined} />
             {totalCompletedTrips >= 1 && (
-              <Status
-                label="Billable Fare"
-                value={`$${billableFare.toFixed(2)}`}
-                tone="green"
-                title={`${totalCompletedTrips} completed trip${totalCompletedTrips > 1 ? "s" : ""} × $${effectiveFare.toFixed(2)}`}
-              />
+              <>
+                <Status
+                  label="Billable Fare"
+                  value={`$${billableFare.toFixed(2)}`}
+                  tone="green"
+                  title={`${totalCompletedTrips} completed trip${totalCompletedTrips > 1 ? "s" : ""} × $${effectiveFare.toFixed(2)}`}
+                />
+                <Status
+                  label="Fortnightly Billable"
+                  value={`$${fortnightlyBillable.toFixed(2)}`}
+                  tone="green"
+                  title={`${fortnightCompletedTrips} completed trip${fortnightCompletedTrips !== 1 ? "s" : ""} in current fortnight (${currentFortnightLabel})`}
+                />
+              </>
             )}
           </section>
 
