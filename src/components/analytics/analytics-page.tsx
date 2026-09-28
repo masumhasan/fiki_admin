@@ -57,6 +57,7 @@ export function AnalyticsPage() {
   const [revenuePeriod, setRevenuePeriod] = useState<PeriodFilter>("year");
   const [statusPeriod, setStatusPeriod] = useState<PeriodFilter>("month");
   const [breakdownPeriod, setBreakdownPeriod] = useState<PeriodFilter>("month");
+  const [financialPeriod, setFinancialPeriod] = useState<PeriodFilter>("month");
 
   const [analyticsData, setAnalyticsData] = useState<{
     metrics?: {
@@ -84,6 +85,15 @@ export function AnalyticsPage() {
       yearlyRevenue: number;
       outstandingBalance?: number;
       avgRidePrice: number;
+      periods?: Record<PeriodFilter, { revenue: number; payroll: number; earnings: number }>;
+      weeklyPayroll?: number;
+      fortnightPayroll?: number;
+      monthlyPayroll?: number;
+      yearlyPayroll?: number;
+      weeklyEarnings?: number;
+      fortnightEarnings?: number;
+      monthlyEarnings?: number;
+      yearlyEarnings?: number;
     };
     ridePerformance?: {
       week: RidePerfItem[];
@@ -262,6 +272,38 @@ export function AnalyticsPage() {
   const bdInProgPct = ((breakdownStatusCounts.inProgress / totalBreakdown) * 100).toFixed(1);
   const bdPendPct = ((breakdownStatusCounts.pending / totalBreakdown) * 100).toFixed(1);
   const bdCancPct = ((breakdownStatusCounts.cancelled / totalBreakdown) * 100).toFixed(1);
+
+  // 5. Financial Summary (Revenue, Payroll, Earnings) Filtered Data
+  const financialPeriodRevenue =
+    analyticsData?.revenueSummary?.periods?.[financialPeriod]?.revenue ??
+    (financialPeriod === "week"
+      ? rev?.weeklyRevenue
+      : financialPeriod === "fortnight"
+      ? rev?.fortnightRevenue
+      : financialPeriod === "year"
+      ? rev?.yearlyRevenue
+      : rev?.monthlyRevenue) ?? 0;
+
+  const financialPeriodPayroll =
+    analyticsData?.revenueSummary?.periods?.[financialPeriod]?.payroll ??
+    (financialPeriod === "week"
+      ? rev?.weeklyPayroll
+      : financialPeriod === "fortnight"
+      ? rev?.fortnightPayroll
+      : financialPeriod === "year"
+      ? rev?.yearlyPayroll
+      : rev?.monthlyPayroll) ?? 0;
+
+  const financialPeriodEarnings =
+    analyticsData?.revenueSummary?.periods?.[financialPeriod]?.earnings ??
+    (financialPeriod === "week"
+      ? rev?.weeklyEarnings
+      : financialPeriod === "fortnight"
+      ? rev?.fortnightEarnings
+      : financialPeriod === "year"
+      ? rev?.yearlyEarnings
+      : rev?.monthlyEarnings) ??
+    (financialPeriodRevenue - financialPeriodPayroll);
 
   // Drivers Table Data
   const topDriversData = (analyticsData?.topDrivers || []).map(
@@ -561,37 +603,86 @@ export function AnalyticsPage() {
         </div>
       </section>
 
-      {/* Financial Summary: Multi-Period Revenue Grid */}
+      {/* Financial Summary: Revenue, Payroll & Earnings */}
       <section className={cardClass}>
-        <div className="flex flex-col justify-between gap-1 sm:flex-row sm:items-center">
+        <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <div>
-            <h2 className="text-base font-bold text-foreground">Revenue summary</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-base font-bold text-foreground">Revenue summary</h2>
+              <span className="rounded-full border border-border bg-muted/50 px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                USD ($)
+              </span>
+            </div>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
-              Audited completed trip billable fare aggregates
+              Audited completed trip billable revenue, driver payroll, and net earnings · {periodLabels[financialPeriod]}
             </p>
           </div>
-          <span className="text-[10px] font-semibold text-muted-foreground">
-            Currency: USD ($)
-          </span>
+          <PeriodSelector value={financialPeriod} onChange={setFinancialPeriod} />
         </div>
 
-        <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-          {[
-            ["Today's revenue", `$${Number(rev?.todayRevenue ?? 0).toFixed(2)}`, "text-emerald-600"],
-            ["Weekly revenue", `$${Number(rev?.weeklyRevenue ?? 0).toFixed(2)}`, "text-blue-600"],
-            ["Fortnightly revenue", `$${Number(rev?.fortnightRevenue ?? 0).toFixed(2)}`, "text-blue-600"],
-            ["Monthly revenue", `$${Number(rev?.monthlyRevenue ?? 0).toFixed(2)}`, "text-blue-600"],
-            ["Yearly revenue", `$${Number(rev?.yearlyRevenue ?? 0).toFixed(2)}`, "text-blue-600"],
-            ["Avg ride price", `$${Number(rev?.avgRidePrice ?? 0).toFixed(2)}`, "text-foreground"],
-          ].map(([label, value, color]) => (
-            <div
-              className="rounded-xl border border-border bg-muted/20 p-4 transition hover:bg-muted/35"
-              key={label}
-            >
-              <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
-              <p className={`mt-1.5 text-xl font-bold tracking-tight ${color}`}>{value}</p>
+        <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+          {/* Card 1: Revenue */}
+          <div className="group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-card via-card to-emerald-500/5 p-5 shadow-sm transition-all duration-200 hover:border-emerald-500/30 hover:shadow-md hover:-translate-y-0.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                Revenue
+              </span>
+              <div className="flex size-9 items-center justify-center rounded-xl bg-emerald-100/70 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400">
+                <TrendingUp className="size-4" />
+              </div>
             </div>
-          ))}
+            <p className="mt-3 text-2xl font-extrabold tracking-tight text-emerald-600 dark:text-emerald-400">
+              ${Number(financialPeriodRevenue).toFixed(2)}
+            </p>
+            <div className="mt-3 flex items-center justify-between border-t border-border/50 pt-2.5 text-[11px] text-muted-foreground">
+              <span>Gross billable fares</span>
+              <span className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+                Gross Income
+              </span>
+            </div>
+          </div>
+
+          {/* Card 2: Payroll */}
+          <div className="group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-card via-card to-amber-500/5 p-5 shadow-sm transition-all duration-200 hover:border-amber-500/30 hover:shadow-md hover:-translate-y-0.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                Payroll
+              </span>
+              <div className="flex size-9 items-center justify-center rounded-xl bg-amber-100/70 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400">
+                <UserRoundCheck className="size-4" />
+              </div>
+            </div>
+            <p className="mt-3 text-2xl font-extrabold tracking-tight text-amber-600 dark:text-amber-400">
+              ${Number(financialPeriodPayroll).toFixed(2)}
+            </p>
+            <div className="mt-3 flex items-center justify-between border-t border-border/50 pt-2.5 text-[11px] text-muted-foreground">
+              <span>Total payable of all drivers</span>
+              <span className="inline-flex items-center rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
+                Wages & Bonuses
+              </span>
+            </div>
+          </div>
+
+          {/* Card 3: Earnings */}
+          <div className="group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-card via-card to-blue-500/5 p-5 shadow-sm transition-all duration-200 hover:border-blue-500/30 hover:shadow-md hover:-translate-y-0.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                Earnings
+              </span>
+              <div className="flex size-9 items-center justify-center rounded-xl bg-blue-100/70 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400">
+                <CircleDollarSign className="size-4" />
+              </div>
+            </div>
+            <p className="mt-3 text-2xl font-extrabold tracking-tight text-blue-600 dark:text-blue-400">
+              ${Number(financialPeriodEarnings).toFixed(2)}
+            </p>
+            <div className="mt-3 flex items-center justify-between border-t border-border/50 pt-2.5 text-[11px] text-muted-foreground">
+              <span>Revenue left after payroll</span>
+              <span className="inline-flex items-center rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold text-blue-700 dark:bg-blue-950/50 dark:text-blue-300">
+                Net Profit
+              </span>
+            </div>
+          </div>
         </div>
       </section>
     </div>
