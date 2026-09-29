@@ -352,7 +352,7 @@ export async function approveDriverApplicationApi(token: string, id: string, veh
 export async function sendQuoteApi(
   token: string,
   tripId: string,
-  quotedFare: number,
+  fare: number,
   quoteNote?: string,
   quoteBreakdown?: {
     baseFare?: number;
@@ -370,11 +370,11 @@ export async function sendQuoteApi(
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ quotedFare, quoteNote, quoteBreakdown }),
+      body: JSON.stringify({ fare, quotedFare: fare, quoteNote, quoteBreakdown }),
     });
     return await res.json();
   } catch (error) {
-    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to send quote" } };
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to update fare" } };
   }
 }
 

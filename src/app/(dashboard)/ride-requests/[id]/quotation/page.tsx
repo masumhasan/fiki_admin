@@ -30,10 +30,17 @@ export default function QuotationPage({
     getAdminTripDetailApi(token, id).then((res) => {
       if (res.success && res.data) {
         setTripData(res.data);
+        const currentPrice =
+          typeof res.data.fare === "number" && res.data.fare > 0
+            ? res.data.fare
+            : typeof res.data.quotedFare === "number" && res.data.quotedFare > 0
+            ? res.data.quotedFare
+            : null;
+
         const hasExisting =
           res.data.status === "QUOTE_SENT" ||
           res.data.status === "QUOTE_ACCEPTED" ||
-          (typeof res.data.quotedFare === "number" && res.data.quotedFare > 0);
+          currentPrice !== null;
         if (hasExisting) {
           setSent(true);
         }
@@ -50,11 +57,11 @@ export default function QuotationPage({
           if (typeof qb.extraServices === "number") setAssist(qb.extraServices);
           if (typeof qb.discount === "number") setDiscount(qb.discount);
           if (typeof qb.taxPercent === "number") setTax(qb.taxPercent);
-        } else if (typeof res.data.quotedFare === "number" && res.data.quotedFare > 0) {
-          // If no breakdown was saved, check if default calculation matches quotedFare
+        } else if (currentPrice !== null) {
+          // If no breakdown was saved, check if default calculation matches currentPrice
           const defaultTotal = Math.max(0, 65 + 18.5 * 3.5 + 0 + ((65 + 18.5 * 3.5) * 8.5) / 100);
-          if (Math.abs(defaultTotal - res.data.quotedFare) > 0.05) {
-            setBase(res.data.quotedFare);
+          if (Math.abs(defaultTotal - currentPrice) > 0.05) {
+            setBase(currentPrice);
             setMiles(0);
             setRate(0);
             setAssist(0);
@@ -74,8 +81,9 @@ export default function QuotationPage({
   const childTrips: any[] = tripData?.childTrips || [];
   const completedTrips = childTrips.filter((c: any) => c.status === "COMPLETED");
   const futureTrips = childTrips.filter((c: any) => c.status !== "COMPLETED" && c.status !== "CANCELLED");
-  const hasExistingQuote =
+  const hasExistingFare =
     sent ||
+    (typeof tripData?.fare === "number" && tripData.fare > 0) ||
     (typeof tripData?.quotedFare === "number" && tripData.quotedFare > 0) ||
     tripData?.status === "QUOTE_SENT" ||
     tripData?.status === "QUOTE_ACCEPTED";
@@ -102,6 +110,7 @@ export default function QuotationPage({
       setSent(true);
       setTripData((prev: any) => (prev ? {
         ...prev,
+        fare: total,
         quotedFare: total,
         quoteNote: quoteNote || undefined,
         quoteBreakdown: breakdown,
@@ -109,9 +118,9 @@ export default function QuotationPage({
 
       const updatedCount = res.data?.updatedFutureTripsCount;
       const compCount = res.data?.completedTripsCount;
-      let msg = hasExistingQuote
-        ? `Quotation updated to ${money(total)} per single trip.`
-        : `Quotation of ${money(total)} per single trip sent to passenger for review.`;
+      let msg = hasExistingFare
+        ? `Fare updated to ${money(total)} per single trip.`
+        : `Fare set to ${money(total)} per single trip.`;
 
       if (typeof updatedCount === "number" && updatedCount > 0) {
         msg += ` ${updatedCount} future trip${updatedCount > 1 ? "s" : ""} updated.`;
@@ -122,7 +131,7 @@ export default function QuotationPage({
 
       setNotice({ text: msg, ok: true });
     } else {
-      setNotice({ text: res.error?.message || "Failed to update quotation.", ok: false });
+      setNotice({ text: res.error?.message || "Failed to update fare.", ok: false });
     }
   };
 
@@ -133,16 +142,16 @@ export default function QuotationPage({
           <div>
             <div className="flex items-center gap-3">
               <h1 className="text-2xl font-bold tracking-[-.03em] text-[#16345e]">
-                Create Quotation (Per Single Trip)
+                {hasExistingFare ? "Update Fare (Per Single Trip)" : "Set Fare (Per Single Trip)"}
               </h1>
               <span
                 className={`rounded-full border px-3 py-1.5 text-[11px] font-bold ${
-                  hasExistingQuote
+                  hasExistingFare
                     ? "border-emerald-300 bg-emerald-50 text-emerald-700"
                     : "border-amber-300 bg-amber-50 text-amber-600"
                 }`}
               >
-                {hasExistingQuote ? "Quotation Active" : "Pending Review"}
+                {hasExistingFare ? "Fare Active" : "Pending Review"}
               </span>
               {completedTrips.length > 0 && (
                 <span className="rounded-full border border-blue-200 bg-blue-50 px-2.5 py-1 text-[11px] font-semibold text-blue-700">
@@ -151,7 +160,7 @@ export default function QuotationPage({
               )}
             </div>
             <p className="mt-1 max-w-2xl text-[13px] text-[#72829a]">
-              Calculate transportation cost per single trip leg and send quotation to the passenger.
+              Calculate and update transportation fare per single trip leg for this ride request.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -178,7 +187,7 @@ export default function QuotationPage({
                   </p>
                   <p className="mt-1">
                     This ride request has <strong>{completedTrips.length} completed trip{completedTrips.length > 1 ? "s" : ""}</strong> and <strong>{futureTrips.length} future trip{futureTrips.length > 1 ? "s" : ""}</strong>.
-                    Updating the quotation will apply <strong>only to the {futureTrips.length} future trip{futureTrips.length > 1 ? "s" : ""}</strong>.
+                    Updating the fare will apply <strong>only to the {futureTrips.length} future trip{futureTrips.length > 1 ? "s" : ""}</strong>.
                     Completed trips will strictly retain their original historical fares and will not be altered.
                   </p>
                 </div>
@@ -236,7 +245,7 @@ export default function QuotationPage({
               <div className="p-5">
                 <textarea
                   className="h-24 w-full rounded-lg border border-[#dce5f0] bg-white px-3 py-2 text-[13px] font-medium text-[#27344a] outline-none focus:border-[#173d76] focus:ring-4 focus:ring-[#173d76]/10 resize-none"
-                  placeholder="Optional note to the passenger about this quotation…"
+                  placeholder="Optional note to the passenger about this fare…"
                   value={quoteNote}
                   onChange={(e) => setQuoteNote(e.target.value)}
                 />
@@ -294,7 +303,7 @@ export default function QuotationPage({
             </article>
 
             <article className="rounded-xl bg-[#173d76] p-5 text-white shadow-[0_4px_14px_rgba(15,37,74,.12)]">
-              <p className="text-sm font-semibold uppercase tracking-wider text-blue-100">Quote Total</p>
+              <p className="text-sm font-semibold uppercase tracking-wider text-blue-100">Fare Total</p>
               <strong className="mt-2 block text-4xl font-bold">{money(total)}</strong>
               <p className="mt-2 text-sm text-blue-100">Auto-calculated · updates in real-time</p>
               <div className="mt-6 space-y-3 border-t border-white/20 pt-5 text-sm">
@@ -315,7 +324,7 @@ export default function QuotationPage({
         <div className="flex gap-3">
           <button
             className="h-9 rounded-lg border px-4 text-xs font-bold text-[#58677d] transition hover:border-[#173d76]/30 hover:bg-[#173d76]/5 disabled:opacity-50 cursor-pointer"
-            onClick={() => setNotice({ text: "Quotation saved as a draft.", ok: true })}
+            onClick={() => setNotice({ text: "Fare saved as a draft.", ok: true })}
             disabled={sending}
             type="button"
           >
@@ -329,15 +338,15 @@ export default function QuotationPage({
           >
             {sending ? (
               <>
-                <Send className="size-4 animate-pulse" /> {hasExistingQuote ? "Updating Quote…" : "Sending…"}
+                <Send className="size-4 animate-pulse" /> {hasExistingFare ? "Updating Fare…" : "Setting Fare…"}
               </>
-            ) : hasExistingQuote ? (
+            ) : hasExistingFare ? (
               <>
-                <Check className="size-4" /> Update Quotation
+                <Check className="size-4" /> Update Fare
               </>
             ) : (
               <>
-                <Send className="size-4" /> Send Quotation
+                <Check className="size-4" /> Set Fare
               </>
             )}
           </button>

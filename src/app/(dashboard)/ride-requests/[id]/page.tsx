@@ -1482,19 +1482,21 @@ export default function RideRequestDetails({
               <article className={`${card} p-4 space-y-3 border-blue-200 bg-blue-50/60 shadow-sm`}>
                 <div className="flex items-center gap-2 font-bold text-xs text-blue-900">
                   <DollarSign className="size-4 text-blue-600" />
-                  Fare Quotation (Per Single Trip)
+                  Fare (Per Single Trip)
                 </div>
                 <p className="text-[11px] text-blue-800 leading-relaxed">
-                  {trip?.quotedFare
-                    ? `Current quoted fare: $${trip.quotedFare.toFixed(2)} per single trip leg.`
-                    : "Send a price quote to the passenger for a single trip leg."}
+                  {typeof trip?.fare === "number" && trip.fare > 0
+                    ? `Current fare: $${trip.fare.toFixed(2)} per single trip leg.`
+                    : trip?.quotedFare
+                    ? `Current fare: $${trip.quotedFare.toFixed(2)} per single trip leg.`
+                    : "Set the fare for a single trip leg."}
                 </p>
                 <Link
                   href={`/ride-requests/${id}/quotation`}
                   className="w-full flex items-center justify-center gap-1.5 rounded-lg bg-[#173d76] hover:bg-[#0d2c58] text-white font-bold text-xs py-2.5 shadow transition cursor-pointer"
                 >
                   <DollarSign className="size-3.5" />
-                  {trip?.quotedFare ? "Update Fare Quote" : "Send Fare Quote"}
+                  {(typeof trip?.fare === "number" && trip.fare > 0) || trip?.quotedFare ? "Update Fare" : "Set Fare"}
                 </Link>
               </article>
 
