@@ -17,7 +17,7 @@ import {
 import { PageHeader } from "@/components/dashboard/page-header";
 import { getAdminAnalyticsApi } from "@/lib/api";
 
-type PeriodFilter = "week" | "fortnight" | "month" | "year";
+type PeriodFilter = "day" | "week" | "fortnight" | "month" | "year";
 
 interface RidePerfItem {
   label: string;
@@ -45,6 +45,7 @@ interface StatusCounts {
 }
 
 const periodLabels: Record<PeriodFilter, string> = {
+  day: "Today",
   week: "Past 7 Days",
   fortnight: "Past 14 Days",
   month: "This Month (By Week)",
@@ -86,28 +87,33 @@ export function AnalyticsPage() {
       outstandingBalance?: number;
       avgRidePrice: number;
       periods?: Record<PeriodFilter, { revenue: number; payroll: number; earnings: number }>;
+      todayPayroll?: number;
       weeklyPayroll?: number;
       fortnightPayroll?: number;
       monthlyPayroll?: number;
       yearlyPayroll?: number;
+      todayEarnings?: number;
       weeklyEarnings?: number;
       fortnightEarnings?: number;
       monthlyEarnings?: number;
       yearlyEarnings?: number;
     };
     ridePerformance?: {
+      day?: RidePerfItem[];
       week: RidePerfItem[];
       fortnight: RidePerfItem[];
       month: RidePerfItem[];
       year: RidePerfItem[];
     };
     revenueOverview?: {
+      day?: RevenueItem[];
       week: RevenueItem[];
       fortnight: RevenueItem[];
       month: RevenueItem[];
       year: RevenueItem[];
     } | Array<{ month: string; monthlyRevenue: number; outstanding: number }>;
     statusDistribution?: {
+      day?: StatusCounts;
       week: StatusCounts;
       fortnight: StatusCounts;
       month: StatusCounts;
@@ -276,7 +282,9 @@ export function AnalyticsPage() {
   // 5. Financial Summary (Revenue, Payroll, Earnings) Filtered Data
   const financialPeriodRevenue =
     analyticsData?.revenueSummary?.periods?.[financialPeriod]?.revenue ??
-    (financialPeriod === "week"
+    (financialPeriod === "day"
+      ? rev?.todayRevenue
+      : financialPeriod === "week"
       ? rev?.weeklyRevenue
       : financialPeriod === "fortnight"
       ? rev?.fortnightRevenue
@@ -286,7 +294,9 @@ export function AnalyticsPage() {
 
   const financialPeriodPayroll =
     analyticsData?.revenueSummary?.periods?.[financialPeriod]?.payroll ??
-    (financialPeriod === "week"
+    (financialPeriod === "day"
+      ? rev?.todayPayroll
+      : financialPeriod === "week"
       ? rev?.weeklyPayroll
       : financialPeriod === "fortnight"
       ? rev?.fortnightPayroll
@@ -296,7 +306,9 @@ export function AnalyticsPage() {
 
   const financialPeriodEarnings =
     analyticsData?.revenueSummary?.periods?.[financialPeriod]?.earnings ??
-    (financialPeriod === "week"
+    (financialPeriod === "day"
+      ? rev?.todayEarnings
+      : financialPeriod === "week"
       ? rev?.weeklyEarnings
       : financialPeriod === "fortnight"
       ? rev?.fortnightEarnings
@@ -698,6 +710,7 @@ function PeriodSelector({
   onChange: (p: PeriodFilter) => void;
 }) {
   const options: Array<{ key: PeriodFilter; label: string }> = [
+    { key: "day", label: "Daily" },
     { key: "week", label: "Weekly" },
     { key: "fortnight", label: "Fortnightly" },
     { key: "month", label: "Monthly" },
