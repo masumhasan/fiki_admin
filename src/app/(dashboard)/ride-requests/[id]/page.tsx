@@ -113,6 +113,26 @@ export default function RideRequestDetails({
     relationship: "",
   });
 
+  // Editing state for Insurance / Payment Info
+  const [isEditingInsurance, setIsEditingInsurance] = useState(false);
+  const [savingInsurance, setSavingInsurance] = useState(false);
+  const [insuranceForm, setInsuranceForm] = useState<any>({
+    privatePay: false,
+    insuranceName: "",
+    authNumber: "",
+    memberId: "",
+  });
+
+  // Editing state for Guardian Info
+  const [isEditingGuardian, setIsEditingGuardian] = useState(false);
+  const [savingGuardian, setSavingGuardian] = useState(false);
+  const [guardianForm, setGuardianForm] = useState<any>({
+    guardianName: "",
+    relationshipToPassenger: "",
+    guardianEmail: "",
+    guardianPhone: "",
+  });
+
 
   // Regeneration state
   const [regenerating, setRegenerating] = useState(false);
@@ -261,6 +281,16 @@ export default function RideRequestDetails({
         setIsEditingPassengerInfo(false);
       }
 
+      if (isEditingInsurance) {
+        await updateTripApi(token, id, insuranceForm);
+        setIsEditingInsurance(false);
+      }
+
+      if (isEditingGuardian) {
+        await updateTripApi(token, id, guardianForm);
+        setIsEditingGuardian(false);
+      }
+
       const res = await regenerateTripsApi(token, id);
       if (res.success) {
         setRegenerateFeedback({ ok: true, text: res.message || "Future trips regenerated successfully!" });
@@ -310,8 +340,52 @@ export default function RideRequestDetails({
         emergencyContactPhone: trip.emergencyContactPhone || "",
         relationship: trip.relationship || "",
       });
+
+      setInsuranceForm({
+        privatePay: Boolean(trip.privatePay),
+        insuranceName: trip.insuranceName || "",
+        authNumber: trip.authNumber || "",
+        memberId: trip.memberId || "",
+      });
+
+      setGuardianForm({
+        guardianName: trip.guardianName || "",
+        relationshipToPassenger: trip.relationshipToPassenger || trip.relationship || "",
+        guardianEmail: (trip.guardianEmail && !(trip.guardianEmail.startsWith("manual_") && trip.guardianEmail.endsWith("@fikitransit.com")))
+          ? trip.guardianEmail
+          : "",
+        guardianPhone: trip.guardianPhone || "",
+      });
     }
   }, [trip]);
+
+  const handleSaveInsurance = async () => {
+    const token = window.localStorage.getItem("fiki_auth_token");
+    if (!token) return;
+    setSavingInsurance(true);
+    const res = await updateTripApi(token, id, insuranceForm);
+    if (res.success && res.data) {
+      setTrip(res.data);
+      setIsEditingInsurance(false);
+    } else {
+      alert(res.error?.message || "Failed to update insurance / payment info");
+    }
+    setSavingInsurance(false);
+  };
+
+  const handleSaveGuardian = async () => {
+    const token = window.localStorage.getItem("fiki_auth_token");
+    if (!token) return;
+    setSavingGuardian(true);
+    const res = await updateTripApi(token, id, guardianForm);
+    if (res.success && res.data) {
+      setTrip(res.data);
+      setIsEditingGuardian(false);
+    } else {
+      alert(res.error?.message || "Failed to update guardian info");
+    }
+    setSavingGuardian(false);
+  };
 
   const handleSavePassengerInfo = async () => {
     const token = window.localStorage.getItem("fiki_auth_token");
@@ -1232,24 +1306,121 @@ export default function RideRequestDetails({
                   icon={<Shield />}
                   title="Insurance / Payment Information"
                   subtitle="Funding source and authorization details"
+                  action={
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingInsurance(!isEditingInsurance)}
+                      className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 transition hover:bg-blue-100"
+                    >
+                      <Pencil className="size-3.5" />
+                      {isEditingInsurance ? "Cancel" : "Edit"}
+                    </button>
+                  }
                 />
-                <div className="grid gap-x-8 gap-y-4 p-5 sm:grid-cols-2">
-                  <Label
-                    label="Funding Source"
-                    value={trip.privatePay ? "Private Pay" : (trip.insuranceName ? "Government Program" : "Government Program")}
-                  />
-                  <Label
-                    label="Insurance Provider"
-                    value={trip.insuranceName || "Medi-Cal"}
-                  />
-                  <Label
-                    label="Authorization Number"
-                    value={trip.authNumber || (trip.privatePay ? "N/A" : "—")}
-                  />
-                  <Label
-                    label="Member ID"
-                    value={trip.authNumber ? `ACB${id.slice(-8).toUpperCase()}` : "—"}
-                  />
+                <div className="p-5">
+                  {isEditingInsurance ? (
+                    <div className="space-y-4">
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div>
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">
+                            Funding Source
+                          </label>
+                          <select
+                            value={insuranceForm.privatePay ? "private_pay" : "government_program"}
+                            onChange={(e) =>
+                              setInsuranceForm({
+                                ...insuranceForm,
+                                privatePay: e.target.value === "private_pay",
+                              })
+                            }
+                            className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-[#173d76]"
+                          >
+                            <option value="government_program">Government Program (Insurance)</option>
+                            <option value="private_pay">Private Pay (Self-Funded)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">
+                            Insurance Provider
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Medi-Cal"
+                            value={insuranceForm.insuranceName}
+                            onChange={(e) =>
+                              setInsuranceForm({ ...insuranceForm, insuranceName: e.target.value })
+                            }
+                            className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-[#173d76]"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">
+                            Authorization Number
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. AUTH-12345"
+                            value={insuranceForm.authNumber}
+                            onChange={(e) =>
+                              setInsuranceForm({ ...insuranceForm, authNumber: e.target.value })
+                            }
+                            className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-[#173d76]"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">
+                            Member ID
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. ACB12345678"
+                            value={insuranceForm.memberId}
+                            onChange={(e) =>
+                              setInsuranceForm({ ...insuranceForm, memberId: e.target.value })
+                            }
+                            className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-[#173d76]"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 border-t pt-4">
+                        <button
+                          type="button"
+                          onClick={handleSaveInsurance}
+                          disabled={savingInsurance}
+                          className="flex h-9 items-center gap-1.5 rounded-lg bg-[#173d76] px-4 text-xs font-bold text-white shadow hover:bg-[#0d2c58] disabled:opacity-50"
+                        >
+                          <Save className="size-3.5" />
+                          {savingInsurance ? "Saving..." : "Save Insurance Info"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingInsurance(false)}
+                          className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
+                      <Label
+                        label="Funding Source"
+                        value={trip.privatePay ? "Private Pay" : (trip.insuranceName ? "Government Program" : "Government Program")}
+                      />
+                      <Label
+                        label="Insurance Provider"
+                        value={trip.insuranceName || (trip.privatePay ? "N/A (Private Pay)" : "Medi-Cal")}
+                      />
+                      <Label
+                        label="Authorization Number"
+                        value={trip.authNumber || (trip.privatePay ? "N/A" : "—")}
+                      />
+                      <Label
+                        label="Member ID"
+                        value={trip.memberId || (trip.authNumber ? `ACB${id.slice(-8).toUpperCase()}` : "—")}
+                      />
+                    </div>
+                  )}
                 </div>
               </article>
 
@@ -1259,19 +1430,112 @@ export default function RideRequestDetails({
                   icon={<UserCheck />}
                   title="Guardian Information"
                   subtitle="Legal guardian or authorized representative"
+                  action={
+                    <button
+                      type="button"
+                      onClick={() => setIsEditingGuardian(!isEditingGuardian)}
+                      className="flex items-center gap-1.5 rounded-lg border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-bold text-blue-700 transition hover:bg-blue-100"
+                    >
+                      <Pencil className="size-3.5" />
+                      {isEditingGuardian ? "Cancel" : "Edit"}
+                    </button>
+                  }
                 />
-                <div className="grid gap-x-8 gap-y-4 p-5 sm:grid-cols-2">
-                  <Label label="Full Name" value={trip.guardianName || "Not Specified / Self"} />
-                  <Label label="Relationship to Rider" value={trip.relationshipToPassenger || trip.relationship || "Self / Guardian"} />
-                  <Label 
-                    label="Email Address" 
-                    value={
-                      (trip.guardianEmail && !(trip.guardianEmail.startsWith("manual_") && trip.guardianEmail.endsWith("@fikitransit.com")))
-                        ? trip.guardianEmail
-                        : "—"
-                    } 
-                  />
-                  <Label label="Phone Number" value={trip.guardianPhone || "—"} />
+                <div className="p-5">
+                  {isEditingGuardian ? (
+                    <div className="space-y-4">
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div>
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">
+                            Full Name
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Guardian full name"
+                            value={guardianForm.guardianName}
+                            onChange={(e) =>
+                              setGuardianForm({ ...guardianForm, guardianName: e.target.value })
+                            }
+                            className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-[#173d76]"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">
+                            Relationship to Rider
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Parent, Legal Guardian, Self"
+                            value={guardianForm.relationshipToPassenger}
+                            onChange={(e) =>
+                              setGuardianForm({ ...guardianForm, relationshipToPassenger: e.target.value })
+                            }
+                            className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-[#173d76]"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">
+                            Email Address
+                          </label>
+                          <input
+                            type="email"
+                            placeholder="guardian@example.com"
+                            value={guardianForm.guardianEmail}
+                            onChange={(e) =>
+                              setGuardianForm({ ...guardianForm, guardianEmail: e.target.value })
+                            }
+                            className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-[#173d76]"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">
+                            Phone Number
+                          </label>
+                          <input
+                            type="tel"
+                            placeholder="e.g. +1 (555) 000-0000"
+                            value={guardianForm.guardianPhone}
+                            onChange={(e) =>
+                              setGuardianForm({ ...guardianForm, guardianPhone: e.target.value })
+                            }
+                            className="mt-1.5 h-9 w-full rounded-lg border border-slate-200 bg-white px-3 text-xs font-medium text-slate-800 outline-none focus:border-[#173d76]"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 border-t pt-4">
+                        <button
+                          type="button"
+                          onClick={handleSaveGuardian}
+                          disabled={savingGuardian}
+                          className="flex h-9 items-center gap-1.5 rounded-lg bg-[#173d76] px-4 text-xs font-bold text-white shadow hover:bg-[#0d2c58] disabled:opacity-50"
+                        >
+                          <Save className="size-3.5" />
+                          {savingGuardian ? "Saving..." : "Save Guardian Info"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingGuardian(false)}
+                          className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="grid gap-x-8 gap-y-4 sm:grid-cols-2">
+                      <Label label="Full Name" value={trip.guardianName || "Not Specified / Self"} />
+                      <Label label="Relationship to Rider" value={trip.relationshipToPassenger || trip.relationship || "Self / Guardian"} />
+                      <Label 
+                        label="Email Address" 
+                        value={
+                          (trip.guardianEmail && !(trip.guardianEmail.startsWith("manual_") && trip.guardianEmail.endsWith("@fikitransit.com")))
+                            ? trip.guardianEmail
+                            : "—"
+                        } 
+                      />
+                      <Label label="Phone Number" value={trip.guardianPhone || "—"} />
+                    </div>
+                  )}
                 </div>
               </article>
 
