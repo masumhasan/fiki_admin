@@ -574,10 +574,28 @@ export function SchedulePage() {
     setEditChangeModalOpen(true);
   };
 
+  const getCentralToday = () => {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Chicago",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date());
+    const y = parts.find((p) => p.type === "year")?.value;
+    const m = parts.find((p) => p.type === "month")?.value;
+    const d = parts.find((p) => p.type === "day")?.value;
+    return new Date(`${y}-${m}-${d}T12:00:00`);
+  };
+
   const getMondayOfDate = (d: Date) => {
-    const dt = new Date(d);
-    const day = dt.getDay();
+    const dayStr = new Intl.DateTimeFormat("en-US", {
+      timeZone: "America/Chicago",
+      weekday: "short",
+    }).format(d);
+    const dayMap: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+    const day = dayMap[dayStr] ?? d.getDay();
     const diff = (day + 6) % 7;
+    const dt = new Date(d);
     dt.setDate(dt.getDate() - diff);
     dt.setHours(0, 0, 0, 0);
     return dt;
@@ -590,7 +608,7 @@ export function SchedulePage() {
     return `${year}-${month}-${day}`;
   };
 
-  const [currentWeekMonday, setCurrentWeekMonday] = useState<Date>(() => getMondayOfDate(new Date()));
+  const [currentWeekMonday, setCurrentWeekMonday] = useState<Date>(() => getMondayOfDate(getCentralToday()));
   const [scheduleData, setScheduleData] = useState<any>(null);
   const [loadingSchedule, setLoadingSchedule] = useState(false);
 
@@ -625,7 +643,7 @@ export function SchedulePage() {
   };
 
   const handleToday = () => {
-    const tod = getMondayOfDate(new Date());
+    const tod = getMondayOfDate(getCentralToday());
     setCurrentWeekMonday(tod);
   };
 

@@ -405,6 +405,30 @@ export async function cancelTripAdminApi(token: string, tripId: string, reason?:
   }
 }
 
+export async function updateAdminTripStatusApi(
+  token: string,
+  tripId: string,
+  status: string,
+  options?: { cancellationReason?: string; driverNotes?: string; note?: string }
+) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/admin/trips/${tripId}/status`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        status,
+        ...options,
+      }),
+    });
+    return await res.json();
+  } catch (error) {
+    return { success: false, error: { code: "NETWORK_ERROR", message: "Failed to update trip status" } };
+  }
+}
+
 
 export async function deleteDriverApi(token: string, id: string) {
   try {

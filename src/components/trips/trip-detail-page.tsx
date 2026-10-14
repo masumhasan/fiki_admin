@@ -16,6 +16,8 @@ import {
   UserRoundCog,
   X,
   AlertTriangle,
+  ArrowRight,
+  RefreshCw,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -26,6 +28,7 @@ import {
   assignDriverApi,
   cancelTripAdminApi,
   deleteTripApi,
+  updateAdminTripStatusApi,
 } from "@/lib/api";
 
 function getInitials(name: string): string {
@@ -113,23 +116,47 @@ function getStatusBadge(status: string, cancellationReason?: string) {
       };
     case "QUOTE_COUNTERED":
       return { label: "Counter Offer", class: "bg-purple-50 text-purple-700" };
+    case "MISSED":
+      return { label: "Missed", class: "bg-rose-50 text-rose-700 border border-rose-200" };
     case "REQUESTED":
     default:
       return { label: "Requested", class: "bg-amber-50 text-amber-700" };
   }
 }
 
+export const TRIP_STATUS_OPTIONS = [
+  { value: "REQUESTED", label: "Requested" },
+  { value: "ACCEPTED", label: "Accepted" },
+  { value: "DRIVER_ARRIVING", label: "Heading to pickup" },
+  { value: "DRIVER_ARRIVED", label: "Passenger picked up" },
+  { value: "IN_PROGRESS", label: "Heading to destination" },
+  { value: "COMPLETED", label: "Trip completed" },
+  { value: "CANCELLED", label: "Cancelled" },
+  { value: "MISSED", label: "Missed" },
+];
+
 export function TripDetailPage({ tripId }: { tripId: string }) {
+  const router = useRouter();
   const [trip, setTrip] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [errorText, setErrorText] = useState("");
 
   // Action states
   const [cancelling, setCancelling] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [reassignModalOpen, setReassignModalOpen] = useState(false);
   const [approvedDrivers, setApprovedDrivers] = useState<any[]>([]);
   const [selectedDriverId, setSelectedDriverId] = useState("");
   const [reassigning, setReassigning] = useState(false);
+
+  // Status Change States
+  const [statusModalOpen, setStatusModalOpen] = useState(false);
+  const [targetStatus, setTargetStatus] = useState("");
+  const [cancellationReason, setCancellationReason] = useState("Cancelled by Admin");
+  const [customCancellationReason, setCustomCancellationReason] = useState("");
+  const [statusNotes, setStatusNotes] = useState("");
+  const [statusUpdating, setStatusUpdating] = useState(false);
+  const [statusSuccessMessage, setStatusSuccessMessage] = useState("");
 
   const isCancelled = trip?.status === "CANCELLED";
   const isCompleted = trip?.status === "COMPLETED";
@@ -225,8 +252,48 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
     }
   };
 
-  const router = useRouter();
-  const [deleting, setDeleting] = useState(false);
+  const handleInitiateStatusChange = (newStatus: string) => {
+    if (!newStatus || newStatus === trip?.status) return;
+    setTargetStatus(newStatus);
+    setCancellationReason("Cancelled by Admin");
+    setCustomCancellationReason("");
+    setStatusNotes("");
+    setStatusModalOpen(true);
+  };
+
+  const handleConfirmStatusChange = async () => {
+    if (!targetStatus || !trip) return;
+    setStatusUpdating(true);
+    try {
+      const token = window.localStorage.getItem("fiki_auth_token") || "";
+      const reason =
+        targetStatus === "CANCELLED"
+          ? cancellationReason === "Other"
+            ? customCancellationReason || "Cancelled by Admin"
+            : cancellationReason
+          : undefined;
+
+      const res = await updateAdminTripStatusApi(token, tripId, targetStatus, {
+        cancellationReason: reason,
+        note: statusNotes || undefined,
+      });
+
+      if (res.success) {
+        setStatusSuccessMessage(
+          `Trip status successfully updated to ${getStatusBadge(targetStatus).label}!`
+        );
+        setStatusModalOpen(false);
+        await fetchTripDetail();
+        setTimeout(() => setStatusSuccessMessage(""), 4500);
+      } else {
+        alert(res.error?.message || "Failed to update trip status.");
+      }
+    } catch {
+      alert("Network error while updating trip status.");
+    } finally {
+      setStatusUpdating(false);
+    }
+  };
 
   const handleDeleteTrip = async () => {
     if (!window.confirm("Are you sure you want to delete this trip? This action is permanent and will remove it from all financial accounting.")) return;
@@ -557,30 +624,62 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
         </div>
       )}
 
+      {/* Status Success Message Banner */}
+      {statusSuccessMessage && (
+        <div className="flex items-center gap-2.5 rounded-xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-xs font-bold text-emerald-900 shadow-xs animate-in fade-in slide-in-from-top-2">
+          <Check className="size-4.5 text-emerald-600 shrink-0" />
+          <span>{statusSuccessMessage}</span>
+        </div>
+      )}
+
       {/* Main Overview Box */}
       <section className="rounded-xl border border-[#e1e6ee] bg-card p-5 shadow-[0_4px_14px_rgba(15,37,74,.04)] sm:p-6">
-        <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-bold tracking-[-0.035em] text-foreground sm:text-[28px]">
-            Trip {trip._id || tripId}
-          </h1>
-          <span
-            className={`rounded-full px-3 py-1 text-[11px] font-bold ${statusBadge.class}`}
-          >
-            {statusBadge.label}
-          </span>
-          {isNoShow ? (
-            <span className="rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold text-amber-900 border border-amber-300">
-              $0.00 (Passenger not charged - No Show Up)
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <div className="flex flex-wrap items-center gap-3">
+              <h1 className="text-2xl font-bold tracking-[-0.035em] text-foreground sm:text-[28px]">
+                Trip {trip._id || tripId}
+              </h1>
+              <span
+                className={`rounded-full px-3 py-1 text-[11px] font-bold ${statusBadge.class}`}
+              >
+                {statusBadge.label}
+              </span>
+              {isNoShow ? (
+                <span className="rounded-full bg-amber-100 px-3 py-1 text-[11px] font-bold text-amber-900 border border-amber-300">
+                  $0.00 (Passenger not charged - No Show Up)
+                </span>
+              ) : trip.fare || trip.quotedFare ? (
+                <span className="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-extrabold text-emerald-800">
+                  ${trip.fare || trip.quotedFare}
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {pickupTimeStr} · {pickupAddress} → {dropoffAddress}
+            </p>
+          </div>
+
+          {/* Change Trip Status Selector (Header Location) */}
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 rounded-xl border border-[#dce4ed] bg-[#f8fafc] p-2.5 shadow-2xs shrink-0">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-[#475569] whitespace-nowrap">
+              Change Trip Status:
             </span>
-          ) : trip.fare || trip.quotedFare ? (
-            <span className="rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-extrabold text-emerald-800">
-              ${trip.fare || trip.quotedFare}
-            </span>
-          ) : null}
+            <select
+              id="header-change-trip-status-select"
+              value={trip.status}
+              onChange={(e) => handleInitiateStatusChange(e.target.value)}
+              disabled={statusUpdating}
+              className="h-9 min-w-[190px] rounded-lg border border-[#cbd5e1] bg-white px-3 text-xs font-bold text-[#173d76] shadow-2xs transition hover:border-[#173d76] focus:border-[#173d76] focus:outline-none focus:ring-2 focus:ring-[#173d76]/20 cursor-pointer disabled:opacity-50"
+            >
+              {TRIP_STATUS_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-        <p className="mt-2 text-sm text-muted-foreground">
-          {pickupTimeStr} · {pickupAddress} → {dropoffAddress}
-        </p>
       </section>
 
       {/* 3 Overview Cards */}
@@ -796,8 +895,37 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
 
           {/* Ride Activity */}
           <section className={cardClass}>
-            <h2 className={titleClass}>Ride activity</h2>
-            <div className="mt-5 space-y-4">
+            <div className="flex flex-col gap-3 border-b border-border/70 pb-3.5 mb-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className={titleClass}>Ride activity</h2>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  Trip lifecycle progression
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <label
+                  htmlFor="ride-activity-status-selector"
+                  className="text-xs font-semibold text-muted-foreground whitespace-nowrap"
+                >
+                  Change Trip Status:
+                </label>
+                <select
+                  id="ride-activity-status-selector"
+                  value={trip.status}
+                  onChange={(e) => handleInitiateStatusChange(e.target.value)}
+                  disabled={statusUpdating}
+                  className="h-8.5 rounded-lg border border-[#cbd5e1] bg-white px-2.5 text-xs font-bold text-[#173d76] shadow-2xs transition hover:border-[#173d76] focus:border-[#173d76] focus:outline-none focus:ring-2 focus:ring-[#173d76]/20 cursor-pointer disabled:opacity-50"
+                >
+                  {TRIP_STATUS_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="space-y-4">
               {rideStatusSteps.map((item, idx) => (
                 <div className="flex items-start gap-3" key={idx}>
                   <span
@@ -889,6 +1017,148 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
                 className="rounded-xl bg-primary px-5 py-2 text-xs font-bold text-primary-foreground hover:bg-primary/90 disabled:opacity-50"
               >
                 {reassigning ? "Assigning..." : "Confirm Assignment"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Trip Status Confirmation Modal */}
+      {statusModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-lg rounded-[28px] border border-border bg-card p-6 shadow-2xl transition-all">
+            <div className="flex items-center justify-between border-b border-border pb-4">
+              <div className="flex items-center gap-2.5">
+                <span className="grid size-9 place-items-center rounded-xl bg-primary/10 text-primary">
+                  <RefreshCw className="size-4.5" />
+                </span>
+                <div>
+                  <h3 className="text-base font-bold text-foreground">
+                    Change Trip Status
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Confirm status transition & portal synchronization
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setStatusModalOpen(false)}
+                className="grid size-8 place-items-center rounded-full bg-muted text-muted-foreground hover:bg-muted/80 cursor-pointer transition"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            <div className="py-5 space-y-4">
+              {/* Status Transition Card */}
+              <div className="rounded-2xl border border-border bg-slate-50/80 p-4">
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground mb-2.5">
+                  Status Transition
+                </p>
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Current:</span>
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-bold ${statusBadge.class}`}
+                    >
+                      {statusBadge.label}
+                    </span>
+                  </div>
+                  <ArrowRight className="size-4 text-muted-foreground" />
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">New Status:</span>
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-bold ${
+                        getStatusBadge(targetStatus).class
+                      }`}
+                    >
+                      {getStatusBadge(targetStatus).label}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Informational Warning Box */}
+              <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50/60 p-3.5 text-xs text-blue-900 leading-relaxed">
+                <AlertTriangle className="size-4.5 text-blue-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold">Multi-Portal Sync Notice:</span> This change takes effect immediately and updates trip progression across the <strong className="font-bold">Admin Portal</strong>, <strong className="font-bold">Driver Portal</strong>, and <strong className="font-bold">Passenger App</strong>.
+                  {targetStatus === "COMPLETED" && (
+                    <span className="block mt-1.5 font-semibold text-emerald-800">
+                      ✓ Completing this trip will record it in driver earnings, increment driver completed trip count, and free up driver availability.
+                    </span>
+                  )}
+                  {targetStatus === "CANCELLED" && (
+                    <span className="block mt-1.5 font-semibold text-red-800">
+                      ⚠ Cancelling this trip will mark it as cancelled and reset driver availability to online.
+                    </span>
+                  )}
+                  {targetStatus === "IN_PROGRESS" && (
+                    <span className="block mt-1.5 font-semibold text-blue-800">
+                      ℹ Setting to in progress will update the driver app to show active transport with drop-off directions.
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Cancellation Reason if CANCELLED */}
+              {targetStatus === "CANCELLED" && (
+                <div className="space-y-2">
+                  <label className="text-xs font-bold text-foreground">
+                    Cancellation Reason
+                  </label>
+                  <select
+                    value={cancellationReason}
+                    onChange={(e) => setCancellationReason(e.target.value)}
+                    className="h-10 w-full rounded-xl border border-border bg-card px-3 text-xs font-semibold outline-none focus:border-primary"
+                  >
+                    <option value="Cancelled by Admin">Cancelled by Admin</option>
+                    <option value="No Show Up">Passenger No Show Up ($0.00 fare)</option>
+                    <option value="Customer Requested Cancellation">Customer Requested Cancellation</option>
+                    <option value="Driver Unavailable">Driver Unavailable</option>
+                    <option value="Vehicle Breakdown">Vehicle Breakdown</option>
+                    <option value="Weather / Road Conditions">Weather / Road Conditions</option>
+                    <option value="Other">Other (Custom Reason)</option>
+                  </select>
+                  {cancellationReason === "Other" && (
+                    <input
+                      type="text"
+                      placeholder="Specify reason..."
+                      value={customCancellationReason}
+                      onChange={(e) => setCustomCancellationReason(e.target.value)}
+                      className="mt-2 h-9 w-full rounded-xl border border-border bg-card px-3 text-xs outline-none focus:border-primary"
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="flex items-center justify-end gap-3 border-t border-border pt-4">
+              <button
+                type="button"
+                onClick={() => setStatusModalOpen(false)}
+                disabled={statusUpdating}
+                className="h-9 rounded-xl border border-border px-4 text-xs font-bold text-muted-foreground hover:bg-muted cursor-pointer transition disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={statusUpdating}
+                onClick={handleConfirmStatusChange}
+                className="flex h-9 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-xs font-bold text-primary-foreground hover:bg-primary/90 cursor-pointer transition disabled:opacity-50 shadow-xs"
+              >
+                {statusUpdating ? (
+                  <>
+                    <Loader2 className="size-3.5 animate-spin" />
+                    Updating Status...
+                  </>
+                ) : (
+                  <>
+                    <Check className="size-3.5" />
+                    Confirm & Update Status
+                  </>
+                )}
               </button>
             </div>
           </div>
