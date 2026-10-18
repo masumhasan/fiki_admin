@@ -18,6 +18,11 @@ import {
   AlertTriangle,
   ArrowRight,
   RefreshCw,
+  Pencil,
+  Calendar,
+  Clock,
+  DollarSign,
+  Info,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -29,6 +34,7 @@ import {
   cancelTripAdminApi,
   deleteTripApi,
   updateAdminTripStatusApi,
+  updateAdminTripApi,
 } from "@/lib/api";
 
 function getInitials(name: string): string {
@@ -157,6 +163,121 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
   const [statusNotes, setStatusNotes] = useState("");
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [statusSuccessMessage, setStatusSuccessMessage] = useState("");
+
+  // Edit Trip Modal States
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editSection, setEditSection] = useState<"all" | "pickup" | "dropoff" | "notes">("all");
+  const [editForm, setEditForm] = useState({
+    pickupAddress: "",
+    dropoffAddress: "",
+    pickupDate: "",
+    pickupTime: "",
+    appointmentTime: "",
+    endDate: "",
+    fare: "",
+    driverNotes: "",
+    specialInstructions: "",
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState("");
+
+  const handleOpenEditModal = (section: "all" | "pickup" | "dropoff" | "notes" = "all") => {
+    if (!trip) return;
+    const currentPickupAddr = trip.pickupLocation?.address || trip.streetAddress || "";
+    const currentDropoffAddr = trip.dropoffLocation?.address || trip.destinationAddress || trip.returnDestinationAddress || "";
+
+    let currentPickupDate = "";
+    const rawDateVal = trip.pickupDate || trip.startDate || trip.createdAt;
+    if (typeof rawDateVal === "string" && /^\d{4}-\d{2}-\d{2}/.test(rawDateVal.trim())) {
+      currentPickupDate = rawDateVal.trim().substring(0, 10);
+    } else if (rawDateVal) {
+      const d = new Date(rawDateVal);
+      if (!isNaN(d.getTime())) {
+        currentPickupDate = d.toISOString().split("T")[0];
+      }
+    }
+
+    let currentEndDate = "";
+    const rawEndVal = trip.endDate || trip.returnDate;
+    if (typeof rawEndVal === "string" && /^\d{4}-\d{2}-\d{2}/.test(rawEndVal.trim())) {
+      currentEndDate = rawEndVal.trim().substring(0, 10);
+    } else if (rawEndVal) {
+      const d = new Date(rawEndVal);
+      if (!isNaN(d.getTime())) {
+        currentEndDate = d.toISOString().split("T")[0];
+      }
+    } else {
+      currentEndDate = currentPickupDate;
+    }
+
+    const currentPickupTime = trip.pickupTime || "";
+    const currentApptTime = trip.appointmentTime || "";
+    const currentFare = trip.fare !== undefined && trip.fare !== null
+      ? String(trip.fare)
+      : (trip.quotedFare !== undefined && trip.quotedFare !== null ? String(trip.quotedFare) : "");
+    const currentDriverNotes = trip.driverNotes || "";
+    const currentSpecialInstructions = trip.specialInstructions || trip.accessInformation || "";
+
+    setEditForm({
+      pickupAddress: currentPickupAddr,
+      dropoffAddress: currentDropoffAddr,
+      pickupDate: currentPickupDate,
+      pickupTime: currentPickupTime,
+      appointmentTime: currentApptTime,
+      endDate: currentEndDate,
+      fare: currentFare,
+      driverNotes: currentDriverNotes,
+      specialInstructions: currentSpecialInstructions,
+    });
+    setEditSection(section);
+    setEditError("");
+    setEditModalOpen(true);
+  };
+
+  const handleSaveTripEdit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!editForm.pickupAddress.trim()) {
+      setEditError("Pickup address is required.");
+      return;
+    }
+    if (!editForm.dropoffAddress.trim()) {
+      setEditError("Drop-off address is required.");
+      return;
+    }
+
+    setSavingEdit(true);
+    setEditError("");
+    try {
+      const token = window.localStorage.getItem("fiki_auth_token") || "";
+      const res = await updateAdminTripApi(token, tripId, {
+        pickupAddress: editForm.pickupAddress.trim(),
+        dropoffAddress: editForm.dropoffAddress.trim(),
+        pickupDate: editForm.pickupDate || undefined,
+        startDate: editForm.pickupDate || undefined,
+        pickupTime: editForm.pickupTime || undefined,
+        appointmentTime: editForm.appointmentTime || undefined,
+        endDate: editForm.endDate || undefined,
+        returnDate: editForm.endDate || undefined,
+        fare: editForm.fare ? Number(editForm.fare) : undefined,
+        driverNotes: editForm.driverNotes,
+        specialInstructions: editForm.specialInstructions,
+      });
+
+      if (res.success && res.data) {
+        setTrip(res.data);
+        setEditModalOpen(false);
+        setStatusSuccessMessage("Trip details updated successfully! Live route and schedule are now synced on the Driver Portal.");
+        setTimeout(() => setStatusSuccessMessage(""), 5000);
+        await fetchTripDetail();
+      } else {
+        setEditError(res.error?.message || "Failed to update trip information.");
+      }
+    } catch {
+      setEditError("A network error occurred while updating trip.");
+    } finally {
+      setSavingEdit(false);
+    }
+  };
 
   const isCancelled = trip?.status === "CANCELLED";
   const isCompleted = trip?.status === "COMPLETED";
@@ -567,6 +688,11 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
             onClick={() => window.print()}
           />
           <ToolbarButton icon={Download} label="Export" onClick={exportTrip} />
+          <ToolbarButton
+            icon={Pencil}
+            label="Edit trip"
+            onClick={() => handleOpenEditModal("all")}
+          />
           {canAssignOrReassign && (
             <ToolbarButton
               icon={UserRoundCog}
@@ -735,18 +861,29 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
         <div className="space-y-5">
           {/* Route Details */}
           <section className={cardClass}>
-            <h2 className={titleClass}>Route details</h2>
+            <div className="flex items-center justify-between">
+              <h2 className={titleClass}>Route details</h2>
+              <button
+                type="button"
+                onClick={() => handleOpenEditModal("all")}
+                className="flex items-center gap-1.5 rounded-lg border border-[#dce4ed] bg-white px-2.5 py-1 text-xs font-bold text-[#173d76] shadow-2xs transition hover:border-[#173d76] hover:bg-[#f3f6fa] cursor-pointer"
+              >
+                <Pencil className="size-3" /> Edit route
+              </button>
+            </div>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <RoutePoint
                 label="Pickup"
                 location={pickupAddress}
                 meta={pickupTimeStr}
                 pickup
+                onEdit={() => handleOpenEditModal("pickup")}
               />
               <RoutePoint
                 label="Drop-off"
                 location={dropoffAddress}
                 meta={dropoffMeta}
+                onEdit={() => handleOpenEditModal("dropoff")}
               />
             </div>
           </section>
@@ -1164,6 +1301,330 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
           </div>
         </div>
       )}
+
+      {/* Edit Trip Information Modal */}
+      {editModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200">
+          <div className="relative flex max-h-[92vh] w-full max-w-2xl flex-col rounded-2xl border border-border bg-card shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-border bg-slate-50/80 px-6 py-4.5">
+              <div className="flex items-center gap-3">
+                <span className="grid size-10 place-items-center rounded-xl bg-primary/10 text-primary">
+                  <Pencil className="size-5" />
+                </span>
+                <div>
+                  <h3 className="text-base font-bold text-foreground">
+                    Edit Trip Information
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    Update route, pickup date, times, and operational notes
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditModalOpen(false)}
+                className="grid size-8 place-items-center rounded-full bg-muted text-muted-foreground hover:bg-muted/80 cursor-pointer transition"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            {/* Quick Section Tabs */}
+            <div className="flex items-center gap-2 border-b border-border bg-muted/30 px-6 py-2.5 overflow-x-auto text-xs font-semibold">
+              <button
+                type="button"
+                onClick={() => setEditSection("all")}
+                className={`rounded-lg px-3 py-1.5 transition cursor-pointer ${
+                  editSection === "all"
+                    ? "bg-primary text-primary-foreground font-bold shadow-2xs"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                All Information
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditSection("pickup")}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition cursor-pointer ${
+                  editSection === "pickup"
+                    ? "bg-emerald-600 text-white font-bold shadow-2xs"
+                    : "text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+                }`}
+              >
+                <MapPin className="size-3" /> Pickup Details
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditSection("dropoff")}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 transition cursor-pointer ${
+                  editSection === "dropoff"
+                    ? "bg-red-600 text-white font-bold shadow-2xs"
+                    : "text-red-700 hover:bg-red-50 hover:text-red-800"
+                }`}
+              >
+                <MapPin className="size-3" /> Drop-off Details
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditSection("notes")}
+                className={`rounded-lg px-3 py-1.5 transition cursor-pointer ${
+                  editSection === "notes"
+                    ? "bg-primary text-primary-foreground font-bold shadow-2xs"
+                    : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                Notes & Fare
+              </button>
+            </div>
+
+            {/* Form Body */}
+            <form onSubmit={handleSaveTripEdit} className="flex-1 overflow-y-auto p-6 space-y-5">
+              {editError && (
+                <div className="flex items-start gap-2.5 rounded-xl border border-red-300 bg-red-50 p-3 text-xs text-red-900">
+                  <AlertTriangle className="size-4 text-red-600 shrink-0 mt-0.5" />
+                  <span>{editError}</span>
+                </div>
+              )}
+
+              {/* Section 1: Pickup Information */}
+              {(editSection === "all" || editSection === "pickup") && (
+                <div className="rounded-2xl border border-emerald-200 bg-emerald-50/40 p-4.5 space-y-3.5">
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100/80 border border-emerald-300 px-2.5 py-0.5 rounded-full">
+                      <MapPin className="size-3 text-emerald-700" /> Pickup Details
+                    </span>
+                    <span className="text-[11px] text-emerald-700 font-medium">
+                      Starting route origin
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-foreground block mb-1.5">
+                      Pickup Address / Location <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-3 size-4 text-emerald-600" />
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. 8415 airport rd Middleton wi"
+                        value={editForm.pickupAddress}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, pickupAddress: e.target.value }))}
+                        className="h-10 w-full rounded-xl border border-[#cbd5e1] bg-white pl-9 pr-3 text-xs font-semibold text-foreground placeholder:text-muted-foreground outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 shadow-2xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="text-xs font-bold text-foreground block mb-1.5">
+                        Pickup Date
+                      </label>
+                      <div className="relative">
+                        <Calendar className="absolute left-3 top-3 size-4 text-muted-foreground" />
+                        <input
+                          type="date"
+                          value={editForm.pickupDate}
+                          onChange={(e) => setEditForm((prev) => ({ ...prev, pickupDate: e.target.value }))}
+                          className="h-10 w-full rounded-xl border border-[#cbd5e1] bg-white pl-9 pr-3 text-xs font-semibold text-foreground outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 shadow-2xs"
+                        />
+                      </div>
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        {editForm.pickupDate ? formatDate(editForm.pickupDate) : "Select date"}
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-foreground block mb-1.5">
+                        Pickup Time
+                      </label>
+                      <div className="relative">
+                        <Clock className="absolute left-3 top-3 size-4 text-muted-foreground" />
+                        <input
+                          type="text"
+                          placeholder="e.g. 10:00 AM or 10:00"
+                          value={editForm.pickupTime}
+                          onChange={(e) => setEditForm((prev) => ({ ...prev, pickupTime: e.target.value }))}
+                          className="h-10 w-full rounded-xl border border-[#cbd5e1] bg-white pl-9 pr-3 text-xs font-semibold text-foreground outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 shadow-2xs"
+                        />
+                      </div>
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        Formatted: {editForm.pickupTime ? formatTimeTo12Hour(editForm.pickupTime) : "—"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Section 2: Drop-off Information */}
+              {(editSection === "all" || editSection === "dropoff") && (
+                <div className="rounded-2xl border border-red-200 bg-red-50/40 p-4.5 space-y-3.5">
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-red-800 bg-red-100/80 border border-red-300 px-2.5 py-0.5 rounded-full">
+                      <MapPin className="size-3 text-red-600" /> Drop-off Details
+                    </span>
+                    <span className="text-[11px] text-red-700 font-medium">
+                      Trip destination
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-foreground block mb-1.5">
+                      Drop-off Address / Location <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <MapPin className="absolute left-3 top-3 size-4 text-red-500" />
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. 209 Hillside Terrace Poynette wi"
+                        value={editForm.dropoffAddress}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, dropoffAddress: e.target.value }))}
+                        className="h-10 w-full rounded-xl border border-[#cbd5e1] bg-white pl-9 pr-3 text-xs font-semibold text-foreground placeholder:text-muted-foreground outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 shadow-2xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="text-xs font-bold text-foreground block mb-1.5">
+                        Scheduled / Return Date
+                      </label>
+                      <div className="relative">
+                        <Calendar className="absolute left-3 top-3 size-4 text-muted-foreground" />
+                        <input
+                          type="date"
+                          value={editForm.endDate}
+                          onChange={(e) => setEditForm((prev) => ({ ...prev, endDate: e.target.value }))}
+                          className="h-10 w-full rounded-xl border border-[#cbd5e1] bg-white pl-9 pr-3 text-xs font-semibold text-foreground outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 shadow-2xs"
+                        />
+                      </div>
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        {editForm.endDate ? formatDate(editForm.endDate) : "Select date"}
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-foreground block mb-1.5">
+                        Appointment / Arrival Time
+                      </label>
+                      <div className="relative">
+                        <Clock className="absolute left-3 top-3 size-4 text-muted-foreground" />
+                        <input
+                          type="text"
+                          placeholder="e.g. 11:00 AM or 11:00"
+                          value={editForm.appointmentTime}
+                          onChange={(e) => setEditForm((prev) => ({ ...prev, appointmentTime: e.target.value }))}
+                          className="h-10 w-full rounded-xl border border-[#cbd5e1] bg-white pl-9 pr-3 text-xs font-semibold text-foreground outline-none focus:border-red-500 focus:ring-2 focus:ring-red-500/20 shadow-2xs"
+                        />
+                      </div>
+                      <p className="mt-1 text-[11px] text-muted-foreground">
+                        Formatted: {editForm.appointmentTime ? formatTimeTo12Hour(editForm.appointmentTime) : "—"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Section 3: Notes & Pricing */}
+              {(editSection === "all" || editSection === "notes") && (
+                <div className="rounded-2xl border border-border bg-slate-50/70 p-4.5 space-y-3.5">
+                  <div className="flex items-center justify-between">
+                    <span className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-slate-700 bg-slate-200/80 px-2.5 py-0.5 rounded-full">
+                      <DollarSign className="size-3 text-slate-700" /> Fare & Instructions
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-bold text-foreground block mb-1.5">
+                      Trip Fare ($ USD)
+                    </label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-3 size-4 text-muted-foreground" />
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        placeholder="e.g. 40.00"
+                        value={editForm.fare}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, fare: e.target.value }))}
+                        className="h-10 w-full rounded-xl border border-[#cbd5e1] bg-white pl-9 pr-3 text-xs font-semibold text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-2xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                    <div>
+                      <label className="text-xs font-bold text-foreground block mb-1.5">
+                        Driver Notes
+                      </label>
+                      <textarea
+                        rows={2}
+                        placeholder="Additional driver notes..."
+                        value={editForm.driverNotes}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, driverNotes: e.target.value }))}
+                        className="w-full rounded-xl border border-[#cbd5e1] bg-white p-3 text-xs font-semibold text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-2xs"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-xs font-bold text-foreground block mb-1.5">
+                        Customer / Special Instructions
+                      </label>
+                      <textarea
+                        rows={2}
+                        placeholder="Customer access or assistance instructions..."
+                        value={editForm.specialInstructions}
+                        onChange={(e) => setEditForm((prev) => ({ ...prev, specialInstructions: e.target.value }))}
+                        className="w-full rounded-xl border border-[#cbd5e1] bg-white p-3 text-xs font-semibold text-foreground placeholder:text-muted-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 shadow-2xs"
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Informational Sync Callout */}
+              <div className="flex items-start gap-3 rounded-xl border border-blue-200 bg-blue-50/70 p-3.5 text-xs text-blue-900 leading-relaxed">
+                <Info className="size-4.5 text-blue-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold">Driver Portal Synchronization:</span> Saving changes updates this trip immediately in the database. The assigned driver will immediately see the updated pickup location, drop-off destination, schedule date, and timing across their Driver Dashboard and Ride Details.
+                </div>
+              </div>
+            </form>
+
+            {/* Modal Footer */}
+            <div className="flex items-center justify-end gap-3 border-t border-border bg-slate-50/80 px-6 py-4">
+              <button
+                type="button"
+                onClick={() => setEditModalOpen(false)}
+                disabled={savingEdit}
+                className="h-9 rounded-xl border border-border px-4 text-xs font-bold text-muted-foreground hover:bg-muted cursor-pointer transition disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={savingEdit}
+                onClick={handleSaveTripEdit}
+                className="flex h-9 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-xs font-bold text-primary-foreground hover:bg-primary/90 cursor-pointer transition disabled:opacity-50 shadow-xs"
+              >
+                {savingEdit ? (
+                  <>
+                    <Loader2 className="size-3.5 animate-spin" />
+                    Saving Changes...
+                  </>
+                ) : (
+                  <>
+                    <Check className="size-3.5" />
+                    Save Changes
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1218,21 +1679,38 @@ function RoutePoint({
   location,
   meta,
   pickup = false,
+  onEdit,
 }: {
   label: string;
   location: string;
   meta: string;
   pickup?: boolean;
+  onEdit?: () => void;
 }) {
   return (
     <div
       className={`rounded-2xl border p-5 ${pickup ? "border-emerald-200 bg-emerald-50/70" : "border-red-200 bg-red-50/65"}`}
     >
-      <p
-        className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.08em] ${pickup ? "text-emerald-600" : "text-red-500"}`}
-      >
-        <MapPin className="size-3.5" /> {label}
-      </p>
+      <div className="flex items-center justify-between">
+        <p
+          className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.08em] ${pickup ? "text-emerald-600" : "text-red-500"}`}
+        >
+          <MapPin className="size-3.5" /> {label}
+        </p>
+        {onEdit && (
+          <button
+            type="button"
+            onClick={onEdit}
+            className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-xs font-bold transition shadow-2xs cursor-pointer ${
+              pickup
+                ? "border-emerald-300 bg-white/90 text-emerald-700 hover:bg-white hover:text-emerald-800 hover:border-emerald-400"
+                : "border-red-300 bg-white/90 text-red-700 hover:bg-white hover:text-red-800 hover:border-red-400"
+            }`}
+          >
+            <Pencil className="size-3" /> Edit
+          </button>
+        )}
+      </div>
       <p className="mt-4 text-sm font-bold text-foreground">{location}</p>
       <p className="mt-1.5 text-xs text-muted-foreground">{meta}</p>
     </div>
