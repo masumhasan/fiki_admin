@@ -23,6 +23,8 @@ import {
   Clock,
   DollarSign,
   Info,
+  Copy,
+  ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -163,6 +165,7 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
   const [statusNotes, setStatusNotes] = useState("");
   const [statusUpdating, setStatusUpdating] = useState(false);
   const [statusSuccessMessage, setStatusSuccessMessage] = useState("");
+  const [copiedRequestId, setCopiedRequestId] = useState(false);
 
   // Edit Trip Modal States
   const [editModalOpen, setEditModalOpen] = useState(false);
@@ -531,6 +534,19 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
 
   const statusBadge = getStatusBadge(trip.status, trip.cancellationReason);
 
+  // Ride Request identification
+  const parentIdStr = trip.parentRequestId
+    ? (typeof trip.parentRequestId === "object"
+        ? (trip.parentRequestId._id || trip.parentRequestId).toString()
+        : String(trip.parentRequestId))
+    : null;
+
+  const rootRideRequestId = parentIdStr || trip._id || tripId;
+  const isChildTrip = Boolean(parentIdStr && parentIdStr !== (trip._id || tripId));
+  const requestShortId = rootRideRequestId
+    ? `RR-${rootRideRequestId.slice(-4).toUpperCase()}`
+    : "—";
+
   // Timeline steps computation
   const timelineSteps = [
     {
@@ -786,24 +802,78 @@ export function TripDetailPage({ tripId }: { tripId: string }) {
             </p>
           </div>
 
-          {/* Change Trip Status Selector (Header Location) */}
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 rounded-xl border border-[#dce4ed] bg-[#f8fafc] p-2.5 shadow-2xs shrink-0">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-[#475569] whitespace-nowrap">
-              Change Trip Status:
-            </span>
-            <select
-              id="header-change-trip-status-select"
-              value={trip.status}
-              onChange={(e) => handleInitiateStatusChange(e.target.value)}
-              disabled={statusUpdating}
-              className="h-9 min-w-[190px] rounded-lg border border-[#cbd5e1] bg-white px-3 text-xs font-bold text-[#173d76] shadow-2xs transition hover:border-[#173d76] focus:border-[#173d76] focus:outline-none focus:ring-2 focus:ring-[#173d76]/20 cursor-pointer disabled:opacity-50"
-            >
-              {TRIP_STATUS_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+          <div className="flex flex-wrap items-center gap-3 shrink-0">
+            {/* Actual Ride Request ID Box (Area marked in red) */}
+            <div className="flex items-center gap-3 rounded-xl border border-[#dce4ed] bg-[#f8fafc] px-3.5 py-2 shadow-2xs">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-[#173d76]/10 text-[#173d76]">
+                <FileText className="size-4" />
+              </div>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-[#64748b]">
+                    {isChildTrip ? "Parent Ride Request" : "Ride Request ID"}
+                  </span>
+                  {isChildTrip ? (
+                    <span className="rounded bg-blue-100 px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-blue-700">
+                      {trip.legType === "RETURN" || trip.isReturnLeg ? "Return Leg" : "Outbound Leg"}
+                    </span>
+                  ) : (
+                    <span className="rounded bg-slate-200 px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-slate-700">
+                      Master Request
+                    </span>
+                  )}
+                </div>
+                <div className="mt-0.5 flex items-center gap-2">
+                  <Link
+                    href={`/ride-requests/${rootRideRequestId}`}
+                    className="group inline-flex items-center gap-1.5 font-mono text-sm font-black text-[#173d76] hover:text-[#0b2347] hover:underline"
+                    title={`Open Ride Request ${rootRideRequestId}`}
+                  >
+                    <span>{requestShortId}</span>
+                    <span className="font-normal text-[11px] text-[#64748b] group-hover:text-[#173d76]">
+                      ({rootRideRequestId.slice(-6)})
+                    </span>
+                    <ExternalLink className="size-3 text-[#173d76]/70 group-hover:text-[#173d76]" />
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(rootRideRequestId);
+                      setCopiedRequestId(true);
+                      setTimeout(() => setCopiedRequestId(false), 2000);
+                    }}
+                    className="inline-flex size-6 items-center justify-center rounded border border-[#cbd5e1] bg-white text-[#64748b] transition hover:bg-[#e2e8f0] hover:text-[#173d76]"
+                    title={`Copy full ID: ${rootRideRequestId}`}
+                  >
+                    {copiedRequestId ? (
+                      <Check className="size-3 text-emerald-600" />
+                    ) : (
+                      <Copy className="size-3" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Change Trip Status Selector (Header Location) */}
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2 rounded-xl border border-[#dce4ed] bg-[#f8fafc] p-2.5 shadow-2xs shrink-0">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#475569] whitespace-nowrap">
+                Change Trip Status:
+              </span>
+              <select
+                id="header-change-trip-status-select"
+                value={trip.status}
+                onChange={(e) => handleInitiateStatusChange(e.target.value)}
+                disabled={statusUpdating}
+                className="h-9 min-w-[190px] rounded-lg border border-[#cbd5e1] bg-white px-3 text-xs font-bold text-[#173d76] shadow-2xs transition hover:border-[#173d76] focus:border-[#173d76] focus:outline-none focus:ring-2 focus:ring-[#173d76]/20 cursor-pointer disabled:opacity-50"
+              >
+                {TRIP_STATUS_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       </section>
