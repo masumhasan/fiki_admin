@@ -48,6 +48,8 @@ type ShiftDetail = {
   startPhotoUrls?: string[];
   endPhotoUrls?: string[];
   totalHoursText: string;
+  autoEnded?: boolean;
+  pendingEndReport?: boolean;
 };
 
 const fuelMap: Record<string, string> = {
@@ -163,22 +165,33 @@ export function ShiftReportPage({ reportId }: { reportId: string }) {
                   )}
                   <i
                     className={`absolute bottom-0 right-0 size-4 rounded-full border-2 border-card ${
-                      data.status === "Completed" ? "bg-emerald-500" : "bg-blue-500"
+                      data.status === "Completed"
+                        ? "bg-emerald-500"
+                        : data.status === "Missing report" || data.pendingEndReport
+                          ? "bg-red-500"
+                          : "bg-blue-500"
                     }`}
                   />
                 </div>
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <h2 className="text-lg font-bold text-foreground">{data.driverName}</h2>
+                    {data.autoEnded && (
+                      <span className="rounded-full bg-indigo-50 border border-indigo-200 px-2.5 py-1 text-[10px] font-bold text-indigo-700">
+                        Auto-Ended (Final Trip)
+                      </span>
+                    )}
                     <span
                       className={`flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-bold ${
                         data.status === "Completed"
                           ? "bg-emerald-50 text-emerald-700"
-                          : "bg-blue-50 text-blue-600"
+                          : data.status === "Missing report" || data.pendingEndReport
+                            ? "bg-red-50 text-red-600"
+                            : "bg-blue-50 text-blue-600"
                       }`}
                     >
                       <Check className="size-3" />
-                      {data.status}
+                      {data.pendingEndReport || data.status === "Missing report" ? "Missing report" : data.status}
                     </span>
                   </div>
                   <p className="mt-1 text-xs text-muted-foreground">
@@ -194,6 +207,22 @@ export function ShiftReportPage({ reportId }: { reportId: string }) {
               </dl>
             </div>
           </section>
+
+          {(data.pendingEndReport || !data.endingOdometer) && (
+            <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 sm:p-5 text-xs text-amber-900 shadow-sm flex items-start gap-3">
+              <span className="grid size-8 shrink-0 place-items-center rounded-xl bg-amber-500 text-white font-bold text-sm mt-0.5">
+                !
+              </span>
+              <div>
+                <h3 className="font-bold text-sm text-amber-950">End-of-Shift Report Pending</h3>
+                <p className="mt-1 leading-relaxed text-amber-900/90 text-xs">
+                  {data.autoEnded
+                    ? "This shift was automatically ended after the driver completed their final trip of the day. The driver is required to submit their end-of-shift vehicle inspection and ending odometer before they can start their next shift."
+                    : "The driver has not yet submitted the required end-of-shift inspection report."}
+                </p>
+              </div>
+            </div>
+          )}
 
           <section className="grid items-start gap-5 xl:grid-cols-2">
             <InspectionCard kind="start" data={data} onPreview={(idx) => setPreviewState({ kind: "start", photoIdx: idx })} />
@@ -368,6 +397,8 @@ function InspectionCard({
     ? `${data.startingOdometer.toLocaleString()} mi`
     : data.endingOdometer
     ? `${data.endingOdometer.toLocaleString()} mi`
+    : data.pendingEndReport
+    ? "Awaiting driver report"
     : "—";
 
   const selectedFuelDisplay = fuelMap[fuelValue] || fuelValue || "1/2";
