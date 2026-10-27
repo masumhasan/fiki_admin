@@ -28,6 +28,8 @@ type Report = {
   shift: string;
   distance: string;
   status: ReportStatus;
+  autoEnded?: boolean;
+  pendingEndReport?: boolean;
 };
 
 export function VehicleReportsPage({ hideHeader }: { hideHeader?: boolean } = {}) {
@@ -66,12 +68,16 @@ export function VehicleReportsPage({ hideHeader }: { hideHeader?: boolean } = {}
               date: r.shiftDateText || (r.createdAt ? new Date(r.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "America/Chicago" }) : "—"),
               shift: r.shiftTimeText || r.shift || "—",
               distance: r.estimatedMiles != null ? `${r.estimatedMiles} mi` : (r.fuelLevelPercentage != null ? `${r.fuelLevelPercentage}% fuel` : "—"),
+              autoEnded: Boolean(r.autoEnded),
+              pendingEndReport: Boolean(r.pendingEndReport),
               status:
-                r.status === "Completed" || r.inspectionStatus === "PASS"
-                  ? "Completed"
-                  : r.status === "In progress" || r.inspectionStatus === "IN_PROGRESS"
-                    ? "In progress"
-                    : "Missing report",
+                r.pendingEndReport || r.status === "Missing report"
+                  ? "Missing report"
+                  : r.status === "Completed" || r.inspectionStatus === "PASS"
+                    ? "Completed"
+                    : r.status === "In progress" || r.inspectionStatus === "IN_PROGRESS"
+                      ? "In progress"
+                      : "Missing report",
             };
           });
           setReports(mapped);
@@ -231,7 +237,12 @@ function ReportCard({ report }: { report: Report }) {
             {report.initials}
           </span>
         )}
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 justify-end">
+          {report.autoEnded && (
+            <span className="rounded-full bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 text-[10px] font-bold text-indigo-700">
+              Auto-Ended
+            </span>
+          )}
           <Status status={report.status} />
         </div>
       </div>
