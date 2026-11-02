@@ -215,7 +215,12 @@ export default function RideRequestDetails({
     };
     const res = await updateTripApi(token, id, payload);
     if (res.success && res.data) {
-      setTrip(res.data);
+      const refreshed = await getAdminTripDetailApi(token, id);
+      if (refreshed.success && refreshed.data) {
+        setTrip(refreshed.data);
+      } else {
+        setTrip(res.data);
+      }
       setIsEditingTripInfo(false);
     } else {
       alert(res.error?.message || "Failed to update trip information");
@@ -963,7 +968,7 @@ export default function RideRequestDetails({
                         <label className="text-[11px] font-bold uppercase tracking-wider text-[#8190a5]">Recurring Days</label>
                         <div className="mt-2 flex flex-wrap gap-2">
                           {["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"].map((day) => {
-                            const checked = tripInfoForm.recurringDays.includes(day);
+                            const checked = Array.isArray(tripInfoForm.recurringDays) && tripInfoForm.recurringDays.some((d: string) => d.toLowerCase() === day.toLowerCase());
                             return (
                               <label
                                 key={day}
@@ -978,11 +983,17 @@ export default function RideRequestDetails({
                                   checked={checked}
                                   onChange={(e) => {
                                     if (e.target.checked) {
-                                      setTripInfoForm({ ...tripInfoForm, recurringDays: [...tripInfoForm.recurringDays, day] });
+                                      setTripInfoForm({
+                                        ...tripInfoForm,
+                                        recurringDays: [
+                                          ...tripInfoForm.recurringDays.filter((d: string) => d.toLowerCase() !== day.toLowerCase()),
+                                          day,
+                                        ],
+                                      });
                                     } else {
                                       setTripInfoForm({
                                         ...tripInfoForm,
-                                        recurringDays: tripInfoForm.recurringDays.filter((d: string) => d !== day),
+                                        recurringDays: tripInfoForm.recurringDays.filter((d: string) => d.toLowerCase() !== day.toLowerCase()),
                                       });
                                     }
                                   }}
@@ -1051,7 +1062,26 @@ export default function RideRequestDetails({
                         </button>
                         <button
                           type="button"
-                          onClick={() => setIsEditingTripInfo(false)}
+                          onClick={() => {
+                            setIsEditingTripInfo(false);
+                            if (trip) {
+                              const pickupAddr = trip.pickupLocation?.address || trip.streetAddress || "";
+                              const dropoffAddr = trip.dropoffLocation?.address || trip.destinationAddress || "";
+                              setTripInfoForm({
+                                tripType: trip.tripType || "one-way",
+                                schedule: trip.schedule || "one-time",
+                                startDate: trip.startDate || trip.pickupDate || "",
+                                endDate: trip.endDate || trip.returnDate || "",
+                                pickupTime: trip.pickupTime || "",
+                                returnPickupTime: trip.returnPickupTime || "05:00 PM",
+                                recurringDays: Array.isArray(trip.recurringDays) ? [...trip.recurringDays] : [],
+                                pickupAddress: pickupAddr,
+                                destinationAddress: dropoffAddr,
+                                returnPickupAddress: trip.returnPickupAddress || dropoffAddr,
+                                returnDestinationAddress: trip.returnDestinationAddress || pickupAddr,
+                              });
+                            }
+                          }}
                           className="h-9 rounded-lg border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 hover:bg-slate-50"
                         >
                           Cancel
